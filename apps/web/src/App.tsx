@@ -13,6 +13,7 @@ import { RaidRoom } from './pages/RaidRoom';
 import { Profile } from './pages/Profile';
 import { Items } from './pages/Items';
 import { AliasMappings } from './pages/admin/AliasMappings';
+import { GoldManagement } from './pages/admin/GoldManagement';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -112,6 +113,14 @@ export default function App() {
             element={
               <AdminRoute>
                 <AliasMappings />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="admin/gold"
+            element={
+              <AdminRoute>
+                <GoldManagement />
               </AdminRoute>
             }
           />

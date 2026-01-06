@@ -11,6 +11,7 @@ import {
   X,
   Package,
   Shield,
+  Coins,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +26,8 @@ const navItems = [
 ];
 
 const adminNavItems = [
-  { path: '/admin/aliases', label: 'Alias Mappings', icon: Shield },
+  { path: '/admin/gold', label: 'Gold', icon: Coins },
+  { path: '/admin/aliases', label: 'Aliases', icon: Shield },
 ];
 
 export function MainLayout() {
