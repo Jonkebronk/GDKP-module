@@ -1,0 +1,156 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+import type { ClientToServerEvents, ServerToClientEvents } from '@gdkp/shared';
+import { useAuthStore } from '../stores/authStore';
+import { useAuctionStore } from '../stores/auctionStore';
+
+type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+
+export function useSocket(raidId: string | null) {
+  const socketRef = useRef<TypedSocket | null>(null);
+  const { token, user } = useAuthStore();
+  const {
+    setActiveItem,
+    addBid,
+    updateRemainingTime,
+    extendAuction,
+    endAuction,
+    setConnection,
+  } = useAuctionStore();
+
+  useEffect(() => {
+    if (!token || !raidId) return;
+
+    // In production, use configured API URL; in development, use same origin
+    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
+    const socket: TypedSocket = io(socketUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
+
+    socketRef.current = socket;
+
+    // Connection events
+    socket.on('connect', () => {
+      setConnection(true);
+      socket.emit('join:raid', { raid_id: raidId });
+    });
+
+    socket.on('disconnect', () => {
+      setConnection(false);
+    });
+
+    socket.on('connect_error', () => {
+      setConnection(false);
+    });
+
+    // Raid state sync
+    socket.on('raid:state', (state) => {
+      if (state.active_auction) {
+        setActiveItem(state.active_auction);
+      }
+    });
+
+    // Auction events
+    socket.on('auction:started', (data) => {
+      setActiveItem(data.item);
+    });
+
+    socket.on('bid:new', (data) => {
+      if (user) {
+        addBid(
+          {
+            id: data.bid_id,
+            item_id: data.item_id,
+            user_id: data.user_id,
+            amount: data.amount,
+            is_winning: true,
+            created_at: new Date(data.timestamp),
+            user: {
+              id: data.user_id,
+              discord_username: data.username,
+              discord_avatar: null,
+            },
+          },
+          user.id
+        );
+      }
+    });
+
+    socket.on('auction:tick', (data) => {
+      updateRemainingTime(data.remaining_ms);
+    });
+
+    socket.on('auction:extended', (data) => {
+      extendAuction(data.new_ends_at);
+    });
+
+    socket.on('auction:ended', () => {
+      endAuction();
+    });
+
+    // Pot distribution events
+    socket.on('pot:payout', (data) => {
+      console.log('Received payout:', data);
+      // Could trigger a toast notification here
+    });
+
+    socket.on('raid:completed', (data) => {
+      console.log('Raid completed:', data);
+      // Trigger refetch of raid data
+      window.dispatchEvent(new CustomEvent('raid:completed', { detail: data }));
+    });
+
+    socket.on('raid:cancelled', (data) => {
+      console.log('Raid cancelled:', data);
+      // Trigger refetch of raid data
+      window.dispatchEvent(new CustomEvent('raid:cancelled', { detail: data }));
+    });
+
+    // Wallet updates (private channel)
+    socket.on('wallet:updated', (data) => {
+      console.log('Wallet updated:', data);
+      window.dispatchEvent(new CustomEvent('wallet:updated', { detail: data }));
+    });
+
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+    });
+
+    return () => {
+      socket.emit('leave:raid', { raid_id: raidId });
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [token, raidId, user]);
+
+  const placeBid = useCallback((itemId: string, amount: number) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('bid:place', { item_id: itemId, amount });
+    }
+  }, []);
+
+  const sendChat = useCallback((message: string) => {
+    if (socketRef.current?.connected && raidId) {
+      socketRef.current.emit('chat:send', { raid_id: raidId, message });
+    }
+  }, [raidId]);
+
+  const startAuction = useCallback((itemId: string, duration?: number) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('auction:start', { item_id: itemId, duration });
+    }
+  }, []);
+
+  return {
+    socket: socketRef.current,
+    placeBid,
+    sendChat,
+    startAuction,
+    isConnected: socketRef.current?.connected ?? false,
+  };
+}

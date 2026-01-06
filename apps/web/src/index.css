@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Gold text glow effect */
+.gold-glow {
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Auction pulse effect */
+.auction-ending {
+  animation: auction-pulse 1s ease-in-out infinite;
+}
+
+@keyframes auction-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+/* WoW item quality colors */
+.item-poor { color: #9d9d9d; }
+.item-common { color: #ffffff; }
+.item-uncommon { color: #1eff00; }
+.item-rare { color: #0070dd; }
+.item-epic { color: #a335ee; }
+.item-legendary { color: #ff8000; }

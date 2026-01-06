@@ -1,0 +1,377 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import { prisma } from '../config/database.js';
+import { requireAuth } from '../middleware/auth.js';
+import { AppError, ERROR_CODES, WOW_INSTANCES } from '@gdkp/shared';
+import { PotDistributionService } from '../services/pot-distribution.service.js';
+
+const potDistributionService = new PotDistributionService();
+
+const createRaidSchema = z.object({
+  name: z.string().min(3).max(100),
+  instance: z.string(),
+  split_config: z.object({
+    type: z.enum(['equal', 'custom', 'role_based']),
+    leader_cut_percent: z.number().min(0).max(20).optional(),
+    custom_shares: z.record(z.number()).optional(),
+  }),
+});
+
+const updateRaidSchema = z.object({
+  name: z.string().min(3).max(100).optional(),
+  split_config: z.object({
+    type: z.enum(['equal', 'custom', 'role_based']),
+    leader_cut_percent: z.number().min(0).max(20).optional(),
+    custom_shares: z.record(z.number()).optional(),
+  }).optional(),
+});
+
+const addItemSchema = z.object({
+  name: z.string().min(1).max(255),
+  wowhead_id: z.number().optional(),
+  icon_url: z.string().url().optional(),
+  starting_bid: z.number().int().min(0).default(0),
+  min_increment: z.number().int().min(1).default(10),
+  auction_duration: z.number().int().min(30).max(300).default(60),
+});
+
+const raidRoutes: FastifyPluginAsync = async (fastify) => {
+  // List raids
+  fastify.get('/', { preHandler: [requireAuth] }, async (request) => {
+    const { status, mine } = request.query as { status?: string; mine?: string };
+
+    const where: Record<string, unknown> = {};
+    if (status) {
+      where.status = status;
+    }
+    if (mine === 'true') {
+      where.leader_id = request.user.id;
+    }
+
+    const raids = await prisma.raid.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: 50,
+      include: {
+        leader: {
+          select: { id: true, discord_username: true, discord_avatar: true },
+        },
+        _count: {
+          select: { participants: true, items: true },
+        },
+      },
+    });
+
+    return raids.map((r) => ({
+      ...r,
+      pot_total: Number(r.pot_total),
+      participant_count: r._count.participants,
+      item_count: r._count.items,
+    }));
+  });
+
+  // Get raid details
+  fastify.get('/:id', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+      include: {
+        leader: {
+          select: { id: true, discord_username: true, discord_avatar: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, discord_username: true, discord_avatar: true },
+            },
+          },
+        },
+        items: {
+          orderBy: { created_at: 'asc' },
+          include: {
+            winner: {
+              select: { id: true, discord_username: true, discord_avatar: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    return {
+      ...raid,
+      pot_total: Number(raid.pot_total),
+      items: raid.items.map((item) => ({
+        ...item,
+        starting_bid: Number(item.starting_bid),
+        current_bid: Number(item.current_bid),
+        min_increment: Number(item.min_increment),
+      })),
+      participants: raid.participants.map((p) => ({
+        ...p,
+        payout_amount: p.payout_amount ? Number(p.payout_amount) : null,
+      })),
+    };
+  });
+
+  // Create raid
+  fastify.post('/', { preHandler: [requireAuth] }, async (request) => {
+    const data = createRaidSchema.parse(request.body);
+
+    const raid = await prisma.raid.create({
+      data: {
+        name: data.name,
+        instance: data.instance,
+        leader_id: request.user.id,
+        split_config: data.split_config,
+      },
+    });
+
+    // Add creator as leader participant
+    await prisma.raidParticipant.create({
+      data: {
+        raid_id: raid.id,
+        user_id: request.user.id,
+        role: 'LEADER',
+      },
+    });
+
+    return {
+      ...raid,
+      pot_total: Number(raid.pot_total),
+    };
+  });
+
+  // Update raid
+  fastify.patch('/:id', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const data = updateRaidSchema.parse(request.body);
+
+    // Verify user is leader
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.leader_id !== request.user.id) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only the raid leader can update the raid', 403);
+    }
+
+    if (raid.status === 'COMPLETED' || raid.status === 'CANCELLED') {
+      throw new AppError(ERROR_CODES.RAID_ALREADY_COMPLETED, 'Cannot update completed/cancelled raid', 400);
+    }
+
+    const updated = await prisma.raid.update({
+      where: { id },
+      data: {
+        name: data.name,
+        split_config: data.split_config,
+      },
+    });
+
+    return {
+      ...updated,
+      pot_total: Number(updated.pot_total),
+    };
+  });
+
+  // Start raid
+  fastify.post('/:id/start', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({ where: { id } });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.leader_id !== request.user.id) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only the raid leader can start the raid', 403);
+    }
+
+    if (raid.status !== 'PENDING') {
+      throw new AppError(ERROR_CODES.RAID_NOT_ACTIVE, 'Raid is not in pending status', 400);
+    }
+
+    const updated = await prisma.raid.update({
+      where: { id },
+      data: {
+        status: 'ACTIVE',
+        started_at: new Date(),
+      },
+    });
+
+    // Notify via socket
+    fastify.io.to(`raid:${id}`).emit('raid:updated', {
+      status: updated.status,
+      started_at: updated.started_at,
+    });
+
+    return {
+      ...updated,
+      pot_total: Number(updated.pot_total),
+    };
+  });
+
+  // Join raid
+  fastify.post('/:id/join', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({ where: { id } });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.status === 'COMPLETED' || raid.status === 'CANCELLED') {
+      throw new AppError(ERROR_CODES.RAID_ALREADY_COMPLETED, 'Cannot join completed/cancelled raid', 400);
+    }
+
+    // Check if already participant
+    const existing = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (existing) {
+      return { already_joined: true };
+    }
+
+    await prisma.raidParticipant.create({
+      data: {
+        raid_id: id,
+        user_id: request.user.id,
+        role: 'MEMBER',
+      },
+    });
+
+    return { joined: true };
+  });
+
+  // Leave raid
+  fastify.delete('/:id/leave', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({ where: { id } });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    // Leader cannot leave
+    if (raid.leader_id === request.user.id) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Leader cannot leave the raid', 400);
+    }
+
+    await prisma.raidParticipant.delete({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    }).catch(() => null); // Ignore if not found
+
+    return { left: true };
+  });
+
+  // Add item to raid
+  fastify.post('/:id/items', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const data = addItemSchema.parse(request.body);
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can add items', 403);
+    }
+
+    const item = await prisma.item.create({
+      data: {
+        raid_id: id,
+        name: data.name,
+        wowhead_id: data.wowhead_id,
+        icon_url: data.icon_url,
+        starting_bid: data.starting_bid,
+        min_increment: data.min_increment,
+        auction_duration: data.auction_duration,
+      },
+    });
+
+    return {
+      ...item,
+      starting_bid: Number(item.starting_bid),
+      current_bid: Number(item.current_bid),
+      min_increment: Number(item.min_increment),
+    };
+  });
+
+  // Get pot distribution preview
+  fastify.get('/:id/distribution-preview', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const preview = await potDistributionService.calculateDistribution(id);
+
+    if (!preview) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    return preview;
+  });
+
+  // Distribute the pot to all participants
+  fastify.post('/:id/distribute', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const result = await potDistributionService.distributePot(
+      id,
+      request.user.id,
+      fastify.io
+    );
+
+    if (!result.success) {
+      throw new AppError(
+        result.error || 'DISTRIBUTION_FAILED',
+        result.message || 'Failed to distribute pot',
+        400
+      );
+    }
+
+    return result;
+  });
+
+  // Cancel raid and refund all auction winners
+  fastify.post('/:id/cancel', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { reason } = request.body as { reason?: string };
+
+    const result = await potDistributionService.cancelRaid(
+      id,
+      request.user.id,
+      reason || 'Raid cancelled by leader',
+      fastify.io
+    );
+
+    if (!result.success) {
+      throw new AppError(
+        result.error || 'CANCEL_FAILED',
+        result.message || 'Failed to cancel raid',
+        400
+      );
+    }
+
+    return result;
+  });
+};
+
+export default raidRoutes;

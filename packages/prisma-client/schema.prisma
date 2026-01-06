@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id               String   @id @default(uuid()) @db.Uuid
+  discord_id       String   @unique
+  discord_username String
+  discord_avatar   String?
+  paypal_email     String?
+  gold_balance     Decimal  @default(0) @db.Decimal(15, 2)
+  role             UserRole @default(USER)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relations
+  raids_led      Raid[]            @relation("RaidLeader")
+  participations RaidParticipant[]
+  bids           Bid[]
+  items_won      Item[]            @relation("ItemWinner")
+  transactions   Transaction[]
+  chat_messages  ChatMessage[]
+
+  @@index([discord_id])
+  @@index([role])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ============================================
+// RAID
+// ============================================
+
+model Raid {
+  id           String     @id @default(uuid()) @db.Uuid
+  name         String     @db.VarChar(100)
+  instance     String     @db.VarChar(100)
+  leader_id    String     @db.Uuid
+  status       RaidStatus @default(PENDING)
+  pot_total    Decimal    @default(0) @db.Decimal(15, 2)
+  split_config Json       @db.JsonB
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+  started_at   DateTime?
+  ended_at     DateTime?
+
+  // Relations
+  leader        User              @relation("RaidLeader", fields: [leader_id], references: [id])
+  participants  RaidParticipant[]
+  items         Item[]
+  chat_messages ChatMessage[]
+
+  @@index([leader_id])
+  @@index([status])
+  @@index([created_at])
+}
+
+enum RaidStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model RaidParticipant {
+  id            String          @id @default(uuid()) @db.Uuid
+  raid_id       String          @db.Uuid
+  user_id       String          @db.Uuid
+  role          ParticipantRole @default(MEMBER)
+  payout_amount Decimal?        @db.Decimal(15, 2)
+  paid_at       DateTime?
+  joined_at     DateTime        @default(now())
+
+  // Relations
+  raid Raid @relation(fields: [raid_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([raid_id, user_id])
+  @@index([raid_id])
+  @@index([user_id])
+}
+
+enum ParticipantRole {
+  LEADER
+  OFFICER
+  MEMBER
+}
+
+// ============================================
+// AUCTION & ITEMS
+// ============================================
+
+model Item {
+  id               String     @id @default(uuid()) @db.Uuid
+  raid_id          String     @db.Uuid
+  name             String     @db.VarChar(255)
+  wowhead_id       Int?
+  icon_url         String?    @db.VarChar(500)
+  status           ItemStatus @default(PENDING)
+  starting_bid     Decimal    @default(0) @db.Decimal(15, 2)
+  current_bid      Decimal    @default(0) @db.Decimal(15, 2)
+  min_increment    Decimal    @default(10) @db.Decimal(15, 2)
+  winner_id        String?    @db.Uuid
+  auction_duration Int        @default(60)
+  started_at       DateTime?
+  ends_at          DateTime?
+  completed_at     DateTime?
+  version          Int        @default(0) // Optimistic locking
+  created_at       DateTime   @default(now())
+
+  // Relations
+  raid   Raid   @relation(fields: [raid_id], references: [id], onDelete: Cascade)
+  winner User?  @relation("ItemWinner", fields: [winner_id], references: [id])
+  bids   Bid[]
+
+  @@index([raid_id])
+  @@index([status])
+  @@index([winner_id])
+  @@index([raid_id, status])
+}
+
+enum ItemStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Bid {
+  id         String   @id @default(uuid()) @db.Uuid
+  item_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  amount     Decimal  @db.Decimal(15, 2)
+  is_winning Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  // Relations
+  item Item @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([item_id])
+  @@index([user_id])
+  @@index([item_id, is_winning])
+  @@index([item_id, created_at])
+}
+
+// ============================================
+// WALLET & TRANSACTIONS
+// ============================================
+
+model Transaction {
+  id                    String            @id @default(uuid()) @db.Uuid
+  user_id               String            @db.Uuid
+  type                  TransactionType
+  gold_amount           Decimal           @db.Decimal(15, 2)
+  real_amount           Decimal?          @db.Decimal(10, 2)
+  currency              String?           @db.VarChar(3)
+  exchange_rate         Decimal?          @db.Decimal(10, 6)
+  paypal_transaction_id String?           @db.VarChar(255)
+  paypal_order_id       String?           @db.VarChar(255)
+  status                TransactionStatus @default(PENDING)
+  idempotency_key       String?           @unique @db.VarChar(255)
+  metadata              Json?             @db.JsonB
+  created_at            DateTime          @default(now())
+  completed_at          DateTime?
+  error_message         String?
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([type])
+  @@index([status])
+  @@index([paypal_order_id])
+  @@index([idempotency_key])
+  @@index([user_id, type])
+  @@index([created_at])
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BID_LOCK
+  BID_RELEASE
+  AUCTION_WIN
+  POT_PAYOUT
+  ADMIN_ADJUST
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ============================================
+// SYSTEM
+// ============================================
+
+model Config {
+  id         String   @id @default(uuid()) @db.Uuid
+  key        String   @unique @db.VarChar(255)
+  value      Json     @db.JsonB
+  updated_at DateTime @updatedAt
+  updated_by String?  @db.Uuid
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid()) @db.Uuid
+  raid_id    String   @db.Uuid
+  user_id    String   @db.Uuid
+  message    String   @db.VarChar(500)
+  is_system  Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  // Relations
+  raid Raid @relation(fields: [raid_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([raid_id, created_at])
+}
+
+// For PayPal webhook idempotency
+model WebhookEvent {
+  id           String   @id @db.VarChar(255) // PayPal event ID
+  event_type   String   @db.VarChar(100)
+  processed_at DateTime @default(now())
+  payload      Json     @db.JsonB
+
+  @@index([event_type])
+  @@index([processed_at])
+}

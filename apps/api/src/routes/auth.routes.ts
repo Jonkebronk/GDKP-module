@@ -1,0 +1,158 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import { prisma } from '../config/database.js';
+import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const discordTokenSchema = z.object({
+  code: z.string(),
+});
+
+const authRoutes: FastifyPluginAsync = async (fastify) => {
+  // Discord OAuth - redirect to Discord
+  fastify.get('/discord', async (request, reply) => {
+    const params = new URLSearchParams({
+      client_id: env.DISCORD_CLIENT_ID,
+      redirect_uri: env.DISCORD_REDIRECT_URI,
+      response_type: 'code',
+      scope: 'identify',
+    });
+
+    return reply.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+  });
+
+  // Discord OAuth callback
+  fastify.get('/discord/callback', async (request, reply) => {
+    try {
+      const { code } = discordTokenSchema.parse(request.query);
+
+      // Exchange code for token
+      const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: env.DISCORD_CLIENT_ID,
+          client_secret: env.DISCORD_CLIENT_SECRET,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: env.DISCORD_REDIRECT_URI,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        logger.error({ status: tokenResponse.status }, 'Discord token exchange failed');
+        return reply.redirect(`${env.FRONTEND_URL}/login?error=discord_failed`);
+      }
+
+      const tokenData = await tokenResponse.json();
+
+      // Get user info from Discord
+      const userResponse = await fetch('https://discord.com/api/users/@me', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userResponse.ok) {
+        logger.error({ status: userResponse.status }, 'Discord user fetch failed');
+        return reply.redirect(`${env.FRONTEND_URL}/login?error=discord_failed`);
+      }
+
+      const discordUser = await userResponse.json() as {
+        id: string;
+        username: string;
+        avatar: string | null;
+      };
+
+      // Find or create user
+      let user = await prisma.user.findUnique({
+        where: { discord_id: discordUser.id },
+      });
+
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            discord_id: discordUser.id,
+            discord_username: discordUser.username,
+            discord_avatar: discordUser.avatar
+              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+              : null,
+          },
+        });
+        logger.info({ userId: user.id, discordId: discordUser.id }, 'New user created');
+      } else {
+        // Update user info
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            discord_username: discordUser.username,
+            discord_avatar: discordUser.avatar
+              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+              : null,
+          },
+        });
+      }
+
+      // Generate JWT
+      const token = fastify.jwt.sign({
+        id: user.id,
+        discord_id: user.discord_id,
+        discord_username: user.discord_username,
+        discord_avatar: user.discord_avatar,
+        role: user.role,
+      }, { expiresIn: env.JWT_EXPIRES_IN });
+
+      // Redirect to frontend with token
+      return reply.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
+    } catch (error) {
+      logger.error({ error }, 'Discord OAuth callback error');
+      return reply.redirect(`${env.FRONTEND_URL}/login?error=auth_failed`);
+    }
+  });
+
+  // Get current user
+  fastify.get('/me', { preHandler: [requireAuth] }, async (request) => {
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: {
+        id: true,
+        discord_id: true,
+        discord_username: true,
+        discord_avatar: true,
+        gold_balance: true,
+        paypal_email: true,
+        role: true,
+        created_at: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      ...user,
+      gold_balance: Number(user.gold_balance),
+      has_paypal: !!user.paypal_email,
+    };
+  });
+
+  // Logout (client-side - just return success)
+  fastify.post('/logout', async () => {
+    return { success: true };
+  });
+
+  // Refresh token
+  fastify.post('/refresh', { preHandler: [requireAuth] }, async (request) => {
+    const token = fastify.jwt.sign({
+      id: request.user.id,
+      discord_id: request.user.discord_id,
+      discord_username: request.user.discord_username,
+      discord_avatar: request.user.discord_avatar,
+      role: request.user.role,
+    }, { expiresIn: env.JWT_EXPIRES_IN });
+
+    return { token };
+  });
+};
+
+export default authRoutes;
