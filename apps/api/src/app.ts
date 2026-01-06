@@ -18,7 +18,7 @@ import webhookRoutes from './routes/webhook.routes.js';
 
 export async function createApp() {
   const app = Fastify({
-    logger: logger,
+    loggerInstance: logger,
     trustProxy: true,
   });
 
