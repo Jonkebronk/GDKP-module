@@ -14,7 +14,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/discord', async (request, reply) => {
     const params = new URLSearchParams({
       client_id: env.DISCORD_CLIENT_ID,
-      redirect_uri: env.DISCORD_REDIRECT_URI,
+      redirect_uri: env.DISCORD_CALLBACK_URL,
       response_type: 'code',
       scope: 'identify',
     });
@@ -36,7 +36,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           client_secret: env.DISCORD_CLIENT_SECRET,
           grant_type: 'authorization_code',
           code,
-          redirect_uri: env.DISCORD_REDIRECT_URI,
+          redirect_uri: env.DISCORD_CALLBACK_URL,
         }),
       });
 

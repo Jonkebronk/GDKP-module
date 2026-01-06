@@ -13,7 +13,7 @@ const envSchema = z.object({
   // Discord OAuth
   DISCORD_CLIENT_ID: z.string(),
   DISCORD_CLIENT_SECRET: z.string(),
-  DISCORD_REDIRECT_URI: z.string(),
+  DISCORD_CALLBACK_URL: z.string(),
 
   // PayPal
   PAYPAL_CLIENT_ID: z.string(),

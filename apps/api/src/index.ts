@@ -34,6 +34,12 @@ async function main() {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
   } catch (error) {
+    console.error('=== SERVER STARTUP ERROR ===');
+    console.error('Error:', error);
+    if (error instanceof Error) {
+      console.error('Message:', error.message);
+      console.error('Stack:', error.stack);
+    }
     logger.error(error, 'Failed to start server');
     process.exit(1);
   }
