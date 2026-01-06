@@ -55,7 +55,7 @@ export function ItemPicker({ raidId, raidInstance, isOpen, onClose, onItemAdded 
     queryKey: ['tbc-items', selectedInstance, selectedSlot, selectedQuality, searchQuery],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedInstance) params.append('instance', selectedInstance);
+      if (selectedInstance) params.append('raid_instance', selectedInstance);
       if (selectedSlot) params.append('slot', selectedSlot);
       if (selectedQuality) params.append('quality', selectedQuality);
       if (searchQuery) params.append('search', searchQuery);
@@ -144,7 +144,7 @@ export function ItemPicker({ raidId, raidInstance, isOpen, onClose, onItemAdded 
                 >
                   <option value="">All Raids</option>
                   {TBC_RAID_INSTANCES.map((instance) => (
-                    <option key={instance.id} value={instance.id}>
+                    <option key={instance.id} value={instance.name}>
                       {instance.name}
                     </option>
                   ))}
