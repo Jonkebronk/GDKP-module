@@ -2,10 +2,10 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../config/database.js';
 import { requireAuth } from '../middleware/auth.js';
-import { AppError, ERROR_CODES, isValidEmail } from '@gdkp/shared';
+import { AppError, ERROR_CODES } from '@gdkp/shared';
 
 const updateProfileSchema = z.object({
-  paypal_email: z.string().email().optional().nullable(),
+  crypto_wallet_address: z.string().max(255).optional().nullable(),
 });
 
 const userRoutes: FastifyPluginAsync = async (fastify) => {
@@ -39,20 +39,21 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch('/me', { preHandler: [requireAuth] }, async (request) => {
     const data = updateProfileSchema.parse(request.body);
 
-    if (data.paypal_email && !isValidEmail(data.paypal_email)) {
-      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid email format', 400);
+    // Basic wallet address validation (if provided)
+    if (data.crypto_wallet_address && data.crypto_wallet_address.length < 26) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid wallet address format', 400);
     }
 
     const user = await prisma.user.update({
       where: { id: request.user.id },
       data: {
-        paypal_email: data.paypal_email,
+        crypto_wallet_address: data.crypto_wallet_address,
       },
       select: {
         id: true,
         discord_username: true,
         discord_avatar: true,
-        paypal_email: true,
+        crypto_wallet_address: true,
         gold_balance: true,
         role: true,
       },
@@ -61,7 +62,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       ...user,
       gold_balance: Number(user.gold_balance),
-      has_paypal: !!user.paypal_email,
+      has_wallet: !!user.crypto_wallet_address,
     };
   });
 

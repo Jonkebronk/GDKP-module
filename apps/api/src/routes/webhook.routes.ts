@@ -1,32 +1,38 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../config/database.js';
 import { logger } from '../config/logger.js';
+import {
+  verifyWebhookSignature,
+  parseWebhookEvent,
+  type CoinbaseWebhookEvent,
+} from '../services/coinbase.service.js';
+import {
+  sendPaymentConfirmed,
+  sendPaymentFailed,
+} from '../services/discord-notify.service.js';
 
 const webhookRoutes: FastifyPluginAsync = async (fastify) => {
-  // PayPal webhook handler
-  fastify.post('/paypal', {
+  // Coinbase Commerce webhook handler
+  fastify.post('/coinbase', {
     config: {
       rawBody: true, // Need raw body for signature verification
     },
   }, async (request, reply) => {
-    // Immediately respond to avoid timeout
-    reply.status(200).send('OK');
-
     try {
-      const headers = request.headers;
-      const body = request.body as string;
+      const signature = request.headers['x-cc-webhook-signature'] as string;
+      const payload = request.body as string;
 
-      // TODO: Verify PayPal webhook signature
-      // const isValid = await verifyPayPalWebhook(headers, body);
-      // if (!isValid) {
-      //   logger.warn('Invalid PayPal webhook signature');
-      //   return;
-      // }
+      // Verify Coinbase webhook signature
+      if (!verifyWebhookSignature(payload, signature)) {
+        logger.warn('Invalid Coinbase webhook signature');
+        return reply.status(401).send('Invalid signature');
+      }
 
-      const event = JSON.parse(body);
+      const event = parseWebhookEvent(payload);
       const eventId = event.id;
-      const eventType = event.event_type;
-      const resource = event.resource;
+      const eventType = event.type;
+
+      logger.info({ eventId, eventType }, 'Coinbase webhook received');
 
       // Check idempotency
       const existing = await prisma.webhookEvent.findUnique({
@@ -35,30 +41,21 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (existing) {
         logger.info({ eventId }, 'Webhook already processed');
-        return;
+        return reply.status(200).send('OK');
       }
 
       // Process event
       switch (eventType) {
-        case 'CHECKOUT.ORDER.APPROVED':
-          await handleOrderApproved(resource);
+        case 'charge:pending':
+          await handleChargePending(event);
           break;
 
-        case 'PAYMENT.CAPTURE.COMPLETED':
-          await handleCaptureCompleted(resource);
+        case 'charge:confirmed':
+          await handleChargeConfirmed(event);
           break;
 
-        case 'PAYMENT.CAPTURE.DENIED':
-        case 'PAYMENT.CAPTURE.REFUNDED':
-          await handleCaptureFailed(resource);
-          break;
-
-        case 'PAYMENT.PAYOUTS-ITEM.SUCCEEDED':
-          await handlePayoutSucceeded(resource);
-          break;
-
-        case 'PAYMENT.PAYOUTS-ITEM.FAILED':
-          await handlePayoutFailed(resource);
+        case 'charge:failed':
+          await handleChargeFailed(event);
           break;
 
         default:
@@ -70,37 +67,62 @@ const webhookRoutes: FastifyPluginAsync = async (fastify) => {
         data: {
           id: eventId,
           event_type: eventType,
-          payload: resource,
+          payload: event.data as object,
         },
       });
 
       logger.info({ eventId, eventType }, 'Webhook processed');
+      return reply.status(200).send('OK');
     } catch (error) {
-      logger.error({ error }, 'PayPal webhook error');
+      logger.error({ error }, 'Coinbase webhook error');
+      return reply.status(500).send('Webhook processing failed');
     }
   });
 };
 
-async function handleOrderApproved(resource: { id: string }) {
-  logger.info({ orderId: resource.id }, 'PayPal order approved');
-  // Order approved - user will be redirected to capture endpoint
+/**
+ * Handle charge:pending - Payment detected but not confirmed
+ */
+async function handleChargePending(event: CoinbaseWebhookEvent): Promise<void> {
+  const { id: chargeId, metadata } = event.data;
+
+  logger.info({ chargeId, userId: metadata.user_id }, 'Charge pending');
+
+  // Update transaction status to PROCESSING
+  await prisma.transaction.updateMany({
+    where: { coinbase_charge_id: chargeId, status: 'PENDING' },
+    data: { status: 'PROCESSING' },
+  });
 }
 
-async function handleCaptureCompleted(resource: { id: string; custom_id?: string }) {
-  const customId = resource.custom_id; // Our idempotency key
+/**
+ * Handle charge:confirmed - Payment confirmed on blockchain
+ */
+async function handleChargeConfirmed(event: CoinbaseWebhookEvent): Promise<void> {
+  const { id: chargeId, metadata, payments, pricing } = event.data;
+  const userId = metadata.user_id;
+  const goldAmount = parseInt(metadata.gold_amount, 10);
+  const discordUsername = metadata.discord_username;
 
-  if (!customId) {
-    logger.warn({ resource }, 'Capture completed without custom_id');
-    return;
-  }
+  // Get payment details
+  const payment = payments?.[0];
+  const cryptoCurrency = payment?.value?.crypto?.currency || payment?.network;
+  const transactionHash = payment?.transaction_id;
+  const amountUsd = pricing.local.amount;
 
   await prisma.$transaction(async (tx) => {
-    const transaction = await tx.transaction.findUnique({
-      where: { idempotency_key: customId },
+    const transaction = await tx.transaction.findFirst({
+      where: { coinbase_charge_id: chargeId },
     });
 
-    if (!transaction || transaction.status !== 'PENDING') {
-      return; // Already processed or not found
+    if (!transaction) {
+      logger.warn({ chargeId }, 'Transaction not found for confirmed charge');
+      return;
+    }
+
+    if (transaction.status === 'COMPLETED') {
+      logger.info({ chargeId }, 'Transaction already completed');
+      return;
     }
 
     // Update transaction
@@ -108,82 +130,58 @@ async function handleCaptureCompleted(resource: { id: string; custom_id?: string
       where: { id: transaction.id },
       data: {
         status: 'COMPLETED',
-        paypal_transaction_id: resource.id,
+        crypto_currency: cryptoCurrency,
+        transaction_hash: transactionHash,
         completed_at: new Date(),
       },
     });
 
     // Credit user's gold balance
     await tx.user.update({
-      where: { id: transaction.user_id },
-      data: { gold_balance: { increment: transaction.gold_amount } },
+      where: { id: userId },
+      data: { gold_balance: { increment: goldAmount } },
     });
 
     logger.info(
-      { transactionId: transaction.id, userId: transaction.user_id, goldAmount: Number(transaction.gold_amount) },
+      { transactionId: transaction.id, userId, goldAmount },
       'Deposit completed via webhook'
     );
   });
+
+  // Send Discord notification
+  await sendPaymentConfirmed({
+    discordUsername,
+    goldAmount,
+    amountUsd,
+    cryptoCurrency,
+    transactionHash,
+  });
 }
 
-async function handleCaptureFailed(resource: { id: string; custom_id?: string }) {
-  const customId = resource.custom_id;
-
-  if (!customId) return;
+/**
+ * Handle charge:failed - Payment failed or expired
+ */
+async function handleChargeFailed(event: CoinbaseWebhookEvent): Promise<void> {
+  const { id: chargeId, metadata } = event.data;
+  const discordUsername = metadata.discord_username;
+  const goldAmount = parseInt(metadata.gold_amount, 10);
 
   await prisma.transaction.updateMany({
-    where: { idempotency_key: customId, status: 'PENDING' },
+    where: { coinbase_charge_id: chargeId, status: { in: ['PENDING', 'PROCESSING'] } },
     data: {
       status: 'FAILED',
-      error_message: 'Payment capture failed',
+      error_message: 'Payment failed or expired',
     },
   });
 
-  logger.warn({ customId }, 'Payment capture failed');
-}
+  logger.warn({ chargeId }, 'Charge failed');
 
-async function handlePayoutSucceeded(resource: { sender_item_id: string }) {
-  const transactionId = resource.sender_item_id;
-
-  await prisma.transaction.update({
-    where: { id: transactionId },
-    data: {
-      status: 'COMPLETED',
-      completed_at: new Date(),
-    },
+  // Send Discord notification
+  await sendPaymentFailed({
+    discordUsername,
+    goldAmount,
+    reason: 'Payment failed or expired',
   });
-
-  logger.info({ transactionId }, 'Payout succeeded');
-}
-
-async function handlePayoutFailed(resource: { sender_item_id: string; payout_item_id: string; error?: { message?: string } }) {
-  const transactionId = resource.sender_item_id;
-
-  // Refund the user's balance
-  const transaction = await prisma.transaction.findUnique({
-    where: { id: transactionId },
-  });
-
-  if (!transaction) return;
-
-  await prisma.$transaction(async (tx) => {
-    // Refund balance
-    await tx.user.update({
-      where: { id: transaction.user_id },
-      data: { gold_balance: { increment: Math.abs(Number(transaction.gold_amount)) } },
-    });
-
-    // Update transaction
-    await tx.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: 'FAILED',
-        error_message: resource.error?.message || 'Payout failed',
-      },
-    });
-  });
-
-  logger.warn({ transactionId, error: resource.error }, 'Payout failed');
 }
 
 export default webhookRoutes;

@@ -1,14 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle } from 'lucide-react';
 
 export function Wallet() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositCurrency, setDepositCurrency] = useState<'EUR' | 'SEK' | 'USD'>('EUR');
+  const [depositCurrency, setDepositCurrency] = useState<'EUR' | 'SEK' | 'USD'>('USD');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  // Handle redirect from Coinbase
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status === 'success') {
+      setStatusMessage({
+        type: 'info',
+        message: 'Payment initiated! Your gold will be credited once the blockchain confirms the transaction.',
+      });
+      setSearchParams({});
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'transactions'] });
+    } else if (status === 'cancelled') {
+      setStatusMessage({
+        type: 'error',
+        message: 'Payment was cancelled.',
+      });
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, queryClient]);
 
   const { data: walletData, isLoading } = useQuery({
     queryKey: ['wallet', 'balance'],
@@ -43,8 +66,14 @@ export function Wallet() {
       return res.data;
     },
     onSuccess: (data) => {
-      // Redirect to PayPal
-      window.location.href = data.approve_url;
+      // Redirect to Coinbase Commerce checkout
+      window.location.href = data.checkout_url;
+    },
+    onError: () => {
+      setStatusMessage({
+        type: 'error',
+        message: 'Failed to create payment. Please try again.',
+      });
     },
   });
 
@@ -55,10 +84,20 @@ export function Wallet() {
       });
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setWithdrawAmount('');
+      setStatusMessage({
+        type: 'success',
+        message: `Withdrawal request submitted! $${data.real_amount.toFixed(2)} USD will be sent to your wallet address.`,
+      });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['user', 'transactions'] });
+    },
+    onError: (error: any) => {
+      setStatusMessage({
+        type: 'error',
+        message: error.response?.data?.message || 'Withdrawal failed. Make sure you have a wallet address configured in your profile.',
+      });
     },
   });
 
@@ -66,8 +105,8 @@ export function Wallet() {
     ? Math.floor(parseFloat(depositAmount) * exchangeRates[depositCurrency])
     : 0;
 
-  const euroPreview = exchangeRates && withdrawAmount
-    ? parseInt(withdrawAmount) / exchangeRates.EUR
+  const usdPreview = exchangeRates && withdrawAmount
+    ? parseInt(withdrawAmount) / exchangeRates.USD
     : 0;
 
   if (isLoading) {
@@ -81,6 +120,34 @@ export function Wallet() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Wallet</h1>
+
+      {/* Status message */}
+      {statusMessage && (
+        <div
+          className={`flex items-center space-x-3 p-4 rounded-lg ${
+            statusMessage.type === 'success'
+              ? 'bg-green-500/20 text-green-400'
+              : statusMessage.type === 'error'
+              ? 'bg-red-500/20 text-red-400'
+              : 'bg-blue-500/20 text-blue-400'
+          }`}
+        >
+          {statusMessage.type === 'success' ? (
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+          ) : statusMessage.type === 'error' ? (
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          ) : (
+            <Bitcoin className="h-5 w-5 flex-shrink-0" />
+          )}
+          <span>{statusMessage.message}</span>
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="ml-auto text-current hover:opacity-70"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Balance overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -152,12 +219,15 @@ export function Wallet() {
             <button
               onClick={() => depositMutation.mutate()}
               disabled={!depositAmount || parseFloat(depositAmount) < 5 || depositMutation.isPending}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition-colors"
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
-              {depositMutation.isPending ? 'Processing...' : 'Deposit with PayPal'}
+              <Bitcoin className="h-4 w-4" />
+              <span>{depositMutation.isPending ? 'Processing...' : 'Deposit with Crypto'}</span>
             </button>
 
-            <p className="text-gray-500 text-xs text-center">Minimum deposit: 5 EUR</p>
+            <p className="text-gray-500 text-xs text-center">
+              Minimum deposit: $5 USD | Accepts BTC, ETH, USDC, and more
+            </p>
           </div>
         </div>
 
@@ -181,9 +251,9 @@ export function Wallet() {
               />
             </div>
 
-            {euroPreview > 0 && (
+            {usdPreview > 0 && (
               <p className="text-gray-400 text-sm">
-                You will receive: <span className="text-green-500 font-semibold">{euroPreview.toFixed(2)} EUR</span>
+                You will receive: <span className="text-green-500 font-semibold">${usdPreview.toFixed(2)} USD</span>
               </p>
             )}
 
@@ -191,17 +261,20 @@ export function Wallet() {
               onClick={() => withdrawMutation.mutate()}
               disabled={
                 !withdrawAmount ||
-                parseInt(withdrawAmount) < 5000 ||
+                parseInt(withdrawAmount) < 9000 ||
                 parseInt(withdrawAmount) > (walletData?.available_balance || 0) ||
                 withdrawMutation.isPending
               }
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition-colors"
+              className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition-colors"
             >
-              {withdrawMutation.isPending ? 'Processing...' : 'Withdraw to PayPal'}
+              {withdrawMutation.isPending ? 'Processing...' : 'Request Withdrawal'}
             </button>
 
             <p className="text-gray-500 text-xs text-center">
-              Minimum: 5,000g | Max: {formatGold(walletData?.available_balance || 0)}
+              Minimum: $10 USD (~9,000g) | Max: {formatGold(walletData?.available_balance || 0)}
+            </p>
+            <p className="text-gray-500 text-xs text-center">
+              Requires wallet address in Profile | Manual processing (24-48h)
             </p>
           </div>
         </div>

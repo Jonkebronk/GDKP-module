@@ -13,15 +13,15 @@ datasource db {
 // ============================================
 
 model User {
-  id               String   @id @default(uuid()) @db.Uuid
-  discord_id       String   @unique
-  discord_username String
-  discord_avatar   String?
-  paypal_email     String?
-  gold_balance     Decimal  @default(0) @db.Decimal(15, 2)
-  role             UserRole @default(USER)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id                    String   @id @default(uuid()) @db.Uuid
+  discord_id            String   @unique
+  discord_username      String
+  discord_avatar        String?
+  crypto_wallet_address String?  @db.VarChar(255) // User's crypto wallet for withdrawals
+  gold_balance          Decimal  @default(0) @db.Decimal(15, 2)
+  role                  UserRole @default(USER)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
   // Relations
   raids_led      Raid[]            @relation("RaidLeader")
@@ -162,21 +162,23 @@ model Bid {
 // ============================================
 
 model Transaction {
-  id                    String            @id @default(uuid()) @db.Uuid
-  user_id               String            @db.Uuid
-  type                  TransactionType
-  gold_amount           Decimal           @db.Decimal(15, 2)
-  real_amount           Decimal?          @db.Decimal(10, 2)
-  currency              String?           @db.VarChar(3)
-  exchange_rate         Decimal?          @db.Decimal(10, 6)
-  paypal_transaction_id String?           @db.VarChar(255)
-  paypal_order_id       String?           @db.VarChar(255)
-  status                TransactionStatus @default(PENDING)
-  idempotency_key       String?           @unique @db.VarChar(255)
-  metadata              Json?             @db.JsonB
-  created_at            DateTime          @default(now())
-  completed_at          DateTime?
-  error_message         String?
+  id                   String            @id @default(uuid()) @db.Uuid
+  user_id              String            @db.Uuid
+  type                 TransactionType
+  gold_amount          Decimal           @db.Decimal(15, 2)
+  real_amount          Decimal?          @db.Decimal(10, 2)
+  currency             String?           @db.VarChar(10) // USD, BTC, ETH, etc.
+  exchange_rate        Decimal?          @db.Decimal(10, 6)
+  coinbase_charge_id   String?           @db.VarChar(255)
+  coinbase_charge_code String?           @db.VarChar(50)
+  crypto_currency      String?           @db.VarChar(20) // BTC, ETH, USDC, etc.
+  transaction_hash     String?           @db.VarChar(255) // Blockchain tx hash
+  status               TransactionStatus @default(PENDING)
+  idempotency_key      String?           @unique @db.VarChar(255)
+  metadata             Json?             @db.JsonB
+  created_at           DateTime          @default(now())
+  completed_at         DateTime?
+  error_message        String?
 
   // Relations
   user User @relation(fields: [user_id], references: [id])
@@ -184,7 +186,7 @@ model Transaction {
   @@index([user_id])
   @@index([type])
   @@index([status])
-  @@index([paypal_order_id])
+  @@index([coinbase_charge_id])
   @@index([idempotency_key])
   @@index([user_id, type])
   @@index([created_at])
@@ -236,9 +238,9 @@ model ChatMessage {
   @@index([raid_id, created_at])
 }
 
-// For PayPal webhook idempotency
+// For Coinbase webhook idempotency
 model WebhookEvent {
-  id           String   @id @db.VarChar(255) // PayPal event ID
+  id           String   @id @db.VarChar(255) // Coinbase event ID
   event_type   String   @db.VarChar(100)
   processed_at DateTime @default(now())
   payload      Json     @db.JsonB

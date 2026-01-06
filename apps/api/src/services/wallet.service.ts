@@ -1,9 +1,9 @@
-import { Prisma } from '@gdkp/prisma-client';
 import { prisma } from '../config/database.js';
-import { env } from '../config/env.js';
 import { AppError, ERROR_CODES } from '@gdkp/shared';
 import { logger } from '../config/logger.js';
 import { nanoid } from 'nanoid';
+import { createCharge } from './coinbase.service.js';
+import { sendWithdrawalRequested } from './discord-notify.service.js';
 
 interface WalletBalance {
   balance: number;
@@ -49,7 +49,7 @@ export class WalletService {
       where: {
         user_id: userId,
         type: 'DEPOSIT',
-        status: 'PENDING',
+        status: { in: ['PENDING', 'PROCESSING'] },
       },
     });
 
@@ -96,17 +96,39 @@ export class WalletService {
   }
 
   /**
-   * Create a deposit order
+   * Create a deposit via Coinbase Commerce
    */
   async createDeposit(
     userId: string,
     amount: number,
     currency: 'SEK' | 'EUR' | 'USD'
   ) {
+    // Get user for Discord username
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { discord_username: true },
+    });
+
+    if (!user) {
+      throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
     const rates = await this.getExchangeRates();
     const exchangeRate = rates[currency];
     const goldAmount = Math.floor(amount * exchangeRate);
+
+    // Convert to USD for Coinbase (they use USD as base)
+    const usdAmount = currency === 'USD' ? amount : amount * (rates.USD / rates[currency]);
     const idempotencyKey = `deposit-${userId}-${nanoid()}`;
+
+    // Create Coinbase charge
+    const charge = await createCharge({
+      userId,
+      discordUsername: user.discord_username,
+      goldAmount,
+      priceUsd: Math.round(usdAmount * 100) / 100, // Round to 2 decimals
+      description: `${goldAmount.toLocaleString()}g for GDKP auctions`,
+    });
 
     // Create pending transaction
     const transaction = await prisma.transaction.create({
@@ -119,24 +141,19 @@ export class WalletService {
         exchange_rate: exchangeRate,
         status: 'PENDING',
         idempotency_key: idempotencyKey,
+        coinbase_charge_id: charge.data.id,
+        coinbase_charge_code: charge.data.code,
       },
     });
 
-    // TODO: Integrate with PayPal to create order
-    // For now, return mock data
-    const mockOrderId = `PAYPAL-${nanoid()}`;
-
-    // Update transaction with PayPal order ID
-    await prisma.transaction.update({
-      where: { id: transaction.id },
-      data: { paypal_order_id: mockOrderId },
-    });
-
-    logger.info({ userId, amount, currency, goldAmount, orderId: mockOrderId }, 'Deposit order created');
+    logger.info(
+      { userId, amount, currency, goldAmount, chargeId: charge.data.id },
+      'Deposit order created via Coinbase'
+    );
 
     return {
-      order_id: mockOrderId,
-      approve_url: `https://www.sandbox.paypal.com/checkoutnow?token=${mockOrderId}`,
+      checkout_url: charge.data.hosted_url,
+      charge_id: charge.data.id,
       gold_amount: goldAmount,
       exchange_rate: exchangeRate,
       transaction_id: transaction.id,
@@ -144,69 +161,22 @@ export class WalletService {
   }
 
   /**
-   * Capture a deposit after PayPal approval
-   */
-  async captureDeposit(userId: string, orderId: string) {
-    // Find the pending transaction
-    const transaction = await prisma.transaction.findFirst({
-      where: {
-        user_id: userId,
-        paypal_order_id: orderId,
-        type: 'DEPOSIT',
-        status: 'PENDING',
-      },
-    });
-
-    if (!transaction) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, 'Deposit not found', 404);
-    }
-
-    // TODO: Verify with PayPal that the order was captured
-    // For now, simulate success
-
-    return await prisma.$transaction(async (tx) => {
-      // Update user balance
-      await tx.user.update({
-        where: { id: userId },
-        data: { gold_balance: { increment: transaction.gold_amount } },
-      });
-
-      // Update transaction
-      const updated = await tx.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          status: 'COMPLETED',
-          completed_at: new Date(),
-          paypal_transaction_id: `CAPTURE-${nanoid()}`,
-        },
-      });
-
-      logger.info({ userId, goldAmount: Number(transaction.gold_amount) }, 'Deposit completed');
-
-      return {
-        success: true,
-        gold_amount: Number(updated.gold_amount),
-        new_balance: 0, // Will be updated client-side
-      };
-    });
-  }
-
-  /**
    * Create a withdrawal request
+   * Withdrawals are manual - admin receives Discord notification and sends crypto manually
    */
   async createWithdrawal(userId: string, goldAmount: number) {
-    // Get user and verify balance
+    // Get user and verify balance + wallet address
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { gold_balance: true, paypal_email: true },
+      select: { gold_balance: true, crypto_wallet_address: true, discord_username: true },
     });
 
     if (!user) {
       throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
-    if (!user.paypal_email) {
-      throw new AppError(ERROR_CODES.USER_NO_PAYPAL, 'PayPal email not configured', 400);
+    if (!user.crypto_wallet_address) {
+      throw new AppError(ERROR_CODES.USER_NO_WALLET, 'Crypto wallet address not configured. Please set it in your profile.', 400);
     }
 
     // Check for pending withdrawals
@@ -239,19 +209,19 @@ export class WalletService {
       throw new AppError(ERROR_CODES.WALLET_INSUFFICIENT_BALANCE, 'Insufficient balance', 400);
     }
 
-    // Get exchange rate and calculate real amount
+    // Get exchange rate and calculate USD amount
     const rates = await this.getExchangeRates();
-    const exchangeRate = rates.EUR;
+    const exchangeRate = rates.USD;
     const realAmount = goldAmount / exchangeRate;
 
-    // Minimum withdrawal check
+    // Minimum withdrawal check (10 USD)
     if (realAmount < 10) {
-      throw new AppError(ERROR_CODES.WALLET_MINIMUM_WITHDRAWAL, 'Minimum withdrawal is 10 EUR', 400);
+      throw new AppError(ERROR_CODES.WALLET_MINIMUM_WITHDRAWAL, 'Minimum withdrawal is $10 USD', 400);
     }
 
     const idempotencyKey = `withdrawal-${userId}-${nanoid()}`;
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Deduct balance immediately
       await tx.user.update({
         where: { id: userId },
@@ -265,25 +235,40 @@ export class WalletService {
           type: 'WITHDRAWAL',
           gold_amount: -goldAmount,
           real_amount: realAmount,
-          currency: 'EUR',
+          currency: 'USD',
           exchange_rate: exchangeRate,
           status: 'PROCESSING',
           idempotency_key: idempotencyKey,
+          metadata: {
+            wallet_address: user.crypto_wallet_address,
+          },
         },
       });
 
-      // TODO: Create PayPal payout
-      // For now, log and return
-
-      logger.info({ userId, goldAmount, realAmount, transactionId: transaction.id }, 'Withdrawal initiated');
+      logger.info(
+        { userId, goldAmount, realAmount, transactionId: transaction.id },
+        'Withdrawal initiated'
+      );
 
       return {
         transaction_id: transaction.id,
         gold_amount: goldAmount,
         real_amount: realAmount,
-        currency: 'EUR',
+        currency: 'USD',
         status: transaction.status,
+        wallet_address: user.crypto_wallet_address,
       };
     });
+
+    // Send Discord notification to admin
+    await sendWithdrawalRequested({
+      discordUsername: user.discord_username,
+      goldAmount,
+      amountUsd: realAmount,
+      walletAddress: user.crypto_wallet_address!,
+      userId,
+    });
+
+    return result;
   }
 }

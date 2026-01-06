@@ -15,11 +15,12 @@ const envSchema = z.object({
   DISCORD_CLIENT_SECRET: z.string(),
   DISCORD_CALLBACK_URL: z.string(),
 
-  // PayPal
-  PAYPAL_CLIENT_ID: z.string(),
-  PAYPAL_CLIENT_SECRET: z.string(),
-  PAYPAL_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
-  PAYPAL_WEBHOOK_ID: z.string().optional(),
+  // Coinbase Commerce
+  COINBASE_API_KEY: z.string(),
+  COINBASE_WEBHOOK_SECRET: z.string(),
+
+  // Discord Notifications
+  DISCORD_WEBHOOK_URL: z.string().optional(),
 
   // JWT
   JWT_SECRET: z.string().min(32),

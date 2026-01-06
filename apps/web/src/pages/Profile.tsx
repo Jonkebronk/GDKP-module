@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-import { User, Mail, Check, X } from 'lucide-react';
+import { User, Wallet, Check, X, AlertCircle } from 'lucide-react';
 
 export function Profile() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const [paypalEmail, setPaypalEmail] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState('');
 
   const { data: profile } = useQuery({
     queryKey: ['user', 'profile'],
@@ -19,23 +20,34 @@ export function Profile() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (email: string | null) => {
-      const res = await api.patch('/users/me', { paypal_email: email });
+    mutationFn: async (address: string | null) => {
+      const res = await api.patch('/users/me', { crypto_wallet_address: address });
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
       setIsEditing(false);
+      setError('');
+    },
+    onError: () => {
+      setError('Failed to update wallet address. Please try again.');
     },
   });
 
   const startEditing = () => {
-    setPaypalEmail(profile?.paypal_email || '');
+    setWalletAddress(profile?.crypto_wallet_address || '');
     setIsEditing(true);
+    setError('');
   };
 
-  const savePaypal = () => {
-    updateMutation.mutate(paypalEmail || null);
+  const saveWallet = () => {
+    // Basic validation for common crypto address formats
+    const trimmed = walletAddress.trim();
+    if (trimmed && trimmed.length < 26) {
+      setError('Invalid wallet address format');
+      return;
+    }
+    updateMutation.mutate(trimmed || null);
   };
 
   return (
@@ -92,29 +104,39 @@ export function Profile() {
         </div>
       </div>
 
-      {/* PayPal settings */}
+      {/* Crypto Wallet settings */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-          <Mail className="h-5 w-5" />
-          <span>PayPal Settings</span>
+          <Wallet className="h-5 w-5" />
+          <span>Crypto Wallet</span>
         </h3>
 
         <p className="text-gray-400 text-sm mb-4">
-          Connect your PayPal email to enable withdrawals. Deposits work without linking PayPal.
+          Add your crypto wallet address to receive withdrawals. We support BTC, ETH, USDC, and other major cryptocurrencies.
         </p>
+
+        {error && (
+          <div className="flex items-center space-x-2 text-red-400 text-sm mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {isEditing ? (
           <div className="space-y-4">
             <input
-              type="email"
-              value={paypalEmail}
-              onChange={(e) => setPaypalEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+              type="text"
+              value={walletAddress}
+              onChange={(e) => setWalletAddress(e.target.value)}
+              placeholder="Enter your wallet address (BTC, ETH, USDC, etc.)"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
+            <p className="text-gray-500 text-xs">
+              Make sure to double-check your wallet address. Incorrect addresses cannot be recovered.
+            </p>
             <div className="flex space-x-2">
               <button
-                onClick={savePaypal}
+                onClick={saveWallet}
                 disabled={updateMutation.isPending}
                 className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
@@ -132,21 +154,23 @@ export function Profile() {
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <div>
-              {profile?.paypal_email ? (
+            <div className="overflow-hidden">
+              {profile?.crypto_wallet_address ? (
                 <div className="flex items-center space-x-2">
-                  <Check className="h-5 w-5 text-green-500" />
-                  <span className="text-white">{profile.paypal_email}</span>
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-white font-mono text-sm truncate" title={profile.crypto_wallet_address}>
+                    {profile.crypto_wallet_address}
+                  </span>
                 </div>
               ) : (
-                <span className="text-gray-500">No PayPal email linked</span>
+                <span className="text-gray-500">No wallet address configured</span>
               )}
             </div>
             <button
               onClick={startEditing}
-              className="text-gold-500 hover:text-gold-400 text-sm"
+              className="text-gold-500 hover:text-gold-400 text-sm flex-shrink-0 ml-4"
             >
-              {profile?.paypal_email ? 'Edit' : 'Add PayPal'}
+              {profile?.crypto_wallet_address ? 'Edit' : 'Add Wallet'}
             </button>
           </div>
         )}

@@ -119,7 +119,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         discord_username: true,
         discord_avatar: true,
         gold_balance: true,
-        paypal_email: true,
+        crypto_wallet_address: true,
         role: true,
         created_at: true,
       },
@@ -132,7 +132,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       ...user,
       gold_balance: Number(user.gold_balance),
-      has_paypal: !!user.paypal_email,
+      has_wallet: !!user.crypto_wallet_address,
     };
   });
 
