@@ -408,6 +408,99 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
 
     return result;
   });
+
+  // Get raid summary (for completed raids - export/history)
+  fastify.get('/:id/summary', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+      include: {
+        leader: {
+          select: { id: true, discord_username: true, alias: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, discord_username: true, alias: true },
+            },
+          },
+        },
+        items: {
+          where: { status: 'COMPLETED' },
+          include: {
+            winner: {
+              select: { id: true, discord_username: true, alias: true },
+            },
+          },
+          orderBy: { completed_at: 'asc' },
+        },
+      },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    // Parse split config
+    const splitConfig = raid.split_config as { leader_cut_percent?: number } | null;
+    const leaderCutPercent = splitConfig?.leader_cut_percent ?? 15;
+    const potTotal = Number(raid.pot_total);
+    const leaderCutAmount = Math.floor(potTotal * (leaderCutPercent / 100));
+    const distributedAmount = potTotal - leaderCutAmount;
+
+    // Calculate participant shares (excluding leader cut, then equal split)
+    const participantCount = raid.participants.length;
+    const sharePerMember = participantCount > 0 ? Math.floor(distributedAmount / participantCount) : 0;
+
+    // Get display name helper
+    const getDisplayName = (user: { alias: string | null; discord_username: string }) =>
+      user.alias || user.discord_username;
+
+    // Build participants with payouts
+    const participants = raid.participants.map((p) => {
+      const isLeader = p.role === 'LEADER';
+      const basePayout = sharePerMember;
+      const leaderBonus = isLeader ? leaderCutAmount : 0;
+      const totalPayout = basePayout + leaderBonus;
+      const sharePercentage = potTotal > 0 ? (totalPayout / potTotal) * 100 : 0;
+
+      return {
+        user_id: p.user.id,
+        display_name: getDisplayName(p.user),
+        role: p.role,
+        payout_amount: p.payout_amount ? Number(p.payout_amount) : totalPayout,
+        share_percentage: sharePercentage,
+      };
+    });
+
+    // Build items sold
+    const items = raid.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      icon_url: item.icon_url,
+      winner_name: item.winner ? getDisplayName(item.winner) : 'No winner',
+      final_bid: Number(item.current_bid),
+      quality: 4, // Default to epic, could be stored in DB
+    }));
+
+    return {
+      raid_id: raid.id,
+      raid_name: raid.name,
+      instance: raid.instance,
+      status: raid.status,
+      leader_name: getDisplayName(raid.leader),
+      pot_total: potTotal,
+      leader_cut_percent: leaderCutPercent,
+      leader_cut_amount: leaderCutAmount,
+      distributed_amount: distributedAmount,
+      participant_count: participantCount,
+      participants,
+      items,
+      started_at: raid.started_at?.toISOString() || null,
+      completed_at: raid.ended_at?.toISOString() || new Date().toISOString(),
+    };
+  });
 };
 
 export default raidRoutes;

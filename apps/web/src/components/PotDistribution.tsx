@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Coins, Users, Crown, AlertTriangle, Check, X } from 'lucide-react';
+import { Coins, Users, Crown, AlertTriangle, Check, X, FileText } from 'lucide-react';
 import { SimpleUserDisplay } from './UserDisplay';
+import { RaidSummary } from './RaidSummary';
 
 interface ParticipantShare {
   user_id: string;
@@ -43,6 +44,7 @@ export function PotDistribution({
   const [showConfirmDistribute, setShowConfirmDistribute] = useState(false);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showSummary, setShowSummary] = useState(false);
 
   const { data: preview, isLoading } = useQuery<DistributionPreview>({
     queryKey: ['raid', raidId, 'distribution-preview'],
@@ -50,8 +52,18 @@ export function PotDistribution({
       const res = await api.get(`/raids/${raidId}/distribution-preview`);
       return res.data;
     },
-    enabled: !!raidId && isLeader,
+    enabled: !!raidId && isLeader && raidStatus !== 'COMPLETED' && raidStatus !== 'CANCELLED',
     refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: summaryData } = useQuery<any>({
+    queryKey: ['raid', raidId, 'summary'],
+    queryFn: async () => {
+      const res = await api.get(`/raids/${raidId}/summary`);
+      return res.data;
+    },
+    enabled: !!raidId && (raidStatus === 'COMPLETED' || showSummary),
   });
 
   const distributeMutation = useMutation({
@@ -87,12 +99,26 @@ export function PotDistribution({
 
   if (raidStatus === 'COMPLETED') {
     return (
-      <div className="wow-tooltip wow-border-common">
-        <div className="p-4 flex items-center space-x-2 text-green-400">
-          <Check className="h-5 w-5" />
-          <span className="font-medium">Pot has been distributed</span>
+      <>
+        <div className="wow-tooltip wow-border-common">
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-green-400">
+              <Check className="h-5 w-5" />
+              <span className="font-medium">Pot has been distributed</span>
+            </div>
+            <button
+              onClick={() => setShowSummary(true)}
+              className="flex items-center space-x-1 bg-amber-500 hover:bg-amber-600 text-black font-medium px-3 py-1.5 rounded text-sm transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+              <span>View Summary</span>
+            </button>
+          </div>
         </div>
-      </div>
+        {showSummary && summaryData && (
+          <RaidSummary data={summaryData} onClose={() => setShowSummary(false)} />
+        )}
+      </>
     );
   }
 
