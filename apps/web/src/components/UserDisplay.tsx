@@ -66,21 +66,12 @@ export function UserDisplay({
       onMouseLeave={() => setShowTooltip(false)}
     >
       {showAvatar && (
-        avatar ? (
-          <img
-            src={avatar}
-            alt={displayName}
-            className="rounded-full"
-            style={{ width: avatarSize, height: avatarSize }}
-          />
-        ) : (
-          <div
-            className="rounded-full bg-gray-600 flex items-center justify-center text-gray-400"
-            style={{ width: avatarSize, height: avatarSize }}
-          >
-            {displayName.charAt(0).toUpperCase()}
-          </div>
-        )
+        <img
+          src="/anonymous-avatar.png"
+          alt={displayName}
+          className="rounded-full object-cover"
+          style={{ width: avatarSize, height: avatarSize }}
+        />
       )}
 
       <span className={canShowTooltip ? 'cursor-help border-b border-dotted border-gray-500' : ''}>

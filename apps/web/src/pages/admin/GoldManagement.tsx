@@ -125,19 +125,11 @@ export function GoldManagement() {
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      {user.discord_avatar ? (
-                        <img
-                          src={`https://cdn.discordapp.com/avatars/${user.id.split('-')[0]}/${user.discord_avatar}.png`}
-                          alt=""
-                          className="w-8 h-8 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
-                          <span className="text-gray-400 text-sm">
-                            {getDisplayName(user)[0].toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      <img
+                        src="/anonymous-avatar.png"
+                        alt=""
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
                       <div className="text-left">
                         <p className="text-white font-medium">{getDisplayName(user)}</p>
                         {user.alias && (

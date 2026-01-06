@@ -113,17 +113,11 @@ export function MainLayout() {
 
               {/* User avatar */}
               <div className="flex items-center space-x-2">
-                {user?.discord_avatar ? (
-                  <img
-                    src={user.discord_avatar}
-                    alt={user ? getDisplayName(user) : ''}
-                    className="h-8 w-8 rounded-full"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-gray-600 flex items-center justify-center">
-                    <User className="h-4 w-4 text-gray-400" />
-                  </div>
-                )}
+                <img
+                  src="/anonymous-avatar.png"
+                  alt={user ? getDisplayName(user) : ''}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
                 <span className="hidden sm:inline text-sm text-gray-300">
                   {user ? getDisplayName(user) : ''}
                 </span>
