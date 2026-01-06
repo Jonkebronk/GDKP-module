@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle } from 'lucide-react';
+import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 
 export function Wallet() {
   const queryClient = useQueryClient();
@@ -109,6 +109,21 @@ export function Wallet() {
     ? parseInt(withdrawAmount) / exchangeRates.USD
     : 0;
 
+  // Format time since last update
+  const getTimeSinceUpdate = () => {
+    if (!exchangeRates?.updated_at) return null;
+    const updated = new Date(exchangeRates.updated_at);
+    const now = new Date();
+    const diffMs = now.getTime() - updated.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return updated.toLocaleDateString();
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -177,6 +192,37 @@ export function Wallet() {
           </p>
         </div>
       </div>
+
+      {/* Live Exchange Rates */}
+      {exchangeRates && (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+              <span className="text-gray-400 text-sm font-medium">Live Rates from G2G</span>
+            </div>
+            <div className="flex items-center space-x-6 text-sm">
+              <div>
+                <span className="text-gray-500">1 SEK = </span>
+                <span className="text-gold-500 font-semibold">{exchangeRates.SEK?.toFixed(1) || '—'}g</span>
+              </div>
+              <div>
+                <span className="text-gray-500">1 EUR = </span>
+                <span className="text-gold-500 font-semibold">{exchangeRates.EUR?.toFixed(1) || '—'}g</span>
+              </div>
+              <div>
+                <span className="text-gray-500">1 USD = </span>
+                <span className="text-gold-500 font-semibold">{exchangeRates.USD?.toFixed(1) || '—'}g</span>
+              </div>
+              {getTimeSinceUpdate() && (
+                <div className="text-gray-500 text-xs">
+                  Updated: {getTimeSinceUpdate()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Deposit */}
