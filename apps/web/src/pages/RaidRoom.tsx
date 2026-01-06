@@ -6,7 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play } from 'lucide-react';
+import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play, Rocket } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -50,6 +50,16 @@ export function RaidRoom() {
       auctionFeedRef.current.scrollTop = auctionFeedRef.current.scrollHeight;
     }
   }, [auctionEvents]);
+
+  // Start raid mutation
+  const startRaidMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/raids/${id}/start`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+    },
+  });
 
   // Delete item mutation
   const deleteItemMutation = useMutation({
@@ -104,8 +114,37 @@ export function RaidRoom() {
   // Get item quality for styling
   const getItemQuality = (item: any) => item.quality || 4; // Default to epic
 
+  const isPending = raid.status === 'PENDING';
+
   return (
     <div className="space-y-6">
+      {/* Start Raid Banner - Show when raid is PENDING */}
+      {isPending && isLeader && (
+        <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Rocket className="h-6 w-6 text-amber-500" />
+            <div>
+              <p className="text-amber-400 font-medium">Raid not started yet</p>
+              <p className="text-amber-400/70 text-sm">Start the raid to begin auctioning items</p>
+            </div>
+          </div>
+          <button
+            onClick={() => startRaidMutation.mutate()}
+            disabled={startRaidMutation.isPending}
+            className="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-black font-semibold px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            {startRaidMutation.isPending ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-black"></div>
+            ) : (
+              <>
+                <Rocket className="h-5 w-5" />
+                <span>Start Raid</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
