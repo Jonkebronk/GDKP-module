@@ -385,17 +385,9 @@ function ItemCard({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number 
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors group relative">
-      <div className="flex items-start space-x-3">
-        {/* Item icon placeholder */}
-        <div
-          className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center flex-shrink-0"
-          style={{ borderColor: qualityColor, borderWidth: 2 }}
-        >
-          <Package className="h-5 w-5 text-gray-500" />
-        </div>
-
+      <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          {/* Item name with WoWhead tooltip */}
+          {/* Item name with WoWhead tooltip and icon */}
           <a
             href={getWowheadItemUrl(item.wowhead_id)}
             data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
@@ -417,7 +409,7 @@ function ItemCard({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number 
         {/* Edit button */}
         <button
           onClick={onEdit}
-          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all ml-2"
           title="Edit item"
         >
           <Pencil className="h-4 w-4" />
