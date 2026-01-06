@@ -58,6 +58,13 @@ export const ITEM_SLOTS = [
   'Two-Hand',
   'Ranged',
   'Relic',
+  // Recipes & Patterns
+  'Pattern',
+  'Formula',
+  'Schematic',
+  'Recipe',
+  'Plans',
+  'Design',
 ] as const;
 
 export type ItemSlot = (typeof ITEM_SLOTS)[number];
