@@ -386,21 +386,13 @@ function ItemCard({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number 
   return (
     <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors group relative">
       <div className="flex items-start space-x-3">
-        {/* Item icon */}
-        <a
-          href={getWowheadItemUrl(item.wowhead_id)}
-          data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-shrink-0"
+        {/* Item icon placeholder */}
+        <div
+          className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center flex-shrink-0"
+          style={{ borderColor: qualityColor, borderWidth: 2 }}
         >
-          <img
-            src={`https://wow.zamimg.com/images/wow/icons/medium/${item.icon || 'inv_misc_questionmark'}.jpg`}
-            alt={item.name}
-            className="w-10 h-10 rounded"
-            style={{ borderColor: qualityColor, borderWidth: 2, borderStyle: 'solid' }}
-          />
-        </a>
+          <Package className="h-5 w-5 text-gray-500" />
+        </div>
 
         <div className="flex-1 min-w-0">
           {/* Item name with WoWhead tooltip */}
