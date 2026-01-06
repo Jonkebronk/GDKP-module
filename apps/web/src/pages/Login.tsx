@@ -78,7 +78,7 @@ export function LoginPage() {
 
         {/* Discord Login Button */}
         <a
-          href="/api/auth/discord"
+          href={`${import.meta.env.VITE_API_URL || ''}/api/auth/discord`}
           className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5865F2] hover:bg-[#4752C4] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors"
         >
           <svg
