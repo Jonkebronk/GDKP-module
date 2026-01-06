@@ -6,8 +6,10 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy workspace files
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# Copy workspace config from repo root
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json ./
+
+# Copy package.json files
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
@@ -17,18 +19,17 @@ RUN pnpm install --frozen-lockfile
 # Copy source files
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
-COPY turbo.json ./
 
 # Build packages
 RUN pnpm --filter @gdkp/shared build
 
-# Build args for environment variables
+# Build args for Vite
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN pnpm --filter @gdkp/web build
 
-# Production stage - serve static files with nginx
+# Production stage
 FROM nginx:alpine AS runner
 
 # Copy built files
