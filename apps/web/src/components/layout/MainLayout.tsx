@@ -9,6 +9,7 @@ import {
   LogOut,
   Menu,
   X,
+  Package,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/raids', label: 'Raids', icon: Swords },
+  { path: '/items', label: 'Items', icon: Package },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 

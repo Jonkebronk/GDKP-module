@@ -1,0 +1,555 @@
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { api } from '../api/client';
+import {
+  TBC_RAID_INSTANCES,
+  ITEM_SLOTS,
+  ITEM_QUALITY_COLORS,
+  ITEM_QUALITY_NAMES,
+  getWowheadItemUrl,
+  getItemQualityClass,
+  type TbcRaidItem,
+  type ItemQuality,
+  type ItemSlot,
+} from '@gdkp/shared';
+import {
+  Search,
+  Filter,
+  Upload,
+  ChevronDown,
+  Package,
+  X,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+} from 'lucide-react';
+
+export function Items() {
+  const [selectedInstance, setSelectedInstance] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [selectedQuality, setSelectedQuality] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [page, setPage] = useState(1);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [selectedInstance, selectedSlot, selectedQuality]);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['items', selectedInstance, selectedSlot, selectedQuality, debouncedSearch, page],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedInstance) params.set('raid_instance', selectedInstance);
+      if (selectedSlot) params.set('slot', selectedSlot);
+      if (selectedQuality) params.set('quality', selectedQuality);
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      params.set('page', page.toString());
+      params.set('limit', '50');
+
+      const res = await api.get(`/items?${params}`);
+      return res.data;
+    },
+  });
+
+  // Refresh WoWhead tooltips when items change
+  useEffect(() => {
+    if (data?.items && window.$WowheadPower) {
+      window.$WowheadPower.refreshLinks();
+    }
+  }, [data?.items]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Package className="h-8 w-8 text-gold-500" />
+          <div>
+            <h1 className="text-2xl font-bold text-white">TBC Raid Items</h1>
+            <p className="text-gray-400 text-sm">Browse loot with WoWhead tooltips</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowImportModal(true)}
+          className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          <Upload className="h-5 w-5" />
+          <span>Import Loot</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-gray-800 rounded-lg p-4">
+        <div className="flex items-center space-x-2 mb-4">
+          <Filter className="h-5 w-5 text-gray-400" />
+          <span className="text-gray-400 font-medium">Filters</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search items..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            />
+          </div>
+
+          {/* Instance filter */}
+          <div className="relative">
+            <select
+              value={selectedInstance}
+              onChange={(e) => setSelectedInstance(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+            >
+              <option value="">All Raids</option>
+              {TBC_RAID_INSTANCES.map((inst) => (
+                <option key={inst.id} value={inst.name}>
+                  {inst.name} (P{inst.phase})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Slot filter */}
+          <div className="relative">
+            <select
+              value={selectedSlot}
+              onChange={(e) => setSelectedSlot(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+            >
+              <option value="">All Slots</option>
+              {ITEM_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Quality filter */}
+          <div className="relative">
+            <select
+              value={selectedQuality}
+              onChange={(e) => setSelectedQuality(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+            >
+              <option value="">All Qualities</option>
+              <option value="3">Rare</option>
+              <option value="4">Epic</option>
+              <option value="5">Legendary</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Active filters */}
+        {(selectedInstance || selectedSlot || selectedQuality || debouncedSearch) && (
+          <div className="flex items-center flex-wrap gap-2 mt-4">
+            <span className="text-gray-500 text-sm">Active:</span>
+            {selectedInstance && (
+              <FilterTag label={selectedInstance} onRemove={() => setSelectedInstance('')} />
+            )}
+            {selectedSlot && (
+              <FilterTag label={selectedSlot} onRemove={() => setSelectedSlot('')} />
+            )}
+            {selectedQuality && (
+              <FilterTag
+                label={ITEM_QUALITY_NAMES[parseInt(selectedQuality) as ItemQuality]}
+                onRemove={() => setSelectedQuality('')}
+              />
+            )}
+            {debouncedSearch && (
+              <FilterTag label={`"${debouncedSearch}"`} onRemove={() => setSearchQuery('')} />
+            )}
+            <button
+              onClick={() => {
+                setSelectedInstance('');
+                setSelectedSlot('');
+                setSelectedQuality('');
+                setSearchQuery('');
+              }}
+              className="text-gray-500 hover:text-white text-sm"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Results count */}
+      {data && (
+        <div className="flex items-center justify-between">
+          <p className="text-gray-400">
+            Showing {data.items.length} of {data.total} items
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="text-gray-400 hover:text-white flex items-center space-x-1"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Refresh</span>
+          </button>
+        </div>
+      )}
+
+      {/* Item grid */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="h-8 w-8 text-gold-500 animate-spin" />
+        </div>
+      ) : data?.items?.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {data.items.map((item: TbcRaidItem & { drop_count?: number }) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {data.total_pages > 1 && (
+            <div className="flex items-center justify-center space-x-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700"
+              >
+                Previous
+              </button>
+              <span className="text-gray-400">
+                Page {page} of {data.total_pages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
+                disabled={page === data.total_pages}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-12 bg-gray-800 rounded-lg">
+          <Package className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">No items found</p>
+          <p className="text-gray-500 text-sm mt-1">Try adjusting your filters</p>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} />}
+    </div>
+  );
+}
+
+function FilterTag({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="flex items-center space-x-1 bg-gray-700 text-gray-300 px-2 py-1 rounded text-sm">
+      <span>{label}</span>
+      <button onClick={onRemove} className="hover:text-white">
+        <X className="h-3 w-3" />
+      </button>
+    </span>
+  );
+}
+
+function ItemCard({ item }: { item: TbcRaidItem & { drop_count?: number } }) {
+  const qualityColor = ITEM_QUALITY_COLORS[item.quality as ItemQuality];
+
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+      <div className="flex items-start space-x-3">
+        {/* Item icon placeholder */}
+        <div
+          className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center flex-shrink-0"
+          style={{ borderColor: qualityColor, borderWidth: 2 }}
+        >
+          <Package className="h-5 w-5 text-gray-500" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Item name with WoWhead tooltip */}
+          <a
+            href={getWowheadItemUrl(item.wowhead_id)}
+            data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`font-medium hover:underline block truncate ${getItemQualityClass(item.quality as ItemQuality)}`}
+            style={{ color: qualityColor }}
+          >
+            {item.name}
+          </a>
+
+          {/* Meta info */}
+          <div className="text-gray-500 text-xs mt-1 space-y-0.5">
+            <p>{item.slot || 'Misc'}</p>
+            <p className="truncate">{item.boss_name}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 pt-3 border-t border-gray-700 flex items-center justify-between text-xs">
+        <span className="text-gray-500">{item.raid_instance}</span>
+        {item.drop_count !== undefined && item.drop_count > 0 && (
+          <span className="text-green-500">Dropped {item.drop_count}x</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ImportModal({ onClose }: { onClose: () => void }) {
+  const [importType, setImportType] = useState<'gargul' | 'rclootcouncil'>('gargul');
+  const [importData, setImportData] = useState('');
+  const [result, setResult] = useState<{
+    success: boolean;
+    imported_count: number;
+    matched_count: number;
+    unmatched_items: string[];
+    errors: string[];
+  } | null>(null);
+
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      const endpoint =
+        importType === 'gargul' ? '/items/import/gargul' : '/items/import/rclootcouncil';
+      const payload = importType === 'gargul' ? { data: importData } : { csv: importData };
+
+      const res = await api.post(endpoint, payload);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+    },
+    onError: (error: any) => {
+      setResult({
+        success: false,
+        imported_count: 0,
+        matched_count: 0,
+        unmatched_items: [],
+        errors: [error.response?.data?.message || 'Import failed'],
+      });
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Import Loot History</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {!result ? (
+          <div className="space-y-4">
+            {/* Import type selector */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Import Format</label>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setImportType('gargul')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    importType === 'gargul'
+                      ? 'bg-gold-600 text-white'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  }`}
+                >
+                  Gargul
+                </button>
+                <button
+                  onClick={() => setImportType('rclootcouncil')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    importType === 'rclootcouncil'
+                      ? 'bg-gold-600 text-white'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  }`}
+                >
+                  RCLootCouncil
+                </button>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-gray-700/50 rounded-lg p-4 text-sm">
+              {importType === 'gargul' ? (
+                <>
+                  <p className="text-gray-300 font-medium mb-2">How to export from Gargul:</p>
+                  <ol className="text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>
+                      Type <code className="bg-gray-800 px-1 rounded">/gdkp</code> in game
+                    </li>
+                    <li>Go to Export &rarr; Share</li>
+                    <li>Copy the entire export string</li>
+                    <li>Paste it below</li>
+                  </ol>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-300 font-medium mb-2">
+                    How to export from RCLootCouncil:
+                  </p>
+                  <ol className="text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>
+                      Type <code className="bg-gray-800 px-1 rounded">/rc history</code> in game
+                    </li>
+                    <li>Click Export and choose CSV format</li>
+                    <li>Copy the entire CSV content</li>
+                    <li>Paste it below</li>
+                  </ol>
+                </>
+              )}
+            </div>
+
+            {/* Import data textarea */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                {importType === 'gargul' ? 'Gargul Export String' : 'RCLootCouncil CSV'}
+              </label>
+              <textarea
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                placeholder={
+                  importType === 'gargul'
+                    ? 'Paste Gargul export string here...'
+                    : 'Paste CSV content here...'
+                }
+                rows={10}
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+            </div>
+
+            {/* Import button */}
+            <button
+              onClick={() => importMutation.mutate()}
+              disabled={!importData.trim() || importMutation.isPending}
+              className="w-full bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              {importMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>Importing...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  <span>Import Loot History</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Result status */}
+            <div
+              className={`flex items-center space-x-3 p-4 rounded-lg ${
+                result.success && result.imported_count > 0
+                  ? 'bg-green-500/20 text-green-400'
+                  : result.errors.length > 0
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-yellow-500/20 text-yellow-400'
+              }`}
+            >
+              {result.success && result.imported_count > 0 ? (
+                <CheckCircle className="h-6 w-6 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-6 w-6 flex-shrink-0" />
+              )}
+              <div>
+                <p className="font-medium">
+                  {result.success && result.imported_count > 0
+                    ? 'Import Successful!'
+                    : result.errors.length > 0
+                      ? 'Import Failed'
+                      : 'Partial Import'}
+                </p>
+                <p className="text-sm opacity-80">
+                  {result.imported_count} items imported, {result.matched_count} matched to
+                  database
+                </p>
+              </div>
+            </div>
+
+            {/* Unmatched items */}
+            {result.unmatched_items.length > 0 && (
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <p className="text-gray-300 font-medium mb-2">
+                  Unmatched Items ({result.unmatched_items.length}):
+                </p>
+                <div className="text-gray-400 text-sm max-h-32 overflow-y-auto">
+                  {result.unmatched_items.slice(0, 10).map((item, i) => (
+                    <p key={i}>{item}</p>
+                  ))}
+                  {result.unmatched_items.length > 10 && (
+                    <p className="text-gray-500">
+                      ...and {result.unmatched_items.length - 10} more
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Errors */}
+            {result.errors.length > 0 && (
+              <div className="bg-red-500/10 rounded-lg p-4">
+                <p className="text-red-400 font-medium mb-2">Errors:</p>
+                <div className="text-red-300 text-sm">
+                  {result.errors.map((error, i) => (
+                    <p key={i}>{error}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  setResult(null);
+                  setImportData('');
+                }}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
+              >
+                Import More
+              </button>
+              <button
+                onClick={onClose}
+                className="flex-1 bg-gold-600 hover:bg-gold-700 text-white font-medium py-2 rounded-lg transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Type declaration for WoWhead tooltips
+declare global {
+  interface Window {
+    $WowheadPower?: {
+      refreshLinks: () => void;
+    };
+  }
+}

@@ -62,6 +62,7 @@ model Raid {
   participants  RaidParticipant[]
   items         Item[]
   chat_messages ChatMessage[]
+  loot_history  LootHistory[]
 
   @@index([leader_id])
   @@index([status])
@@ -209,6 +210,48 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+// ============================================
+// TBC RAID ITEM DATABASE
+// ============================================
+
+model TbcRaidItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  wowhead_id    Int      @unique
+  name          String   @db.VarChar(255)
+  icon          String   @db.VarChar(100) // e.g., "inv_sword_25"
+  quality       Int      @default(4) // 3=Rare, 4=Epic, 5=Legendary
+  slot          String?  @db.VarChar(50) // "Head", "Chest", etc.
+  item_level    Int?
+  raid_instance String   @db.VarChar(100) // "Karazhan", "Black Temple"
+  boss_name     String?  @db.VarChar(100)
+  phase         Int      @default(1) // TBC phase 1-5
+
+  loot_history LootHistory[]
+
+  @@index([raid_instance])
+  @@index([slot])
+  @@index([quality])
+  @@index([name])
+}
+
+model LootHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  tbc_item_id   String   @db.Uuid
+  raid_id       String?  @db.Uuid
+  winner_name   String?  @db.VarChar(100)
+  gold_amount   Int?
+  import_source String   @db.VarChar(50) // "gargul" | "rclootcouncil"
+  dropped_at    DateTime @default(now())
+  imported_at   DateTime @default(now())
+
+  tbc_item TbcRaidItem @relation(fields: [tbc_item_id], references: [id])
+  raid     Raid?       @relation(fields: [raid_id], references: [id])
+
+  @@index([tbc_item_id])
+  @@index([raid_id])
+  @@index([dropped_at])
 }
 
 // ============================================

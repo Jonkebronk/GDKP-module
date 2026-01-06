@@ -19,6 +19,7 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx seed.ts",
+    "db:seed:tbc": "tsx seed-tbc-items.ts",
     "db:reset": "prisma migrate reset --force"
   },
   "dependencies": {

@@ -10,6 +10,7 @@ import { Wallet } from './pages/Wallet';
 import { Raids } from './pages/Raids';
 import { RaidRoom } from './pages/RaidRoom';
 import { Profile } from './pages/Profile';
+import { Items } from './pages/Items';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="wallet" element={<Wallet />} />
           <Route path="raids" element={<Raids />} />
           <Route path="raids/:id" element={<RaidRoom />} />
+          <Route path="items" element={<Items />} />
           <Route path="profile" element={<Profile />} />
         </Route>
 
