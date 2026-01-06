@@ -159,6 +159,18 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       })),
     };
   });
+
+  // Clear all TBC raid items from the database
+  fastify.delete('/tbc-items', { preHandler: [requireAdmin] }, async (request) => {
+    const deleted = await prisma.tbcRaidItem.deleteMany({});
+
+    logger.info({ adminId: request.user.id, deletedCount: deleted.count }, 'TBC items cleared');
+
+    return {
+      deleted: deleted.count,
+      message: `Deleted ${deleted.count} TBC items from database`,
+    };
+  });
 };
 
 export default adminRoutes;
