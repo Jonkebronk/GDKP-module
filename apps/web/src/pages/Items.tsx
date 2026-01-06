@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Trash2,
   Plus,
+  Pencil,
 } from 'lucide-react';
 
 export function Items() {
@@ -35,6 +36,7 @@ export function Items() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<TbcRaidItem | null>(null);
   const [page, setPage] = useState(1);
 
   const queryClient = useQueryClient();
@@ -256,7 +258,7 @@ export function Items() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {data.items.map((item: TbcRaidItem & { drop_count?: number }) => (
-              <ItemCard key={item.id} item={item} />
+              <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} />
             ))}
           </div>
 
@@ -300,6 +302,18 @@ export function Items() {
           onClose={() => setShowAddItemModal(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['items'] });
+          }}
+        />
+      )}
+
+      {/* Edit Item Modal */}
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['items'] });
+            setEditingItem(null);
           }}
         />
       )}
@@ -366,19 +380,27 @@ function FilterTag({ label, onRemove }: { label: string; onRemove: () => void })
   );
 }
 
-function ItemCard({ item }: { item: TbcRaidItem & { drop_count?: number } }) {
+function ItemCard({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }; onEdit: () => void }) {
   const qualityColor = ITEM_QUALITY_COLORS[item.quality as ItemQuality];
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+    <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors group relative">
       <div className="flex items-start space-x-3">
-        {/* Item icon placeholder */}
-        <div
-          className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center flex-shrink-0"
-          style={{ borderColor: qualityColor, borderWidth: 2 }}
+        {/* Item icon */}
+        <a
+          href={getWowheadItemUrl(item.wowhead_id)}
+          data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0"
         >
-          <Package className="h-5 w-5 text-gray-500" />
-        </div>
+          <img
+            src={`https://wow.zamimg.com/images/wow/icons/medium/${item.icon || 'inv_misc_questionmark'}.jpg`}
+            alt={item.name}
+            className="w-10 h-10 rounded"
+            style={{ borderColor: qualityColor, borderWidth: 2, borderStyle: 'solid' }}
+          />
+        </a>
 
         <div className="flex-1 min-w-0">
           {/* Item name with WoWhead tooltip */}
@@ -399,6 +421,15 @@ function ItemCard({ item }: { item: TbcRaidItem & { drop_count?: number } }) {
             <p className="truncate">{item.boss_name}</p>
           </div>
         </div>
+
+        {/* Edit button */}
+        <button
+          onClick={onEdit}
+          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
+          title="Edit item"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Footer */}
@@ -877,6 +908,193 @@ function AddItemModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
               )}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditItemModal({
+  item,
+  onClose,
+  onSuccess,
+}: {
+  item: TbcRaidItem;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [raidInstance, setRaidInstance] = useState(item.raid_instance || '');
+  const [bossName, setBossName] = useState(item.boss_name || '');
+  const [slot, setSlot] = useState(item.slot || '');
+  const [quality, setQuality] = useState(item.quality.toString());
+
+  const qualityColor = ITEM_QUALITY_COLORS[item.quality as ItemQuality];
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.put(`/items/${item.id}`, {
+        name,
+        slot: slot || undefined,
+        quality: parseInt(quality),
+        raid_instance: raidInstance || undefined,
+        boss_name: bossName || undefined,
+      });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        onSuccess();
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.delete(`/items/${item.id}`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        onSuccess();
+      }
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Edit Item</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Item Preview */}
+          <div className="flex items-center space-x-3 bg-gray-700/50 rounded-lg p-3">
+            <img
+              src={`https://wow.zamimg.com/images/wow/icons/medium/${item.icon || 'inv_misc_questionmark'}.jpg`}
+              alt={item.name}
+              className="w-10 h-10 rounded"
+              style={{
+                borderWidth: 2,
+                borderStyle: 'solid',
+                borderColor: qualityColor,
+              }}
+            />
+            <div>
+              <p className="font-medium" style={{ color: qualityColor }}>
+                {item.name}
+              </p>
+              <p className="text-gray-500 text-xs">WoWhead ID: {item.wowhead_id}</p>
+            </div>
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Item Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            />
+          </div>
+
+          {/* Quality */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Quality</label>
+            <select
+              value={quality}
+              onChange={(e) => setQuality(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            >
+              <option value="2">Uncommon</option>
+              <option value="3">Rare</option>
+              <option value="4">Epic</option>
+              <option value="5">Legendary</option>
+            </select>
+          </div>
+
+          {/* Raid Instance */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Raid Instance</label>
+            <select
+              value={raidInstance}
+              onChange={(e) => setRaidInstance(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            >
+              <option value="">Select raid...</option>
+              {TBC_RAID_INSTANCES.map((inst) => (
+                <option key={inst.id} value={inst.name}>
+                  {inst.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Boss Name */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Boss Name</label>
+            <input
+              type="text"
+              value={bossName}
+              onChange={(e) => setBossName(e.target.value)}
+              placeholder="e.g. Illidan Stormrage"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            />
+          </div>
+
+          {/* Item Slot */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Item Slot</label>
+            <select
+              value={slot}
+              onChange={(e) => setSlot(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+            >
+              <option value="">Select slot...</option>
+              {ITEM_SLOTS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-3 pt-2">
+            <button
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending || updateMutation.isPending}
+              className="flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              {deleteMutation.isPending ? (
+                <RefreshCw className="h-5 w-5 animate-spin" />
+              ) : (
+                <Trash2 className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending || deleteMutation.isPending || !name.trim()}
+              className="flex-1 bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5" />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

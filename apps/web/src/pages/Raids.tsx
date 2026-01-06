@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { formatGold, WOW_INSTANCES } from '@gdkp/shared';
 import { Plus, Users, Coins, Calendar, X } from 'lucide-react';
+import { SimpleUserDisplay } from '../components/UserDisplay';
 
 export function Raids() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -98,17 +99,12 @@ export function Raids() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center space-x-2">
-                {raid.leader.discord_avatar ? (
-                  <img
-                    src={raid.leader.discord_avatar}
-                    alt={raid.leader.discord_username}
-                    className="h-6 w-6 rounded-full"
-                  />
-                ) : (
-                  <div className="h-6 w-6 rounded-full bg-gray-600" />
-                )}
-                <span className="text-gray-400 text-sm">{raid.leader.discord_username}</span>
+              <div className="mt-4 text-gray-400 text-sm">
+                <SimpleUserDisplay
+                  user={raid.leader}
+                  showAvatar
+                  avatarSize={24}
+                />
               </div>
             </Link>
           ))}

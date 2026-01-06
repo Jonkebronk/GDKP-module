@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
 import { Coins, Users, Crown, AlertTriangle, Check, X } from 'lucide-react';
+import { SimpleUserDisplay } from './UserDisplay';
 
 interface ParticipantShare {
   user_id: string;
   discord_username: string;
+  display_name?: string;
+  alias?: string;
   role: string;
   share_amount: number;
   share_percentage: number;
@@ -170,7 +173,10 @@ export function PotDistribution({
                 {share.role === 'LEADER' && (
                   <Crown className="h-4 w-4 text-gold-500" />
                 )}
-                <span className="text-white text-sm">{share.discord_username}</span>
+                <SimpleUserDisplay
+                  user={share}
+                  className="text-white text-sm"
+                />
                 <span className="text-gray-500 text-xs">
                   ({share.share_percentage.toFixed(1)}%)
                 </span>

@@ -49,6 +49,14 @@ const addItemSchema = z.object({
   boss_name: z.string().optional(),
 });
 
+const updateItemSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  slot: z.string().optional(),
+  quality: z.number().int().min(0).max(5).optional(),
+  raid_instance: z.string().optional(),
+  boss_name: z.string().optional(),
+});
+
 const itemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /items - List all TBC raid items with filters
@@ -97,6 +105,68 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
     logger.info({ userId: request.user.id, itemId: item.id, name: item.name }, 'Item added to database');
 
     return { success: true, item };
+  });
+
+  /**
+   * PUT /items/:id - Update an existing item
+   */
+  fastify.put('/:id', { preHandler: [requireAuth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const data = updateItemSchema.parse(request.body);
+
+    // Check if item exists
+    const existing = await prisma.tbcRaidItem.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return reply.status(404).send({
+        error: 'Item not found',
+      });
+    }
+
+    // Update the item
+    const item = await prisma.tbcRaidItem.update({
+      where: { id },
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.slot && { slot: data.slot }),
+        ...(data.quality !== undefined && { quality: data.quality }),
+        ...(data.raid_instance && { raid_instance: data.raid_instance }),
+        ...(data.boss_name && { boss_name: data.boss_name }),
+      },
+    });
+
+    logger.info({ userId: request.user.id, itemId: item.id, name: item.name }, 'Item updated');
+
+    return { success: true, item };
+  });
+
+  /**
+   * DELETE /items/:id - Delete an item
+   */
+  fastify.delete('/:id', { preHandler: [requireAuth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    // Check if item exists
+    const existing = await prisma.tbcRaidItem.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      return reply.status(404).send({
+        error: 'Item not found',
+      });
+    }
+
+    // Delete the item
+    await prisma.tbcRaidItem.delete({
+      where: { id },
+    });
+
+    logger.info({ userId: request.user.id, itemId: id, name: existing.name }, 'Item deleted');
+
+    return { success: true };
   });
 
   /**
