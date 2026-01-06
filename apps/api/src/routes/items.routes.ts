@@ -154,7 +154,8 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 
     // If not in database, try to fetch from WoWhead
     try {
-      const response = await fetch(`https://nether.wowhead.com/tooltip/item/${wowheadId}?dataEnv=4&locale=0`);
+      // dataEnv=5 is for TBC Classic, locale=0 is English
+      const response = await fetch(`https://nether.wowhead.com/tooltip/item/${wowheadId}?dataEnv=5&locale=0`);
       if (!response.ok) {
         return { error: 'Item not found on WoWhead' };
       }
