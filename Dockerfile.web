@@ -21,6 +21,11 @@ COPY turbo.json ./
 
 # Build packages
 RUN pnpm --filter @gdkp/shared build
+
+# Build args for environment variables
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN pnpm --filter @gdkp/web build
 
 # Production stage - serve static files with nginx
