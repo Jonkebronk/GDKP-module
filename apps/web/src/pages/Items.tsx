@@ -1,6 +1,7 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useAuthStore } from '../stores/authStore';
 import {
   TBC_RAID_INSTANCES,
   ITEM_SLOTS,
@@ -21,6 +22,7 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 
 export function Items() {
@@ -30,7 +32,12 @@ export function Items() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [page, setPage] = useState(1);
+
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
 
   // Debounce search
   useEffect(() => {
@@ -62,6 +69,18 @@ export function Items() {
     },
   });
 
+  // Clear all items mutation (admin only)
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.delete('/admin/tbc-items');
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setShowClearConfirm(false);
+    },
+  });
+
   // Refresh WoWhead tooltips when items change
   useEffect(() => {
     if (data?.items && window.$WowheadPower) {
@@ -79,13 +98,24 @@ export function Items() {
             <p className="text-gray-400 text-sm">Browse loot with WoWhead tooltips</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowImportModal(true)}
-          className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Upload className="h-5 w-5" />
-          <span>Import Loot</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span>Clear All</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Upload className="h-5 w-5" />
+            <span>Import Loot</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -254,6 +284,54 @@ export function Items() {
 
       {/* Import Modal */}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} />}
+
+      {/* Clear Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="h-6 w-6 text-red-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Clear All Items</h2>
+                <p className="text-gray-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete all <strong>{data?.total || 0}</strong> items from the database?
+              You'll need to re-import items afterwards.
+            </p>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => clearMutation.mutate()}
+                disabled={clearMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                {clearMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-5 w-5" />
+                    <span>Delete All</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
