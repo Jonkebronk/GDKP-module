@@ -2,12 +2,25 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { Item, Bid } from '@gdkp/shared';
 
+export interface AuctionEvent {
+  id: string;
+  type: 'auction_start' | 'bid_placed' | 'countdown' | 'stop_bids' | 'awarded' | 'pot_updated';
+  message: string;
+  timestamp: Date;
+  itemName?: string;
+  playerName?: string;
+  amount?: number;
+}
+
 interface AuctionState {
   // Current auction state
   activeItem: Item | null;
   bids: Bid[];
   remainingMs: number;
   isEnding: boolean;
+
+  // Auction feed events (Gargul-style)
+  auctionEvents: AuctionEvent[];
 
   // User's bid state
   myCurrentBid: number | null;
@@ -23,6 +36,8 @@ interface AuctionState {
   extendAuction: (newEndsAt: string) => void;
   endAuction: () => void;
   setConnection: (connected: boolean) => void;
+  addAuctionEvent: (event: Omit<AuctionEvent, 'id' | 'timestamp'>) => void;
+  clearAuctionEvents: () => void;
   reset: () => void;
 }
 
@@ -32,6 +47,7 @@ export const useAuctionStore = create<AuctionState>()(
     bids: [],
     remainingMs: 0,
     isEnding: false,
+    auctionEvents: [],
     myCurrentBid: null,
     isLeadingBidder: false,
     isConnected: false,
@@ -83,12 +99,27 @@ export const useAuctionStore = create<AuctionState>()(
 
     setConnection: (connected) => set({ isConnected: connected }),
 
+    addAuctionEvent: (event) =>
+      set((state) => ({
+        auctionEvents: [
+          ...state.auctionEvents,
+          {
+            ...event,
+            id: crypto.randomUUID(),
+            timestamp: new Date(),
+          },
+        ].slice(-100), // Keep last 100 events
+      })),
+
+    clearAuctionEvents: () => set({ auctionEvents: [] }),
+
     reset: () =>
       set({
         activeItem: null,
         bids: [],
         remainingMs: 0,
         isEnding: false,
+        auctionEvents: [],
         myCurrentBid: null,
         isLeadingBidder: false,
       }),

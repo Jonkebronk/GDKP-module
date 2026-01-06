@@ -132,11 +132,12 @@ export function Wallet() {
   });
 
   const handleSaveRates = () => {
-    const sek = parseFloat(editRates.SEK);
-    const eur = parseFloat(editRates.EUR);
-    const usd = parseFloat(editRates.USD);
+    // editRates contains "currency per 1000g", convert to "gold per currency"
+    const sekPer1000g = parseFloat(editRates.SEK);
+    const eurPer1000g = parseFloat(editRates.EUR);
+    const usdPer1000g = parseFloat(editRates.USD);
 
-    if (isNaN(sek) || isNaN(eur) || isNaN(usd) || sek <= 0 || eur <= 0 || usd <= 0) {
+    if (isNaN(sekPer1000g) || isNaN(eurPer1000g) || isNaN(usdPer1000g) || sekPer1000g <= 0 || eurPer1000g <= 0 || usdPer1000g <= 0) {
       setStatusMessage({
         type: 'error',
         message: 'Please enter valid positive numbers for all rates.',
@@ -144,14 +145,20 @@ export function Wallet() {
       return;
     }
 
+    // Convert to gold per currency (internal format)
+    const sek = 1000 / sekPer1000g;
+    const eur = 1000 / eurPer1000g;
+    const usd = 1000 / usdPer1000g;
+
     updateRatesMutation.mutate({ SEK: sek, EUR: eur, USD: usd });
   };
 
   const openRateEditor = () => {
+    // Convert from "gold per currency" to "currency per 1000g" for editing
     setEditRates({
-      SEK: exchangeRates?.SEK?.toString() || '',
-      EUR: exchangeRates?.EUR?.toString() || '',
-      USD: exchangeRates?.USD?.toString() || '',
+      SEK: exchangeRates?.SEK ? (1000 / exchangeRates.SEK).toFixed(2) : '',
+      EUR: exchangeRates?.EUR ? (1000 / exchangeRates.EUR).toFixed(2) : '',
+      USD: exchangeRates?.USD ? (1000 / exchangeRates.USD).toFixed(2) : '',
     });
     setRateEditorOpen(true);
   };
@@ -267,16 +274,19 @@ export function Wallet() {
             </div>
             <div className="flex items-center space-x-6 text-sm">
               <div>
-                <span className="text-gray-500">1 SEK = </span>
-                <span className="text-gold-500 font-semibold">{exchangeRates.SEK?.toFixed(1) || '—'}g</span>
+                <span className="text-gold-500 font-semibold">1000g</span>
+                <span className="text-gray-500"> = </span>
+                <span className="text-green-400 font-semibold">{exchangeRates.SEK ? (1000 / exchangeRates.SEK).toFixed(2) : '—'} SEK</span>
               </div>
               <div>
-                <span className="text-gray-500">1 EUR = </span>
-                <span className="text-gold-500 font-semibold">{exchangeRates.EUR?.toFixed(1) || '—'}g</span>
+                <span className="text-gold-500 font-semibold">1000g</span>
+                <span className="text-gray-500"> = </span>
+                <span className="text-green-400 font-semibold">{exchangeRates.EUR ? (1000 / exchangeRates.EUR).toFixed(2) : '—'} EUR</span>
               </div>
               <div>
-                <span className="text-gray-500">1 USD = </span>
-                <span className="text-gold-500 font-semibold">{exchangeRates.USD?.toFixed(1) || '—'}g</span>
+                <span className="text-gold-500 font-semibold">1000g</span>
+                <span className="text-gray-500"> = </span>
+                <span className="text-green-400 font-semibold">{exchangeRates.USD ? (1000 / exchangeRates.USD).toFixed(2) : '—'} USD</span>
               </div>
               {getTimeSinceUpdate() && (
                 <div className="text-gray-500 text-xs">
@@ -323,40 +333,40 @@ export function Wallet() {
                 >
                   G2G
                 </a>
-                {' '}and enter the gold per currency values below.
+                {' '}and enter how much 1000g costs in each currency.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">1 SEK = ? gold</label>
+                  <label className="block text-sm text-gray-400 mb-1">1000g = ? SEK</label>
                   <input
                     type="number"
                     value={editRates.SEK}
                     onChange={(e) => setEditRates(prev => ({ ...prev, SEK: e.target.value }))}
-                    placeholder="e.g., 85"
-                    step="0.1"
+                    placeholder="e.g., 12"
+                    step="0.01"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">1 EUR = ? gold</label>
+                  <label className="block text-sm text-gray-400 mb-1">1000g = ? EUR</label>
                   <input
                     type="number"
                     value={editRates.EUR}
                     onChange={(e) => setEditRates(prev => ({ ...prev, EUR: e.target.value }))}
-                    placeholder="e.g., 900"
-                    step="0.1"
+                    placeholder="e.g., 1.10"
+                    step="0.01"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">1 USD = ? gold</label>
+                  <label className="block text-sm text-gray-400 mb-1">1000g = ? USD</label>
                   <input
                     type="number"
                     value={editRates.USD}
                     onChange={(e) => setEditRates(prev => ({ ...prev, USD: e.target.value }))}
-                    placeholder="e.g., 800"
-                    step="0.1"
+                    placeholder="e.g., 1.25"
+                    step="0.01"
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
                   />
                 </div>

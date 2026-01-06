@@ -8,6 +8,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 export function useSocket(raidId: string | null) {
   const socketRef = useRef<TypedSocket | null>(null);
+  const lastCountdownRef = useRef<number | null>(null);
   const { token, user } = useAuthStore();
   const {
     setActiveItem,
@@ -16,6 +17,7 @@ export function useSocket(raidId: string | null) {
     extendAuction,
     endAuction,
     setConnection,
+    addAuctionEvent,
   } = useAuctionStore();
 
   useEffect(() => {
@@ -58,6 +60,17 @@ export function useSocket(raidId: string | null) {
     // Auction events
     socket.on('auction:started', (data) => {
       setActiveItem(data.item);
+      lastCountdownRef.current = null; // Reset countdown tracker
+
+      // Gargul-style announcement
+      const minBid = Number(data.item.starting_bid) || 0;
+      const increment = Number(data.item.min_increment) || 10;
+      addAuctionEvent({
+        type: 'auction_start',
+        message: `Bid on [${data.item.name}]. Minimum is ${minBid}g - increment is ${increment}g. Use raid chat!`,
+        itemName: data.item.name,
+        amount: minBid,
+      });
     });
 
     socket.on('bid:new', (data) => {
@@ -78,18 +91,70 @@ export function useSocket(raidId: string | null) {
           },
           user.id
         );
+
+        // Gargul-style bid announcement
+        addAuctionEvent({
+          type: 'bid_placed',
+          message: `${data.username} is the highest bidder - ${data.amount}g`,
+          playerName: data.username,
+          amount: data.amount,
+        });
       }
     });
 
     socket.on('auction:tick', (data) => {
       updateRemainingTime(data.remaining_ms);
+
+      // Gargul-style countdown at 5, 4, 3, 2, 1 seconds
+      const seconds = Math.ceil(data.remaining_ms / 1000);
+      if (seconds <= 5 && seconds >= 1 && lastCountdownRef.current !== seconds) {
+        lastCountdownRef.current = seconds;
+        addAuctionEvent({
+          type: 'countdown',
+          message: `${seconds} second${seconds !== 1 ? 's' : ''} to bid`,
+        });
+      }
     });
 
     socket.on('auction:extended', (data) => {
       extendAuction(data.new_ends_at);
     });
 
-    socket.on('auction:ended', () => {
+    socket.on('auction:ended', (data) => {
+      // Capture item name before endAuction resets the state
+      const currentItem = useAuctionStore.getState().activeItem;
+      const itemName = currentItem?.name || 'Unknown Item';
+
+      // Gargul-style "Stop your bids!"
+      addAuctionEvent({
+        type: 'stop_bids',
+        message: 'Stop your bids!',
+      });
+
+      // Award message
+      if (data.winner_name && data.final_amount > 0) {
+        addAuctionEvent({
+          type: 'awarded',
+          message: `[${itemName}] was awarded to ${data.winner_name} for ${data.final_amount}g. Congrats!`,
+          itemName,
+          playerName: data.winner_name,
+          amount: data.final_amount,
+        });
+
+        // Pot update message
+        addAuctionEvent({
+          type: 'pot_updated',
+          message: `Pot was updated, it now holds ${data.pot_total}g`,
+          amount: data.pot_total,
+        });
+      } else {
+        addAuctionEvent({
+          type: 'awarded',
+          message: `[${itemName}] received no bids.`,
+          itemName,
+        });
+      }
+
       endAuction();
     });
 

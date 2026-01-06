@@ -59,3 +59,123 @@ body {
 .item-rare { color: #0070dd; }
 .item-epic { color: #a335ee; }
 .item-legendary { color: #ff8000; }
+
+/* WoW Item Quality Borders with Glow */
+.wow-border-poor { border-color: #9d9d9d; }
+.wow-border-common { border-color: #ffffff; }
+.wow-border-uncommon { border-color: #1eff00; box-shadow: 0 0 6px #1eff00; }
+.wow-border-rare { border-color: #0070dd; box-shadow: 0 0 8px #0070dd; }
+.wow-border-epic { border-color: #a335ee; box-shadow: 0 0 10px #a335ee; }
+.wow-border-legendary { border-color: #ff8000; box-shadow: 0 0 12px #ff8000; }
+
+/* WoW Tooltip Container */
+.wow-tooltip {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+  border: 2px solid;
+  border-radius: 4px;
+}
+
+.wow-tooltip-header {
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* WoW Item Card */
+.wow-item-card {
+  background: linear-gradient(180deg, rgba(30, 30, 50, 0.95) 0%, rgba(15, 15, 30, 0.98) 100%);
+  border: 2px solid;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.wow-item-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Gargul Message Styles */
+.gargul-feed {
+  font-family: 'Friz Quadrata', 'Cinzel', Georgia, serif;
+}
+
+.gargul-msg {
+  line-height: 1.6;
+}
+
+.gargul-prefix {
+  color: #00ffff;
+  font-weight: bold;
+}
+
+.gargul-item {
+  color: #a335ee;
+  font-weight: bold;
+}
+
+.gargul-player {
+  color: #ff7c0a;
+  font-weight: 500;
+}
+
+.gargul-gold {
+  color: #ffd100;
+  font-weight: bold;
+}
+
+.gargul-system {
+  color: #ffff00;
+}
+
+.gargul-countdown {
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+.gargul-stop {
+  color: #ff4444;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.gargul-congrats {
+  color: #44ff44;
+}
+
+/* Auction timer styles */
+.auction-timer {
+  font-variant-numeric: tabular-nums;
+}
+
+.auction-timer-ending {
+  animation: timer-pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes timer-pulse {
+  from {
+    color: #ff6b6b;
+    transform: scale(1);
+  }
+  to {
+    color: #ff0000;
+    transform: scale(1.05);
+  }
+}
+
+/* Add Items Modal Tabs */
+.modal-tab {
+  transition: all 0.2s ease;
+}
+
+.modal-tab-active {
+  background: #f59e0b;
+  color: #000;
+}
+
+.modal-tab-inactive {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.modal-tab-inactive:hover {
+  background: #4b5563;
+  color: #fff;
+}
