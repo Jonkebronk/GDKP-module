@@ -1,14 +1,23 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
-import { useAuctionStore } from '../stores/auctionStore';
+import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
-import { formatGold, QUICK_BID_INCREMENTS } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Link, Loader2 } from 'lucide-react';
+import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS } from '@gdkp/shared';
+import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
-import { ItemPicker } from '../components/ItemPicker';
+import { AddItemsModal } from '../components/AddItemsModal';
+
+// Quality to CSS class mapping
+const qualityBorderClass: Record<number, string> = {
+  1: 'wow-border-common',
+  2: 'wow-border-uncommon',
+  3: 'wow-border-rare',
+  4: 'wow-border-epic',
+  5: 'wow-border-legendary',
+};
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
@@ -16,14 +25,12 @@ export function RaidRoom() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { placeBid, sendChat, startAuction, isConnected } = useSocket(id || null);
-  const { activeItem, remainingMs, isEnding, isLeadingBidder, bids } = useAuctionStore();
+  const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
 
   const [bidAmount, setBidAmount] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
-  const [wowheadInput, setWowheadInput] = useState('');
-  const [wowheadLoading, setWowheadLoading] = useState(false);
-  const [wowheadError, setWowheadError] = useState('');
+  const auctionFeedRef = useRef<HTMLDivElement>(null);
 
   const { data: raid, isLoading } = useQuery({
     queryKey: ['raid', id],
@@ -36,6 +43,13 @@ export function RaidRoom() {
 
   const isLeader = raid?.leader_id === user?.id;
 
+  // Auto-scroll auction feed
+  useEffect(() => {
+    if (auctionFeedRef.current) {
+      auctionFeedRef.current.scrollTop = auctionFeedRef.current.scrollHeight;
+    }
+  }, [auctionEvents]);
+
   // Delete item mutation
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
@@ -45,48 +59,6 @@ export function RaidRoom() {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
     },
   });
-
-  // Add item from WoWhead ID
-  const handleAddFromWowhead = async () => {
-    // Extract ID from input (could be URL or just ID)
-    const match = wowheadInput.match(/item[=/](\d+)/i) || wowheadInput.match(/^(\d+)$/);
-    if (!match) {
-      setWowheadError('Enter a valid WoWhead item ID or URL');
-      return;
-    }
-
-    const wowheadId = parseInt(match[1]);
-    setWowheadLoading(true);
-    setWowheadError('');
-
-    try {
-      // Fetch item data from WoWhead
-      const lookupRes = await api.get(`/items/wowhead/${wowheadId}`);
-      const itemData = lookupRes.data;
-
-      if (itemData.error) {
-        setWowheadError(itemData.error);
-        return;
-      }
-
-      // Add to raid
-      await api.post(`/raids/${id}/items`, {
-        name: itemData.name,
-        wowhead_id: itemData.id,
-        icon_url: `https://wow.zamimg.com/images/wow/icons/large/${itemData.icon}.jpg`,
-        starting_bid: 0,
-        min_increment: 10,
-        auction_duration: 60,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['raid', id] });
-      setWowheadInput('');
-    } catch (err: any) {
-      setWowheadError(err.response?.data?.message || 'Failed to add item');
-    } finally {
-      setWowheadLoading(false);
-    }
-  };
 
   const handleBid = (amount?: number) => {
     const bidValue = amount || parseInt(bidAmount);
@@ -110,7 +82,7 @@ export function RaidRoom() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gold-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
       </div>
     );
   }
@@ -128,6 +100,9 @@ export function RaidRoom() {
     ? activeItem.current_bid + activeItem.min_increment
     : 0;
 
+  // Get item quality for styling
+  const getItemQuality = (item: any) => item.quality || 4; // Default to epic
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -144,36 +119,44 @@ export function RaidRoom() {
             </span>
           </div>
           <div className="flex items-center space-x-2 bg-gray-800 px-4 py-2 rounded-lg">
-            <Coins className="h-5 w-5 text-gold-500" />
-            <span className="text-gold-500 font-bold">{formatGold(raid.pot_total)}</span>
+            <Coins className="h-5 w-5 text-amber-500" />
+            <span className="text-amber-500 font-bold">{formatGold(raid.pot_total)}</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main auction area */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Active Auction */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Active Auction - WoW Style */}
           {activeItem ? (
-            <div className={`bg-gray-800 rounded-lg p-6 ${isEnding ? 'auction-ending border-2 border-red-500' : ''}`}>
-              <div className="flex items-center justify-between mb-4">
+            <div className={`wow-tooltip ${qualityBorderClass[getItemQuality(activeItem)]} p-4 ${isEnding ? 'auction-ending' : ''}`}>
+              {/* Header */}
+              <div className="wow-tooltip-header flex items-center justify-between p-3 -m-4 mb-4 rounded-t">
                 <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <Gavel className="h-5 w-5 text-gold-500" />
+                  <Gavel className="h-5 w-5 text-amber-500" />
                   <span>Live Auction</span>
                 </h2>
-                <div className={`flex items-center space-x-2 ${isEnding ? 'text-red-500 animate-pulse' : 'text-gray-400'}`}>
+                <div className={`flex items-center space-x-2 ${isEnding ? 'auction-timer-ending' : 'text-gray-300'}`}>
                   <Clock className="h-5 w-5" />
-                  <span className="text-2xl font-bold">{formatTime(remainingMs)}</span>
+                  <span className="text-2xl font-bold auction-timer">{formatTime(remainingMs)}</span>
                 </div>
               </div>
 
+              {/* Item Display */}
               <div className="flex items-start space-x-4 mb-6">
-                {activeItem.icon_url && (
-                  <img src={activeItem.icon_url} alt={activeItem.name} className="w-16 h-16 rounded" />
-                )}
-                <div>
-                  <h3 className="text-xl font-bold text-epic">{activeItem.name}</h3>
-                  <p className="text-3xl font-bold text-gold-500 mt-2">
+                <div className={`p-1 rounded border-2 ${qualityBorderClass[getItemQuality(activeItem)]}`}>
+                  {activeItem.icon_url ? (
+                    <img src={activeItem.icon_url} alt={activeItem.name} className="w-16 h-16 rounded" />
+                  ) : (
+                    <div className="w-16 h-16 rounded bg-gray-700 flex items-center justify-center">
+                      <span className="text-2xl text-gray-500">?</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold item-epic">{activeItem.name}</h3>
+                  <p className="text-3xl font-bold text-amber-400 mt-2">
                     {formatGold(activeItem.current_bid)}
                   </p>
                   <p className="text-gray-400 text-sm">
@@ -183,7 +166,7 @@ export function RaidRoom() {
               </div>
 
               {isLeadingBidder && (
-                <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg mb-4 text-center">
+                <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg mb-4 text-center font-medium">
                   You are the highest bidder!
                 </div>
               )}
@@ -194,7 +177,7 @@ export function RaidRoom() {
                   <button
                     key={increment}
                     onClick={() => handleBid(activeItem.current_bid + increment)}
-                    className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors border border-gray-600"
                   >
                     +{formatGold(increment, { abbreviated: true })}
                   </button>
@@ -207,45 +190,52 @@ export function RaidRoom() {
                   type="number"
                   value={bidAmount}
                   onChange={(e) => setBidAmount(e.target.value)}
-                  placeholder={`Min ${minBid}`}
-                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  placeholder={`Min ${minBid}g`}
+                  className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <button
                   onClick={() => handleBid()}
                   disabled={!bidAmount || parseInt(bidAmount) < minBid}
-                  className="bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                  className="bg-amber-500 hover:bg-amber-600 disabled:bg-gray-600 disabled:text-gray-400 text-black font-semibold px-6 py-2 rounded-lg transition-colors"
                 >
-                  Bid
+                  Place Bid
                 </button>
               </div>
-
-              {/* Recent bids */}
-              {bids.length > 0 && (
-                <div className="mt-4 max-h-32 overflow-y-auto">
-                  {bids.slice(-5).reverse().map((bid) => (
-                    <div key={bid.id} className="flex items-center justify-between py-1 text-sm">
-                      <span className="text-gray-400">{bid.user.discord_username}</span>
-                      <span className="text-gold-500">{formatGold(bid.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ) : (
-            <div className="bg-gray-800 rounded-lg p-6 text-center">
+            <div className="wow-tooltip wow-border-common p-8 text-center">
               <Gavel className="h-12 w-12 text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400">No active auction</p>
             </div>
           )}
 
-          {/* Items queue */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Items</h2>
+          {/* Auction Feed - Gargul Style */}
+          <div className="wow-tooltip wow-border-rare">
+            <div className="wow-tooltip-header p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Auction Feed</h2>
+            </div>
+            <div
+              ref={auctionFeedRef}
+              className="h-40 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
+            >
+              {auctionEvents.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">Auction events will appear here</p>
+              ) : (
+                auctionEvents.map((event) => (
+                  <GargulMessage key={event.id} event={event} />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Items Queue - WoW Style */}
+          <div className="wow-tooltip wow-border-epic">
+            <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Items</h2>
               {isLeader && (
                 <button
                   onClick={() => setItemPickerOpen(true)}
-                  className="flex items-center space-x-1 bg-gold-600 hover:bg-gold-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+                  className="flex items-center space-x-1 bg-amber-500 hover:bg-amber-600 text-black text-sm font-medium px-3 py-1.5 rounded transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Add Items</span>
@@ -253,107 +243,29 @@ export function RaidRoom() {
               )}
             </div>
 
-            {/* Manual WoWhead ID input (Leader only) */}
-            {isLeader && (
-              <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Link className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">Add by WoWhead ID or URL</span>
+            <div className="p-3 space-y-2 max-h-80 overflow-y-auto">
+              {raid.items.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No items added yet</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {raid.items.map((item: any) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      isLeader={isLeader}
+                      onStart={() => handleStartAuction(item.id)}
+                      onDelete={() => deleteItemMutation.mutate(item.id)}
+                      isDeleting={deleteItemMutation.isPending}
+                    />
+                  ))}
                 </div>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={wowheadInput}
-                    onChange={(e) => setWowheadInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddFromWowhead()}
-                    placeholder="e.g., 28795 or wowhead.com/tbc/item=28795"
-                    className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
-                  <button
-                    onClick={handleAddFromWowhead}
-                    disabled={wowheadLoading || !wowheadInput.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors flex items-center space-x-1"
-                  >
-                    {wowheadLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4" />
-                    )}
-                    <span>Add</span>
-                  </button>
-                </div>
-                {wowheadError && (
-                  <p className="text-red-400 text-xs mt-1">{wowheadError}</p>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              {raid.items.map((item: any) => (
-                <div
-                  key={item.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${
-                    item.status === 'ACTIVE'
-                      ? 'bg-gold-500/20 border border-gold-500'
-                      : item.status === 'COMPLETED'
-                      ? 'bg-gray-700 opacity-50'
-                      : 'bg-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    {item.icon_url ? (
-                      <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded border border-gray-600" />
-                    ) : (
-                      <div className="w-8 h-8 rounded border border-gray-600 bg-gray-600 flex items-center justify-center">
-                        <span className="text-xs text-gray-400">?</span>
-                      </div>
-                    )}
-                    <a
-                      href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
-                      className={`font-medium hover:underline ${item.status === 'COMPLETED' ? 'text-gray-500' : 'text-epic'}`}
-                    >
-                      {item.name}
-                    </a>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {item.status === 'COMPLETED' && item.winner && (
-                      <span className="text-gray-400 text-sm">
-                        {item.winner.discord_username} - {formatGold(item.current_bid)}
-                      </span>
-                    )}
-                    {item.status === 'PENDING' && isLeader && (
-                      <>
-                        <button
-                          onClick={() => handleStartAuction(item.id)}
-                          className="bg-gold-600 hover:bg-gold-700 text-white text-sm px-3 py-1 rounded transition-colors"
-                        >
-                          Start
-                        </button>
-                        <button
-                          onClick={() => deleteItemMutation.mutate(item.id)}
-                          disabled={deleteItemMutation.isPending}
-                          className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-1 rounded transition-colors"
-                          title="Delete item"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                    {item.status === 'ACTIVE' && (
-                      <span className="text-gold-500 text-sm font-medium">LIVE</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Pot Distribution (Leader only) */}
           {isLeader && (
             <PotDistribution
@@ -368,12 +280,14 @@ export function RaidRoom() {
           )}
 
           {/* Participants */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-              <Users className="h-5 w-5" />
-              <span>Participants ({raid.participants.length})</span>
-            </h2>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="wow-tooltip wow-border-common">
+            <div className="wow-tooltip-header p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>Participants ({raid.participants.length})</span>
+              </h2>
+            </div>
+            <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
               {raid.participants.map((p: any) => (
                 <div key={p.id} className="flex items-center space-x-2">
                   {p.user.discord_avatar ? (
@@ -383,7 +297,7 @@ export function RaidRoom() {
                   )}
                   <span className="text-gray-300 text-sm">{p.user.discord_username}</span>
                   {p.role === 'LEADER' && (
-                    <span className="text-xs text-gold-500">Leader</span>
+                    <span className="text-xs text-amber-500 font-medium">Leader</span>
                   )}
                 </div>
               ))}
@@ -391,33 +305,37 @@ export function RaidRoom() {
           </div>
 
           {/* Chat */}
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Chat</h2>
-            <div className="h-64 overflow-y-auto mb-4 space-y-2">
-              <p className="text-gray-500 text-sm text-center">Chat messages will appear here</p>
+          <div className="wow-tooltip wow-border-common">
+            <div className="wow-tooltip-header p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Chat</h2>
             </div>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-                placeholder="Type a message..."
-                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
-              />
-              <button
-                onClick={handleSendChat}
-                className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors"
-              >
-                <Send className="h-4 w-4" />
-              </button>
+            <div className="h-48 overflow-y-auto p-3 space-y-2">
+              <p className="text-gray-500 text-sm text-center py-4">Chat messages will appear here</p>
+            </div>
+            <div className="p-3 border-t border-gray-700">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                  placeholder="Type a message..."
+                  className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button
+                  onClick={handleSendChat}
+                  className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Item Picker Modal */}
-      <ItemPicker
+      {/* Add Items Modal */}
+      <AddItemsModal
         raidId={id!}
         raidInstance={raid.instance}
         isOpen={itemPickerOpen}
@@ -426,6 +344,166 @@ export function RaidRoom() {
           queryClient.invalidateQueries({ queryKey: ['raid', id] });
         }}
       />
+    </div>
+  );
+}
+
+// Gargul-style message component
+function GargulMessage({ event }: { event: AuctionEvent }) {
+  const formatMessage = () => {
+    switch (event.type) {
+      case 'auction_start':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span>Bid on </span>
+            <span className="gargul-item">[{event.itemName}]</span>
+            <span>. {event.message.split('].')[1]}</span>
+          </>
+        );
+      case 'bid_placed':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span className="gargul-player">{event.playerName}</span>
+            <span> is the highest bidder - </span>
+            <span className="gargul-gold">{event.amount}g</span>
+          </>
+        );
+      case 'countdown':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span className="gargul-countdown">{event.message}</span>
+          </>
+        );
+      case 'stop_bids':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span className="gargul-stop">{event.message}</span>
+          </>
+        );
+      case 'awarded':
+        if (event.playerName) {
+          return (
+            <>
+              <span className="gargul-prefix">💎 Gargul: </span>
+              <span className="gargul-item">[{event.itemName}]</span>
+              <span> was awarded to </span>
+              <span className="gargul-player">{event.playerName}</span>
+              <span> for </span>
+              <span className="gargul-gold">{event.amount}g</span>
+              <span className="gargul-congrats">. Congrats!</span>
+            </>
+          );
+        }
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span className="gargul-item">[{event.itemName}]</span>
+            <span className="text-gray-400"> received no bids.</span>
+          </>
+        );
+      case 'pot_updated':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span>Pot was updated, it now holds </span>
+            <span className="gargul-gold">{event.amount}g</span>
+          </>
+        );
+      default:
+        return <span>{event.message}</span>;
+    }
+  };
+
+  return (
+    <div className="gargul-msg text-gray-200">
+      {formatMessage()}
+    </div>
+  );
+}
+
+// WoW-style item card component
+interface ItemCardProps {
+  item: any;
+  isLeader: boolean;
+  onStart: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function ItemCard({ item, isLeader, onStart, onDelete, isDeleting }: ItemCardProps) {
+  const quality = item.quality || 4;
+  const qualityColor = ITEM_QUALITY_COLORS[quality as keyof typeof ITEM_QUALITY_COLORS] || '#a335ee';
+  const borderClass = qualityBorderClass[quality] || 'wow-border-epic';
+
+  const isActive = item.status === 'ACTIVE';
+  const isCompleted = item.status === 'COMPLETED';
+  const isPending = item.status === 'PENDING';
+
+  return (
+    <div
+      className={`wow-item-card ${borderClass} p-2 ${
+        isActive ? 'ring-2 ring-amber-500 ring-opacity-50' : ''
+      } ${isCompleted ? 'opacity-50' : ''}`}
+    >
+      <div className="flex items-center space-x-2">
+        {/* Icon */}
+        <div className={`p-0.5 rounded border ${borderClass}`}>
+          {item.icon_url ? (
+            <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
+          ) : (
+            <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
+              <span className="text-gray-500">?</span>
+            </div>
+          )}
+        </div>
+
+        {/* Item info */}
+        <div className="flex-1 min-w-0">
+          <a
+            href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+            className="font-medium text-sm hover:underline truncate block"
+            style={{ color: qualityColor }}
+          >
+            {item.name}
+          </a>
+          {isCompleted && item.winner && (
+            <p className="text-xs text-gray-400 truncate">
+              {item.winner.discord_username} - {formatGold(item.current_bid)}
+            </p>
+          )}
+          {isActive && (
+            <p className="text-xs text-amber-500 font-medium">LIVE</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        {isPending && isLeader && (
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={onStart}
+              className="bg-amber-500 hover:bg-amber-600 text-black p-1.5 rounded transition-colors"
+              title="Start auction"
+            >
+              <Play className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-1.5 rounded transition-colors"
+              title="Delete item"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
