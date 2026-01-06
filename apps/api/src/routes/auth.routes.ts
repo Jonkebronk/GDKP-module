@@ -107,11 +107,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         discord_id: user.discord_id,
         discord_username: user.discord_username,
         discord_avatar: user.discord_avatar,
+        alias: user.alias,
         role: user.role,
       }, { expiresIn: env.JWT_EXPIRES_IN });
 
       // Redirect to frontend with token
-      return reply.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
+      // If user has no alias, include setup flag for alias setup page
+      const setupParam = !user.alias ? '&setup=alias' : '';
+      return reply.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}${setupParam}`);
     } catch (error) {
       logger.error({ error }, 'Discord OAuth callback error');
       return reply.redirect(`${env.FRONTEND_URL}/login?error=auth_failed`);
@@ -127,6 +130,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         discord_id: true,
         discord_username: true,
         discord_avatar: true,
+        alias: true,
         gold_balance: true,
         crypto_wallet_address: true,
         role: true,
@@ -152,12 +156,30 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Refresh token
   fastify.post('/refresh', { preHandler: [requireAuth] }, async (request) => {
+    // Fetch fresh user data to get current alias
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: {
+        id: true,
+        discord_id: true,
+        discord_username: true,
+        discord_avatar: true,
+        alias: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
     const token = fastify.jwt.sign({
-      id: request.user.id,
-      discord_id: request.user.discord_id,
-      discord_username: request.user.discord_username,
-      discord_avatar: request.user.discord_avatar,
-      role: request.user.role,
+      id: user.id,
+      discord_id: user.discord_id,
+      discord_username: user.discord_username,
+      discord_avatar: user.discord_avatar,
+      alias: user.alias,
+      role: user.role,
     }, { expiresIn: env.JWT_EXPIRES_IN });
 
     return { token };

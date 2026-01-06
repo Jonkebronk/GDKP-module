@@ -83,7 +83,9 @@ export interface InterServerEvents {
 // Socket data attached to each connection
 export interface SocketData {
   user_id: string;
-  username: string;
+  username: string; // Display name (alias or discord_username)
+  discord_username: string; // Real Discord username (for admin)
+  role: 'USER' | 'ADMIN';
   current_raid_id?: string;
 }
 

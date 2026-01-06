@@ -5,10 +5,11 @@ import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
-import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS } from '@gdkp/shared';
+import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName } from '@gdkp/shared';
 import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
+import { SimpleUserDisplay } from '../components/UserDisplay';
 
 // Quality to CSS class mapping
 const qualityBorderClass: Record<number, string> = {
@@ -290,12 +291,12 @@ export function RaidRoom() {
             <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
               {raid.participants.map((p: any) => (
                 <div key={p.id} className="flex items-center space-x-2">
-                  {p.user.discord_avatar ? (
-                    <img src={p.user.discord_avatar} alt="" className="w-6 h-6 rounded-full" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-600" />
-                  )}
-                  <span className="text-gray-300 text-sm">{p.user.discord_username}</span>
+                  <SimpleUserDisplay
+                    user={p.user}
+                    showAvatar
+                    avatarSize={24}
+                    className="text-gray-300 text-sm"
+                  />
                   {p.role === 'LEADER' && (
                     <span className="text-xs text-amber-500 font-medium">Leader</span>
                   )}
@@ -475,7 +476,7 @@ function ItemCard({ item, isLeader, onStart, onDelete, isDeleting }: ItemCardPro
           </a>
           {isCompleted && item.winner && (
             <p className="text-xs text-gray-400 truncate">
-              {item.winner.discord_username} - {formatGold(item.current_bid)}
+              {getDisplayName(item.winner)} - {formatGold(item.current_bid)}
             </p>
           )}
           {isActive && (

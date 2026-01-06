@@ -7,6 +7,7 @@ import type { SplitConfig } from '@gdkp/shared';
 interface ParticipantShare {
   user_id: string;
   discord_username: string;
+  alias?: string | null;
   role: string;
   share_amount: number;
   share_percentage: number;
@@ -46,6 +47,7 @@ export class PotDistributionService {
               select: {
                 id: true,
                 discord_username: true,
+                alias: true,
               },
             },
           },
@@ -107,7 +109,7 @@ export class PotDistributionService {
     participants: Array<{
       user_id: string;
       role: string;
-      user: { id: string; discord_username: string };
+      user: { id: string; discord_username: string; alias: string | null };
     }>,
     remainingPot: number,
     leaderCutAmount: number,
@@ -124,6 +126,7 @@ export class PotDistributionService {
         return {
           user_id: p.user_id,
           discord_username: p.user.discord_username,
+          alias: p.user.alias,
           role: p.role,
           share_amount: shareAmount,
           share_percentage: customShare,
@@ -143,6 +146,7 @@ export class PotDistributionService {
       return {
         user_id: p.user_id,
         discord_username: p.user.discord_username,
+        alias: p.user.alias,
         role: p.role,
         share_amount: shareAmount,
         share_percentage: Math.round(sharePercentage * 100) / 100,

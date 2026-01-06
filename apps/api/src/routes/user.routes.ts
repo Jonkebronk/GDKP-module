@@ -8,10 +8,18 @@ const updateProfileSchema = z.object({
   crypto_wallet_address: z.string().max(255).optional().nullable(),
 });
 
+const updateAliasSchema = z.object({
+  alias: z.string()
+    .min(2, 'Alias must be at least 2 characters')
+    .max(32, 'Alias must be at most 32 characters')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Alias can only contain letters, numbers, underscores, and hyphens'),
+});
+
 const userRoutes: FastifyPluginAsync = async (fastify) => {
   // Get user profile by ID
   fastify.get('/:id', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
+    const isAdmin = request.user.role === 'ADMIN';
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -19,6 +27,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         discord_username: true,
         discord_avatar: true,
+        alias: true,
         gold_balance: true,
         role: true,
         created_at: true,
@@ -29,9 +38,19 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
+    // Always provide display_name (alias or fallback)
+    const display_name = user.alias || user.discord_username;
+
     return {
-      ...user,
+      id: user.id,
+      display_name,
+      discord_avatar: user.discord_avatar,
+      alias: user.alias,
+      // Only expose discord_username to admins
+      ...(isAdmin ? { discord_username: user.discord_username } : {}),
       gold_balance: Number(user.gold_balance),
+      role: user.role,
+      created_at: user.created_at,
     };
   });
 
@@ -53,6 +72,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
         id: true,
         discord_username: true,
         discord_avatar: true,
+        alias: true,
         crypto_wallet_address: true,
         gold_balance: true,
         role: true,
@@ -64,6 +84,26 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       gold_balance: Number(user.gold_balance),
       has_wallet: !!user.crypto_wallet_address,
     };
+  });
+
+  // Update user alias (display name)
+  fastify.patch('/me/alias', { preHandler: [requireAuth] }, async (request) => {
+    const { alias } = updateAliasSchema.parse(request.body);
+
+    const user = await prisma.user.update({
+      where: { id: request.user.id },
+      data: { alias },
+      select: {
+        id: true,
+        discord_id: true,
+        discord_username: true,
+        discord_avatar: true,
+        alias: true,
+        role: true,
+      },
+    });
+
+    return user;
   });
 
   // Get transaction history

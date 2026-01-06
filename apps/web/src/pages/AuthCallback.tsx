@@ -26,14 +26,25 @@ export function AuthCallback() {
     // Set token first so API calls work
     useAuthStore.setState({ token });
 
+    const setup = searchParams.get('setup');
+    const needsAliasSetup = setup === 'alias';
+
     // Fetch user data
     api
       .get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        setAuth(response.data, token);
-        navigate('/');
+        // Check if user needs alias setup (either from URL param or from user data)
+        const userNeedsAlias = needsAliasSetup || !response.data.alias;
+        setAuth(response.data, token, userNeedsAlias);
+
+        // Redirect to alias setup if needed, otherwise home
+        if (userNeedsAlias) {
+          navigate('/setup-alias');
+        } else {
+          navigate('/');
+        }
       })
       .catch((err) => {
         console.error('Failed to get user:', err);

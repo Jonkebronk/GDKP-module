@@ -27,9 +27,11 @@ export async function socketAuth(
 
     // Attach user data to socket
     socket.data.user_id = payload.id;
-    socket.data.username = payload.discord_username;
+    socket.data.username = payload.alias || payload.discord_username; // Display name (alias preferred)
+    socket.data.discord_username = payload.discord_username; // Real Discord username (for admin)
+    socket.data.role = payload.role;
 
-    logger.debug({ user_id: payload.id }, 'Socket authenticated');
+    logger.debug({ user_id: payload.id, username: socket.data.username }, 'Socket authenticated');
     next();
   } catch (error) {
     logger.warn({ error }, 'Socket authentication failed');

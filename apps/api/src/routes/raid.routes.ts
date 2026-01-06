@@ -54,7 +54,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       take: 50,
       include: {
         leader: {
-          select: { id: true, discord_username: true, discord_avatar: true },
+          select: { id: true, discord_username: true, discord_avatar: true, alias: true },
         },
         _count: {
           select: { participants: true, items: true },
@@ -78,12 +78,12 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id },
       include: {
         leader: {
-          select: { id: true, discord_username: true, discord_avatar: true },
+          select: { id: true, discord_username: true, discord_avatar: true, alias: true },
         },
         participants: {
           include: {
             user: {
-              select: { id: true, discord_username: true, discord_avatar: true },
+              select: { id: true, discord_username: true, discord_avatar: true, alias: true },
             },
           },
         },
@@ -91,7 +91,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
           orderBy: { created_at: 'asc' },
           include: {
             winner: {
-              select: { id: true, discord_username: true, discord_avatar: true },
+              select: { id: true, discord_username: true, discord_avatar: true, alias: true },
             },
           },
         },

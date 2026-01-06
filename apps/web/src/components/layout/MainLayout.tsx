@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { formatGold } from '@gdkp/shared';
+import { formatGold, getDisplayName } from '@gdkp/shared';
 import {
   Home,
   Wallet,
@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   Package,
+  Shield,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +22,10 @@ const navItems = [
   { path: '/raids', label: 'Raids', icon: Swords },
   { path: '/items', label: 'Items', icon: Package },
   { path: '/profile', label: 'Profile', icon: User },
+];
+
+const adminNavItems = [
+  { path: '/admin/aliases', label: 'Alias Mappings', icon: Shield },
 ];
 
 export function MainLayout() {
@@ -69,6 +74,30 @@ export function MainLayout() {
                   </Link>
                 );
               })}
+              {/* Admin nav items */}
+              {user?.role === 'ADMIN' && (
+                <>
+                  <div className="w-px h-6 bg-gray-700" />
+                  {adminNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'text-red-400/70 hover:bg-red-500/10 hover:text-red-400'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
             </nav>
 
             {/* User info */}
@@ -85,7 +114,7 @@ export function MainLayout() {
                 {user?.discord_avatar ? (
                   <img
                     src={user.discord_avatar}
-                    alt={user.discord_username}
+                    alt={user ? getDisplayName(user) : ''}
                     className="h-8 w-8 rounded-full"
                   />
                 ) : (
@@ -94,7 +123,7 @@ export function MainLayout() {
                   </div>
                 )}
                 <span className="hidden sm:inline text-sm text-gray-300">
-                  {user?.discord_username}
+                  {user ? getDisplayName(user) : ''}
                 </span>
               </div>
 
@@ -141,6 +170,32 @@ export function MainLayout() {
                   </Link>
                 );
               })}
+
+              {/* Admin nav items (mobile) */}
+              {user?.role === 'ADMIN' && (
+                <>
+                  <div className="border-t border-gray-700 my-2" />
+                  {adminNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                          isActive
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'text-red-400/70 hover:bg-red-500/10 hover:text-red-400'
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </>
+              )}
 
               {/* Mobile gold balance */}
               <div className="sm:hidden px-3 py-2 text-gold-500 font-semibold">

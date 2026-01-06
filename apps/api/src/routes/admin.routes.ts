@@ -26,7 +26,12 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     const where = search
-      ? { discord_username: { contains: search, mode: 'insensitive' as const } }
+      ? {
+          OR: [
+            { discord_username: { contains: search, mode: 'insensitive' as const } },
+            { alias: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
       : {};
 
     const [users, total] = await Promise.all([
@@ -40,7 +45,8 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
           discord_id: true,
           discord_username: true,
           discord_avatar: true,
-          paypal_email: true,
+          alias: true,
+          crypto_wallet_address: true,
           gold_balance: true,
           role: true,
           created_at: true,
@@ -61,6 +67,45 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       })),
       total,
     };
+  });
+
+  // Get alias to Discord username mappings (for admin panel)
+  fastify.get('/alias-mappings', { preHandler: [requireAdmin] }, async (request) => {
+    const { limit = 50, offset = 0, search } = request.query as {
+      limit?: number;
+      offset?: number;
+      search?: string;
+    };
+
+    const where = search
+      ? {
+          OR: [
+            { alias: { contains: search, mode: 'insensitive' as const } },
+            { discord_username: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        take: Math.min(Number(limit), 100),
+        skip: Number(offset),
+        select: {
+          id: true,
+          discord_id: true,
+          discord_username: true,
+          discord_avatar: true,
+          alias: true,
+          role: true,
+          created_at: true,
+        },
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return { users, total };
   });
 
   // Get exchange rates
