@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
-import { formatGold, goldToCurrency } from '@gdkp/shared';
+import { formatGold } from '@gdkp/shared';
 import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
 
 export function Wallet() {

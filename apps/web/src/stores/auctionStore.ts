@@ -27,7 +27,7 @@ interface AuctionState {
 }
 
 export const useAuctionStore = create<AuctionState>()(
-  subscribeWithSelector((set, get) => ({
+  subscribeWithSelector((set) => ({
     activeItem: null,
     bids: [],
     remainingMs: 0,

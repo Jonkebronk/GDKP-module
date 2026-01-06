@@ -6,7 +6,6 @@ import { formatGold, WOW_INSTANCES } from '@gdkp/shared';
 import { Plus, Users, Coins, Calendar, X } from 'lucide-react';
 
 export function Raids() {
-  const queryClient = useQueryClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'mine'>('all');
 
@@ -137,7 +136,7 @@ export function Raids() {
 function CreateRaidModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
-  const [instance, setInstance] = useState(WOW_INSTANCES[0]);
+  const [instance, setInstance] = useState<string>(WOW_INSTANCES[0]);
   const [leaderCut, setLeaderCut] = useState(10);
 
   const createMutation = useMutation({
