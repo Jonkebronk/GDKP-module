@@ -33,6 +33,9 @@ const envSchema = z.object({
   // Exchange rates
   GOLD_PER_EUR: z.string().default('1000'),
   PLATFORM_FEE_PERCENT: z.string().default('5'),
+
+  // Admin users (comma-separated Discord usernames)
+  ADMIN_DISCORD_USERNAMES: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -43,6 +46,14 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+// Parse admin usernames into a Set for fast lookup
+const adminUsernames = new Set(
+  parsed.data.ADMIN_DISCORD_USERNAMES
+    .split(',')
+    .map(u => u.trim().toLowerCase())
+    .filter(u => u.length > 0)
+);
+
 export const env = {
   ...parsed.data,
   PORT: Number(parsed.data.PORT),
@@ -51,4 +62,5 @@ export const env = {
   isDev: parsed.data.NODE_ENV === 'development',
   isProd: parsed.data.NODE_ENV === 'production',
   isTest: parsed.data.NODE_ENV === 'test',
+  isAdmin: (username: string) => adminUsernames.has(username.toLowerCase()),
 };

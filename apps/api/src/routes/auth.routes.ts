@@ -63,6 +63,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         avatar: string | null;
       };
 
+      // Check if this user should be admin based on env config
+      const shouldBeAdmin = env.isAdmin(discordUser.username);
+
       // Find or create user
       let user = await prisma.user.findUnique({
         where: { discord_id: discordUser.id },
@@ -76,11 +79,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             discord_avatar: discordUser.avatar
               ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
               : null,
+            role: shouldBeAdmin ? 'ADMIN' : 'USER',
           },
         });
-        logger.info({ userId: user.id, discordId: discordUser.id }, 'New user created');
+        logger.info({ userId: user.id, discordId: discordUser.id, isAdmin: shouldBeAdmin }, 'New user created');
       } else {
-        // Update user info
+        // Update user info (and promote to admin if configured)
         user = await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -88,8 +92,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             discord_avatar: discordUser.avatar
               ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
               : null,
+            // Promote to admin if configured (but don't demote existing admins)
+            ...(shouldBeAdmin && user.role !== 'ADMIN' ? { role: 'ADMIN' } : {}),
           },
         });
+        if (shouldBeAdmin && user.role !== 'ADMIN') {
+          logger.info({ userId: user.id }, 'User promoted to admin');
+        }
       }
 
       // Generate JWT
