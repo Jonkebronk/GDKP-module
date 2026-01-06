@@ -31,7 +31,25 @@ export function RaidRoom() {
   const [bidAmount, setBidAmount] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
+  const [bidError, setBidError] = useState<string | null>(null);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
+
+  // Listen for bid rejection events
+  useEffect(() => {
+    const handleBidRejected = (e: CustomEvent) => {
+      setBidError(e.detail.message);
+      setTimeout(() => setBidError(null), 5000);
+    };
+    const handleBidAccepted = () => {
+      setBidError(null);
+    };
+    window.addEventListener('bid:rejected', handleBidRejected as EventListener);
+    window.addEventListener('bid:accepted', handleBidAccepted as EventListener);
+    return () => {
+      window.removeEventListener('bid:rejected', handleBidRejected as EventListener);
+      window.removeEventListener('bid:accepted', handleBidAccepted as EventListener);
+    };
+  }, []);
 
   const { data: raid, isLoading } = useQuery({
     queryKey: ['raid', id],
@@ -208,6 +226,13 @@ export function RaidRoom() {
               {isLeadingBidder && (
                 <div className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg mb-4 text-center font-medium">
                   You are the highest bidder!
+                </div>
+              )}
+
+              {/* Bid error message */}
+              {bidError && (
+                <div className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg mb-4 text-center font-medium border border-red-500/50">
+                  {bidError}
                 </div>
               )}
 

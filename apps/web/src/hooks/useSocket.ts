@@ -184,6 +184,27 @@ export function useSocket(raidId: string | null) {
 
     socket.on('error', (error) => {
       console.error('Socket error:', error);
+      window.dispatchEvent(new CustomEvent('socket:error', { detail: error }));
+    });
+
+    // Bid feedback
+    socket.on('bid:rejected', (data) => {
+      console.error('Bid rejected:', data);
+      const errorMessages: Record<string, string> = {
+        'BID_INSUFFICIENT_BALANCE': 'Not enough gold! Deposit more to place bids.',
+        'BID_TOO_LOW': `Bid too low! Minimum is ${data.min_required}g`,
+        'BID_ALREADY_WINNING': 'You are already the highest bidder!',
+        'AUCTION_NOT_ACTIVE': 'This auction is not active.',
+        'AUCTION_ENDED': 'This auction has ended.',
+        'BID_INVALID_AMOUNT': 'Invalid bid amount.',
+      };
+      const message = errorMessages[data.error] || `Bid failed: ${data.error}`;
+      window.dispatchEvent(new CustomEvent('bid:rejected', { detail: { ...data, message } }));
+    });
+
+    socket.on('bid:accepted', (data) => {
+      console.log('Bid accepted:', data);
+      window.dispatchEvent(new CustomEvent('bid:accepted', { detail: data }));
     });
 
     return () => {
