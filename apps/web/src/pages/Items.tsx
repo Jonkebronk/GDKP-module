@@ -23,6 +23,7 @@ import {
   CheckCircle,
   RefreshCw,
   Trash2,
+  Plus,
 } from 'lucide-react';
 
 export function Items() {
@@ -33,6 +34,7 @@ export function Items() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [page, setPage] = useState(1);
 
   const queryClient = useQueryClient();
@@ -108,6 +110,13 @@ export function Items() {
               <span>Clear All</span>
             </button>
           )}
+          <button
+            onClick={() => setShowAddItemModal(true)}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Item</span>
+          </button>
           <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
@@ -284,6 +293,16 @@ export function Items() {
 
       {/* Import Modal */}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} />}
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <AddItemModal
+          onClose={() => setShowAddItemModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['items'] });
+          }}
+        />
+      )}
 
       {/* Clear Confirmation Modal */}
       {showClearConfirm && (
@@ -617,6 +636,228 @@ function ImportModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AddItemModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [wowheadId, setWowheadId] = useState('');
+  const [itemData, setItemData] = useState<{
+    id: number;
+    name: string;
+    icon: string;
+    quality: number;
+    source: string;
+  } | null>(null);
+  const [raidInstance, setRaidInstance] = useState('');
+  const [bossName, setBossName] = useState('');
+  const [slot, setSlot] = useState('');
+  const [lookupError, setLookupError] = useState('');
+
+  // Lookup item from WoWhead
+  const lookupMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.get(`/items/wowhead/${id}`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.error) {
+        setLookupError(data.error);
+        setItemData(null);
+      } else {
+        setItemData(data);
+        setLookupError('');
+      }
+    },
+    onError: () => {
+      setLookupError('Failed to lookup item');
+      setItemData(null);
+    },
+  });
+
+  // Add item to database
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      if (!itemData) return;
+      const res = await api.post('/items', {
+        wowhead_id: itemData.id,
+        name: itemData.name,
+        icon: itemData.icon,
+        quality: itemData.quality,
+        raid_instance: raidInstance || undefined,
+        boss_name: bossName || undefined,
+        slot: slot || undefined,
+      });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        onSuccess();
+        // Reset for next item
+        setWowheadId('');
+        setItemData(null);
+        setRaidInstance('');
+        setBossName('');
+        setSlot('');
+      }
+    },
+  });
+
+  const handleLookup = () => {
+    if (wowheadId.trim()) {
+      lookupMutation.mutate(wowheadId.trim());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Add Item</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* WoWhead ID Input */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">WoWhead Item ID</label>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={wowheadId}
+                onChange={(e) => setWowheadId(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+                placeholder="e.g. 32837"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+              />
+              <button
+                onClick={handleLookup}
+                disabled={!wowheadId.trim() || lookupMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                {lookupMutation.isPending ? (
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                ) : (
+                  'Lookup'
+                )}
+              </button>
+            </div>
+            <p className="text-gray-500 text-xs mt-1">
+              Find the ID from wowhead.com/tbc URL (e.g. /item=32837)
+            </p>
+          </div>
+
+          {lookupError && (
+            <div className="flex items-center space-x-2 text-red-400 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>{lookupError}</span>
+            </div>
+          )}
+
+          {/* Item Preview */}
+          {itemData && (
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <img
+                  src={`https://wow.zamimg.com/images/wow/icons/medium/${itemData.icon}.jpg`}
+                  alt={itemData.name}
+                  className="w-10 h-10 rounded"
+                  style={{
+                    borderWidth: 2,
+                    borderStyle: 'solid',
+                    borderColor: ITEM_QUALITY_COLORS[itemData.quality as ItemQuality],
+                  }}
+                />
+                <div>
+                  <p
+                    className="font-medium"
+                    style={{ color: ITEM_QUALITY_COLORS[itemData.quality as ItemQuality] }}
+                  >
+                    {itemData.name}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    ID: {itemData.id} • {itemData.source === 'database' ? 'Already in database' : 'From WoWhead'}
+                  </p>
+                </div>
+              </div>
+
+              {itemData.source !== 'database' && (
+                <div className="space-y-3">
+                  {/* Raid Instance */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Raid Instance (optional)</label>
+                    <select
+                      value={raidInstance}
+                      onChange={(e) => setRaidInstance(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                    >
+                      <option value="">Select raid...</option>
+                      {TBC_RAID_INSTANCES.map((inst) => (
+                        <option key={inst.id} value={inst.name}>
+                          {inst.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Boss Name */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Boss Name (optional)</label>
+                    <input
+                      type="text"
+                      value={bossName}
+                      onChange={(e) => setBossName(e.target.value)}
+                      placeholder="e.g. Illidan Stormrage"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                    />
+                  </div>
+
+                  {/* Slot */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Item Slot (optional)</label>
+                    <select
+                      value={slot}
+                      onChange={(e) => setSlot(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                    >
+                      <option value="">Select slot...</option>
+                      {ITEM_SLOTS.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => addMutation.mutate()}
+                    disabled={addMutation.isPending}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  >
+                    {addMutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 animate-spin" />
+                        <span>Adding...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-5 w-5" />
+                        <span>Add to Database</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {itemData.source === 'database' && (
+                <p className="text-yellow-500 text-sm">This item is already in the database.</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

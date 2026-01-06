@@ -39,6 +39,16 @@ const rclcImportSchema = z.object({
   raid_id: z.string().uuid().optional(),
 });
 
+const addItemSchema = z.object({
+  wowhead_id: z.number().int().positive(),
+  name: z.string().min(1).max(255),
+  icon: z.string().optional(),
+  slot: z.string().optional(),
+  quality: z.number().int().min(0).max(5).default(4),
+  raid_instance: z.string().optional(),
+  boss_name: z.string().optional(),
+});
+
 const itemRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * GET /items - List all TBC raid items with filters
@@ -50,6 +60,43 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await getTbcItems(filters);
 
     return result;
+  });
+
+  /**
+   * POST /items - Add a new item to the database
+   */
+  fastify.post('/', { preHandler: [requireAuth] }, async (request, reply) => {
+    const data = addItemSchema.parse(request.body);
+
+    // Check if item already exists
+    const existing = await prisma.tbcRaidItem.findUnique({
+      where: { wowhead_id: data.wowhead_id },
+    });
+
+    if (existing) {
+      return reply.status(409).send({
+        error: 'Item already exists',
+        item: existing,
+      });
+    }
+
+    // Create the item
+    const item = await prisma.tbcRaidItem.create({
+      data: {
+        wowhead_id: data.wowhead_id,
+        name: data.name,
+        icon: data.icon || 'inv_misc_questionmark',
+        slot: data.slot || 'Unknown',
+        quality: data.quality,
+        raid_instance: data.raid_instance || 'Unknown',
+        boss_name: data.boss_name || 'Unknown',
+        phase: 1,
+      },
+    });
+
+    logger.info({ userId: request.user.id, itemId: item.id, name: item.name }, 'Item added to database');
+
+    return { success: true, item };
   });
 
   /**
