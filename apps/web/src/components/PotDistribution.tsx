@@ -87,8 +87,8 @@ export function PotDistribution({
 
   if (raidStatus === 'COMPLETED') {
     return (
-      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-        <div className="flex items-center space-x-2 text-green-400">
+      <div className="wow-tooltip wow-border-common">
+        <div className="p-4 flex items-center space-x-2 text-green-400">
           <Check className="h-5 w-5" />
           <span className="font-medium">Pot has been distributed</span>
         </div>
@@ -98,8 +98,8 @@ export function PotDistribution({
 
   if (raidStatus === 'CANCELLED') {
     return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-        <div className="flex items-center space-x-2 text-red-400">
+      <div className="wow-tooltip wow-border-common">
+        <div className="p-4 flex items-center space-x-2 text-red-400">
           <X className="h-5 w-5" />
           <span className="font-medium">Raid was cancelled</span>
         </div>
@@ -109,7 +109,7 @@ export function PotDistribution({
 
   if (isLoading) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6">
+      <div className="wow-tooltip wow-border-common p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-6 bg-gray-700 rounded w-1/3"></div>
           <div className="h-4 bg-gray-700 rounded w-full"></div>
@@ -126,92 +126,95 @@ export function PotDistribution({
   const hasActiveAuctions = raidStatus === 'ACTIVE';
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-          <Coins className="h-5 w-5 text-gold-500" />
+    <div className="wow-tooltip wow-border-common">
+      {/* Header */}
+      <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+        <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+          <Coins className="h-4 w-4" />
           <span>Pot Distribution</span>
-        </h3>
-        <span className="text-2xl font-bold text-gold-500">
+        </h2>
+        <span className="text-lg font-bold text-gold-500">
           {formatGold(preview.pot_total)}
         </span>
       </div>
 
-      {/* Distribution breakdown */}
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <p className="text-gray-400">Participants</p>
-          <p className="text-white font-medium flex items-center space-x-1">
-            <Users className="h-4 w-4" />
-            <span>{preview.participant_count}</span>
-          </p>
+      <div className="p-3 space-y-3">
+        {/* Distribution breakdown */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-gray-400 text-xs">Participants</p>
+            <p className="text-white font-medium flex items-center space-x-1">
+              <Users className="h-3 w-3" />
+              <span>{preview.participant_count}</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs">Leader Cut</p>
+            <p className="text-white font-medium text-sm">
+              {preview.leader_cut}% ({formatGold(preview.leader_cut_amount)})
+            </p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-gray-400 text-xs">Equal Share per Member</p>
+            <p className="text-gold-500 font-medium">
+              {formatGold(preview.member_share)}
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-gray-400">Leader Cut</p>
-          <p className="text-white font-medium">
-            {preview.leader_cut}% ({formatGold(preview.leader_cut_amount)})
-          </p>
-        </div>
-        <div className="col-span-2">
-          <p className="text-gray-400">Equal Share per Member</p>
-          <p className="text-gold-500 font-medium">
-            {formatGold(preview.member_share)}
-          </p>
-        </div>
-      </div>
 
-      {/* Participant shares */}
-      <div className="border-t border-gray-700 pt-4">
-        <h4 className="text-sm font-medium text-gray-400 mb-2">Share Breakdown</h4>
-        <div className="max-h-48 overflow-y-auto space-y-2">
-          {preview.shares.map((share) => (
-            <div
-              key={share.user_id}
-              className="flex items-center justify-between py-2 px-3 bg-gray-700/50 rounded"
-            >
-              <div className="flex items-center space-x-2">
-                {share.role === 'LEADER' && (
-                  <Crown className="h-4 w-4 text-gold-500" />
-                )}
-                <SimpleUserDisplay
-                  user={share}
-                  className="text-white text-sm"
-                />
-                <span className="text-gray-500 text-xs">
-                  ({share.share_percentage.toFixed(1)}%)
+        {/* Participant shares */}
+        <div className="border-t border-gray-700 pt-3">
+          <h4 className="text-xs font-medium text-gray-400 mb-2">Share Breakdown</h4>
+          <div className="max-h-32 overflow-y-auto space-y-1">
+            {preview.shares.map((share) => (
+              <div
+                key={share.user_id}
+                className="flex items-center justify-between py-1.5 px-2 bg-gray-700/50 rounded text-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  {share.role === 'LEADER' && (
+                    <Crown className="h-3 w-3 text-gold-500" />
+                  )}
+                  <SimpleUserDisplay
+                    user={share}
+                    className="text-white text-sm"
+                  />
+                  <span className="text-gray-500 text-xs">
+                    ({share.share_percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <span className="text-gold-500 font-medium">
+                  {formatGold(share.share_amount)}
                 </span>
               </div>
-              <span className="text-gold-500 font-medium">
-                {formatGold(share.share_amount)}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Action buttons */}
-      <div className="flex space-x-2 pt-4 border-t border-gray-700">
-        <button
-          onClick={() => setShowConfirmDistribute(true)}
-          disabled={hasActiveAuctions || preview.pot_total === 0}
-          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded-lg transition-colors"
-        >
-          Distribute Pot
-        </button>
-        <button
-          onClick={() => setShowConfirmCancel(true)}
-          className="bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          Cancel Raid
-        </button>
-      </div>
+        {/* Action buttons */}
+        <div className="flex space-x-2 pt-2 border-t border-gray-700">
+          <button
+            onClick={() => setShowConfirmDistribute(true)}
+            disabled={hasActiveAuctions || preview.pot_total === 0}
+            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded transition-colors text-sm"
+          >
+            Distribute Pot
+          </button>
+          <button
+            onClick={() => setShowConfirmCancel(true)}
+            className="bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium px-3 py-2 rounded transition-colors text-sm"
+          >
+            Cancel Raid
+          </button>
+        </div>
 
-      {hasActiveAuctions && (
-        <p className="text-yellow-500 text-xs flex items-center space-x-1">
-          <AlertTriangle className="h-3 w-3" />
-          <span>Complete all auctions before distributing</span>
-        </p>
-      )}
+        {hasActiveAuctions && (
+          <p className="text-yellow-500 text-xs flex items-center space-x-1">
+            <AlertTriangle className="h-3 w-3" />
+            <span>Complete all auctions before distributing</span>
+          </p>
+        )}
+      </div>
 
       {/* Confirm Distribute Modal */}
       {showConfirmDistribute && (
