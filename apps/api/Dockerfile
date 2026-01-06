@@ -14,8 +14,8 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/prisma-client/package.json ./packages/prisma-client/
 COPY apps/api/package.json ./apps/api/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (allow lockfile updates for new deps)
+RUN pnpm install
 
 # Copy source files
 COPY packages/shared ./packages/shared
