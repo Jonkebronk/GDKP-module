@@ -3,15 +3,23 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
+import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle, TrendingUp, ExternalLink, Settings, Save, X } from 'lucide-react';
 
 export function Wallet() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [depositAmount, setDepositAmount] = useState('');
   const [depositCurrency, setDepositCurrency] = useState<'EUR' | 'SEK' | 'USD'>('USD');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  // Exchange rate editing (admin only)
+  const [rateEditorOpen, setRateEditorOpen] = useState(false);
+  const [editRates, setEditRates] = useState({ SEK: '', EUR: '', USD: '' });
+
+  const isAdmin = user?.role === 'ADMIN';
 
   // Handle redirect from Coinbase
   useEffect(() => {
@@ -100,6 +108,53 @@ export function Wallet() {
       });
     },
   });
+
+  // Admin: Update exchange rates
+  const updateRatesMutation = useMutation({
+    mutationFn: async (rates: { SEK: number; EUR: number; USD: number }) => {
+      const res = await api.put('/admin/exchange-rates', rates);
+      return res.data;
+    },
+    onSuccess: () => {
+      setRateEditorOpen(false);
+      setStatusMessage({
+        type: 'success',
+        message: 'Exchange rates updated successfully!',
+      });
+      queryClient.invalidateQueries({ queryKey: ['wallet', 'exchange-rates'] });
+    },
+    onError: () => {
+      setStatusMessage({
+        type: 'error',
+        message: 'Failed to update exchange rates.',
+      });
+    },
+  });
+
+  const handleSaveRates = () => {
+    const sek = parseFloat(editRates.SEK);
+    const eur = parseFloat(editRates.EUR);
+    const usd = parseFloat(editRates.USD);
+
+    if (isNaN(sek) || isNaN(eur) || isNaN(usd) || sek <= 0 || eur <= 0 || usd <= 0) {
+      setStatusMessage({
+        type: 'error',
+        message: 'Please enter valid positive numbers for all rates.',
+      });
+      return;
+    }
+
+    updateRatesMutation.mutate({ SEK: sek, EUR: eur, USD: usd });
+  };
+
+  const openRateEditor = () => {
+    setEditRates({
+      SEK: exchangeRates?.SEK?.toString() || '',
+      EUR: exchangeRates?.EUR?.toString() || '',
+      USD: exchangeRates?.USD?.toString() || '',
+    });
+    setRateEditorOpen(true);
+  };
 
   const goldPreview = exchangeRates && depositAmount
     ? Math.floor(parseFloat(depositAmount) * exchangeRates[depositCurrency])
@@ -193,13 +248,22 @@ export function Wallet() {
         </div>
       </div>
 
-      {/* Live Exchange Rates */}
+      {/* Exchange Rates */}
       {exchangeRates && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <TrendingUp className="h-5 w-5 text-green-500" />
-              <span className="text-gray-400 text-sm font-medium">Live Rates from G2G</span>
+              <span className="text-gray-400 text-sm font-medium">Exchange Rates</span>
+              <a
+                href="https://www.g2g.com/wow-classic-tbc-gold"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span>Check G2G</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
             <div className="flex items-center space-x-6 text-sm">
               <div>
@@ -219,6 +283,101 @@ export function Wallet() {
                   Updated: {getTimeSinceUpdate()}
                 </div>
               )}
+              {isAdmin && (
+                <button
+                  onClick={openRateEditor}
+                  className="flex items-center space-x-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+                >
+                  <Settings className="h-3 w-3" />
+                  <span>Edit</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rate Editor Modal (Admin) */}
+      {rateEditorOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/70" onClick={() => setRateEditorOpen(false)} />
+            <div className="relative bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Set Exchange Rates</h3>
+                <button
+                  onClick={() => setRateEditorOpen(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-gray-400 text-sm mb-4">
+                Check current rates on{' '}
+                <a
+                  href="https://www.g2g.com/wow-classic-tbc-gold"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:underline"
+                >
+                  G2G
+                </a>
+                {' '}and enter the gold per currency values below.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">1 SEK = ? gold</label>
+                  <input
+                    type="number"
+                    value={editRates.SEK}
+                    onChange={(e) => setEditRates(prev => ({ ...prev, SEK: e.target.value }))}
+                    placeholder="e.g., 85"
+                    step="0.1"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">1 EUR = ? gold</label>
+                  <input
+                    type="number"
+                    value={editRates.EUR}
+                    onChange={(e) => setEditRates(prev => ({ ...prev, EUR: e.target.value }))}
+                    placeholder="e.g., 900"
+                    step="0.1"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">1 USD = ? gold</label>
+                  <input
+                    type="number"
+                    value={editRates.USD}
+                    onChange={(e) => setEditRates(prev => ({ ...prev, USD: e.target.value }))}
+                    placeholder="e.g., 800"
+                    step="0.1"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setRateEditorOpen(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveRates}
+                  disabled={updateRatesMutation.isPending}
+                  className="flex-1 bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>{updateRatesMutation.isPending ? 'Saving...' : 'Save Rates'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
