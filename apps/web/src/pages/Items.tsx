@@ -10,7 +10,6 @@ import {
   getItemQualityClass,
   type TbcRaidItem,
   type ItemQuality,
-  type ItemSlot,
 } from '@gdkp/shared';
 import {
   Search,

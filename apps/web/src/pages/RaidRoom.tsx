@@ -6,8 +6,9 @@ import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { formatGold, QUICK_BID_INCREMENTS } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel } from 'lucide-react';
+import { Users, Coins, Clock, Send, Gavel, Plus } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
+import { ItemPicker } from '../components/ItemPicker';
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export function RaidRoom() {
 
   const [bidAmount, setBidAmount] = useState('');
   const [chatMessage, setChatMessage] = useState('');
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
 
   const { data: raid, isLoading } = useQuery({
     queryKey: ['raid', id],
@@ -183,7 +185,18 @@ export function RaidRoom() {
 
           {/* Items queue */}
           <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Items</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">Items</h2>
+              {isLeader && (
+                <button
+                  onClick={() => setItemPickerOpen(true)}
+                  className="flex items-center space-x-1 bg-gold-600 hover:bg-gold-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Items</span>
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
               {raid.items.map((item: any) => (
                 <div
@@ -291,6 +304,17 @@ export function RaidRoom() {
           </div>
         </div>
       </div>
+
+      {/* Item Picker Modal */}
+      <ItemPicker
+        raidId={id!}
+        raidInstance={raid.instance}
+        isOpen={itemPickerOpen}
+        onClose={() => setItemPickerOpen(false)}
+        onItemAdded={() => {
+          queryClient.invalidateQueries({ queryKey: ['raid', id] });
+        }}
+      />
     </div>
   );
 }
