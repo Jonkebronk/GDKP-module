@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { formatGold, QUICK_BID_INCREMENTS } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel, Plus } from 'lucide-react';
+import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Link, Loader2 } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { ItemPicker } from '../components/ItemPicker';
 
@@ -21,6 +21,9 @@ export function RaidRoom() {
   const [bidAmount, setBidAmount] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
+  const [wowheadInput, setWowheadInput] = useState('');
+  const [wowheadLoading, setWowheadLoading] = useState(false);
+  const [wowheadError, setWowheadError] = useState('');
 
   const { data: raid, isLoading } = useQuery({
     queryKey: ['raid', id],
@@ -32,6 +35,58 @@ export function RaidRoom() {
   });
 
   const isLeader = raid?.leader_id === user?.id;
+
+  // Delete item mutation
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      await api.delete(`/raids/${id}/items/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+    },
+  });
+
+  // Add item from WoWhead ID
+  const handleAddFromWowhead = async () => {
+    // Extract ID from input (could be URL or just ID)
+    const match = wowheadInput.match(/item[=/](\d+)/i) || wowheadInput.match(/^(\d+)$/);
+    if (!match) {
+      setWowheadError('Enter a valid WoWhead item ID or URL');
+      return;
+    }
+
+    const wowheadId = parseInt(match[1]);
+    setWowheadLoading(true);
+    setWowheadError('');
+
+    try {
+      // Fetch item data from WoWhead
+      const lookupRes = await api.get(`/items/wowhead/${wowheadId}`);
+      const itemData = lookupRes.data;
+
+      if (itemData.error) {
+        setWowheadError(itemData.error);
+        return;
+      }
+
+      // Add to raid
+      await api.post(`/raids/${id}/items`, {
+        name: itemData.name,
+        wowhead_id: itemData.id,
+        icon_url: `https://wow.zamimg.com/images/wow/icons/large/${itemData.icon}.jpg`,
+        starting_bid: 0,
+        min_increment: 10,
+        auction_duration: 60,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      setWowheadInput('');
+    } catch (err: any) {
+      setWowheadError(err.response?.data?.message || 'Failed to add item');
+    } finally {
+      setWowheadLoading(false);
+    }
+  };
 
   const handleBid = (amount?: number) => {
     const bidValue = amount || parseInt(bidAmount);
@@ -197,6 +252,42 @@ export function RaidRoom() {
                 </button>
               )}
             </div>
+
+            {/* Manual WoWhead ID input (Leader only) */}
+            {isLeader && (
+              <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Link className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-400">Add by WoWhead ID or URL</span>
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={wowheadInput}
+                    onChange={(e) => setWowheadInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddFromWowhead()}
+                    placeholder="e.g., 28795 or wowhead.com/tbc/item=28795"
+                    className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                  />
+                  <button
+                    onClick={handleAddFromWowhead}
+                    disabled={wowheadLoading || !wowheadInput.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm px-3 py-1.5 rounded transition-colors flex items-center space-x-1"
+                  >
+                    {wowheadLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    <span>Add</span>
+                  </button>
+                </div>
+                {wowheadError && (
+                  <p className="text-red-400 text-xs mt-1">{wowheadError}</p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               {raid.items.map((item: any) => (
                 <div
@@ -210,12 +301,22 @@ export function RaidRoom() {
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    {item.icon_url && (
-                      <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded" />
+                    {item.icon_url ? (
+                      <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded border border-gray-600" />
+                    ) : (
+                      <div className="w-8 h-8 rounded border border-gray-600 bg-gray-600 flex items-center justify-center">
+                        <span className="text-xs text-gray-400">?</span>
+                      </div>
                     )}
-                    <span className={`font-medium ${item.status === 'COMPLETED' ? 'text-gray-500' : 'text-white'}`}>
+                    <a
+                      href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+                      className={`font-medium hover:underline ${item.status === 'COMPLETED' ? 'text-gray-500' : 'text-epic'}`}
+                    >
                       {item.name}
-                    </span>
+                    </a>
                   </div>
                   <div className="flex items-center space-x-2">
                     {item.status === 'COMPLETED' && item.winner && (
@@ -224,12 +325,22 @@ export function RaidRoom() {
                       </span>
                     )}
                     {item.status === 'PENDING' && isLeader && (
-                      <button
-                        onClick={() => handleStartAuction(item.id)}
-                        className="bg-gold-600 hover:bg-gold-700 text-white text-sm px-3 py-1 rounded transition-colors"
-                      >
-                        Start
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleStartAuction(item.id)}
+                          className="bg-gold-600 hover:bg-gold-700 text-white text-sm px-3 py-1 rounded transition-colors"
+                        >
+                          Start
+                        </button>
+                        <button
+                          onClick={() => deleteItemMutation.mutate(item.id)}
+                          disabled={deleteItemMutation.isPending}
+                          className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-1 rounded transition-colors"
+                          title="Delete item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                     {item.status === 'ACTIVE' && (
                       <span className="text-gold-500 text-sm font-medium">LIVE</span>

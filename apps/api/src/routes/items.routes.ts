@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth.js';
 import { TBC_RAID_INSTANCES, ITEM_SLOTS } from '@gdkp/shared';
+import { prisma } from '../config/database.js';
 import {
   parseGargulExport,
   parseRCLootCouncilCSV,
@@ -75,6 +76,58 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/slots', { preHandler: [requireAuth] }, async () => {
     return { slots: ITEM_SLOTS };
+  });
+
+  /**
+   * GET /items/wowhead/:id - Lookup item from WoWhead by ID
+   */
+  fastify.get('/wowhead/:id', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const wowheadId = parseInt(id);
+
+    if (isNaN(wowheadId) || wowheadId <= 0) {
+      return { error: 'Invalid WoWhead ID' };
+    }
+
+    // First check if we have it in our database
+    const existingItem = await prisma.tbcRaidItem.findUnique({
+      where: { wowhead_id: wowheadId },
+    });
+
+    if (existingItem) {
+      return {
+        id: existingItem.wowhead_id,
+        name: existingItem.name,
+        icon: existingItem.icon,
+        slot: existingItem.slot,
+        quality: existingItem.quality,
+        source: 'database',
+      };
+    }
+
+    // If not in database, try to fetch from WoWhead
+    try {
+      const response = await fetch(`https://nether.wowhead.com/tooltip/item/${wowheadId}?dataEnv=4&locale=0`);
+      if (!response.ok) {
+        return { error: 'Item not found on WoWhead' };
+      }
+
+      const data = await response.json() as { name?: string; icon?: string; quality?: number };
+
+      if (!data.name) {
+        return { error: 'Item not found on WoWhead' };
+      }
+
+      return {
+        id: wowheadId,
+        name: data.name,
+        icon: data.icon || 'inv_misc_questionmark',
+        quality: data.quality || 4,
+        source: 'wowhead',
+      };
+    } catch {
+      return { error: 'Failed to fetch from WoWhead' };
+    }
   });
 
   /**

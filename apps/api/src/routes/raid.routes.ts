@@ -316,6 +316,42 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // Delete item from raid
+  fastify.delete('/:id/items/:itemId', { preHandler: [requireAuth] }, async (request) => {
+    const { id, itemId } = request.params as { id: string; itemId: string };
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can delete items', 403);
+    }
+
+    // Check item exists and belongs to this raid
+    const item = await prisma.item.findFirst({
+      where: { id: itemId, raid_id: id },
+    });
+
+    if (!item) {
+      throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Item not found', 404);
+    }
+
+    // Don't allow deleting active or completed items
+    if (item.status !== 'PENDING') {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot delete active or completed items', 400);
+    }
+
+    await prisma.item.delete({
+      where: { id: itemId },
+    });
+
+    return { deleted: true };
+  });
+
   // Get pot distribution preview
   fastify.get('/:id/distribution-preview', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
