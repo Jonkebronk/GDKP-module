@@ -705,9 +705,29 @@ function AddItemModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
   });
 
   const handleLookup = () => {
-    if (wowheadId.trim()) {
-      lookupMutation.mutate(wowheadId.trim());
+    const input = wowheadId.trim();
+    if (!input) return;
+
+    // Extract item ID from various formats:
+    // - Just ID: "21903"
+    // - With item=: "item=21903"
+    // - Full URL path: "/tbc/item=21903/pattern-name" or "bc/item=21903/..."
+    // - Full URL: "https://www.wowhead.com/tbc/item=21903/pattern-name"
+    let itemId = input;
+
+    // Try to extract from item=XXXXX pattern
+    const match = input.match(/item[=:](\d+)/i);
+    if (match) {
+      itemId = match[1];
+    } else {
+      // If no match, try to extract just digits if that's all there is
+      const digitsOnly = input.replace(/\D/g, '');
+      if (digitsOnly && digitsOnly.length >= 4) {
+        itemId = digitsOnly;
+      }
     }
+
+    lookupMutation.mutate(itemId);
   };
 
   return (
@@ -746,7 +766,7 @@ function AddItemModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
               </button>
             </div>
             <p className="text-gray-500 text-xs mt-1">
-              Find the ID from wowhead.com/tbc URL (e.g. /item=32837)
+              Paste item ID or full WoWhead URL (e.g. 32837 or wowhead.com/tbc/item=32837/...)
             </p>
           </div>
 
