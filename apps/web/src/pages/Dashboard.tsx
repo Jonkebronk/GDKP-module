@@ -27,6 +27,22 @@ const qualityBorderClass: Record<number, string> = {
   5: 'border-orange-500',
 };
 
+// Raid background images
+const raidBackgrounds: Record<string, string> = {
+  'Karazhan': '/raids/karazhan.jpg',
+  "Gruul's Lair": '/raids/gruul.jpg',
+  "Magtheridon's Lair": '/raids/magtheridon.jpg',
+  'Serpentshrine Cavern': '/raids/ssc.jpg',
+  'Tempest Keep': '/raids/tempest-keep.jpg',
+  'The Eye': '/raids/tempest-keep.jpg',
+  'Mount Hyjal': '/raids/hyjal.jpg',
+  'Black Temple': '/raids/black-temple.jpg',
+  'Sunwell Plateau': '/raids/sunwell.jpg',
+  "Zul'Aman": '/raids/zulaman.jpg',
+};
+
+const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+
 interface ItemWon {
   id: string;
   name: string;
@@ -154,42 +170,56 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Active Raids - Compact Card */}
+        {/* Active Raids - Compact Card with Background */}
         {activeRaids && activeRaids.length > 0 && activeRaids.slice(0, 1).map((raid) => {
           const inRaid = isInRaid(raid);
           return (
-            <div key={raid.id} className="bg-gray-800 rounded-lg p-5 flex-shrink-0">
-              <div className="flex items-center justify-between gap-6">
-                <div className="flex items-center space-x-3">
-                  <Swords className="h-10 w-10 text-purple-400/50" />
-                  <div>
-                    <p className="text-white font-semibold">{raid.name}</p>
-                    <p className="text-gray-400 text-sm flex items-center space-x-2">
-                      <span>{raid.instance}</span>
-                      <span>•</span>
-                      <Users className="h-3 w-3" />
-                      <span>{raid.participant_count}</span>
-                    </p>
+            <div
+              key={raid.id}
+              className="rounded-lg overflow-hidden flex-shrink-0 relative"
+              style={{
+                backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              {/* Dark overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/60 to-black/70" />
+
+              {/* Content */}
+              <div className="relative p-5">
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center space-x-3">
+                    <Swords className="h-10 w-10 text-purple-400/70" />
+                    <div>
+                      <p className="text-white font-semibold drop-shadow-lg">{raid.name}</p>
+                      <p className="text-gray-300 text-sm flex items-center space-x-2 drop-shadow-md">
+                        <span>{raid.instance}</span>
+                        <span>•</span>
+                        <Users className="h-3 w-3" />
+                        <span>{raid.participant_count}</span>
+                      </p>
+                    </div>
                   </div>
+                  {inRaid ? (
+                    <Link
+                      to={`/raids/${raid.id}`}
+                      className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>Joined</span>
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => joinRaidMutation.mutate(raid.id)}
+                      disabled={joinRaidMutation.isPending}
+                      className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
+                    </button>
+                  )}
                 </div>
-                {inRaid ? (
-                  <Link
-                    to={`/raids/${raid.id}`}
-                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span>Joined</span>
-                  </Link>
-                ) : (
-                  <button
-                    onClick={() => joinRaidMutation.mutate(raid.id)}
-                    disabled={joinRaidMutation.isPending}
-                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
-                  </button>
-                )}
               </div>
             </div>
           );
