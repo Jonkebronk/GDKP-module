@@ -150,7 +150,7 @@ export function LoginPage() {
         )}
 
         {/* Fight Club Quote */}
-        <p className="text-amber-600/50 text-sm italic">
+        <p className="text-amber-500 text-sm italic">
           The first rule of Fight Club is: You do not talk about Fight Club
         </p>
       </div>
