@@ -52,6 +52,9 @@ export function Raids() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raids'] });
     },
+    onError: (error: any) => {
+      alert(error?.response?.data?.message || error?.message || 'Failed to delete raid');
+    },
   });
 
   return (
