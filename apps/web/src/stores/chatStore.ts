@@ -5,6 +5,8 @@ interface Participant {
   user_id: string;
   username: string;
   avatar: string | null;
+  alias?: string | null;
+  display_name?: string | null;
   role?: string;
 }
 

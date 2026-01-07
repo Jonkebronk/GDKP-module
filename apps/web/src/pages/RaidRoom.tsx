@@ -499,11 +499,18 @@ export function RaidRoom() {
                 user_id: p.user_id,
                 username: p.user?.discord_username || 'Unknown',
                 avatar: p.user?.discord_avatar || null,
+                alias: p.user?.alias || null,
+                display_name: p.user?.display_name || null,
                 role: p.role,
               }))).map((p: any) => (
                 <div key={p.user_id} className="flex items-center space-x-2">
                   <SimpleUserDisplay
-                    user={{ discord_username: p.username, discord_avatar: p.avatar }}
+                    user={{
+                      discord_username: p.username,
+                      discord_avatar: p.avatar,
+                      alias: p.alias,
+                      display_name: p.display_name,
+                    }}
                     showAvatar
                     avatarSize={24}
                     className="text-gray-300 text-sm"
