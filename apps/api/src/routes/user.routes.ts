@@ -106,6 +106,124 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
     return user;
   });
 
+  // Get items won by user (gold spent history)
+  fastify.get('/me/items-won', { preHandler: [requireAuth] }, async (request) => {
+    const items = await prisma.item.findMany({
+      where: {
+        winner_id: request.user.id,
+        status: 'COMPLETED',
+      },
+      include: {
+        raid: {
+          select: {
+            id: true,
+            name: true,
+            instance: true,
+            ended_at: true,
+          },
+        },
+      },
+      orderBy: { completed_at: 'desc' },
+    });
+
+    // Group by raid
+    const byRaid: Record<string, {
+      raid_id: string;
+      raid_name: string;
+      instance: string;
+      ended_at: string | null;
+      items: Array<{
+        id: string;
+        name: string;
+        icon_url: string | null;
+        quality: number;
+        final_bid: number;
+        completed_at: string | null;
+      }>;
+      total_spent: number;
+    }> = {};
+
+    let totalSpent = 0;
+
+    for (const item of items) {
+      const finalBid = Number(item.current_bid);
+      totalSpent += finalBid;
+
+      if (!byRaid[item.raid_id]) {
+        byRaid[item.raid_id] = {
+          raid_id: item.raid_id,
+          raid_name: item.raid.name,
+          instance: item.raid.instance,
+          ended_at: item.raid.ended_at?.toISOString() || null,
+          items: [],
+          total_spent: 0,
+        };
+      }
+
+      byRaid[item.raid_id].items.push({
+        id: item.id,
+        name: item.name,
+        icon_url: item.icon_url,
+        quality: item.quality,
+        final_bid: finalBid,
+        completed_at: item.completed_at?.toISOString() || null,
+      });
+      byRaid[item.raid_id].total_spent += finalBid;
+    }
+
+    return {
+      raids: Object.values(byRaid),
+      total_spent: totalSpent,
+      total_items: items.length,
+    };
+  });
+
+  // Get payout history (cut payouts from raids)
+  fastify.get('/me/payouts', { preHandler: [requireAuth] }, async (request) => {
+    const participations = await prisma.raidParticipant.findMany({
+      where: {
+        user_id: request.user.id,
+        payout_amount: { not: null },
+        paid_at: { not: null },
+      },
+      include: {
+        raid: {
+          select: {
+            id: true,
+            name: true,
+            instance: true,
+            ended_at: true,
+            pot_total: true,
+          },
+        },
+      },
+      orderBy: { paid_at: 'desc' },
+    });
+
+    let totalPayout = 0;
+    const raids = participations.map((p) => {
+      const payoutAmount = Number(p.payout_amount);
+      totalPayout += payoutAmount;
+
+      return {
+        raid_id: p.raid_id,
+        raid_name: p.raid.name,
+        instance: p.raid.instance,
+        ended_at: p.raid.ended_at?.toISOString() || null,
+        pot_total: Number(p.raid.pot_total),
+        payout_amount: payoutAmount,
+        role: p.role,
+        paid_at: p.paid_at?.toISOString() || null,
+      };
+    });
+
+    return {
+      raids,
+      total_payout: totalPayout,
+      total_raids: raids.length,
+    };
+  });
+
   // Get transaction history
   fastify.get('/me/transactions', { preHandler: [requireAuth] }, async (request) => {
     const { limit = 50, offset = 0, type } = request.query as {

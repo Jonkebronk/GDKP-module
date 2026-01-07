@@ -1,10 +1,66 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { formatGold } from '@gdkp/shared';
-import { Wallet, Swords, TrendingUp, Clock } from 'lucide-react';
+import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins } from 'lucide-react';
+import { GoldDisplay } from '../components/GoldDisplay';
+import { useState } from 'react';
+
+// Quality border classes
+const qualityBorderClass: Record<number, string> = {
+  0: 'border-gray-500',
+  1: 'border-gray-300',
+  2: 'border-green-500',
+  3: 'border-blue-500',
+  4: 'border-purple-500',
+  5: 'border-orange-500',
+};
+
+interface ItemWon {
+  id: string;
+  name: string;
+  icon_url: string | null;
+  quality: number;
+  final_bid: number;
+  completed_at: string | null;
+}
+
+interface RaidWithItems {
+  raid_id: string;
+  raid_name: string;
+  instance: string;
+  ended_at: string | null;
+  items: ItemWon[];
+  total_spent: number;
+}
+
+interface ItemsWonData {
+  raids: RaidWithItems[];
+  total_spent: number;
+  total_items: number;
+}
+
+interface RaidPayout {
+  raid_id: string;
+  raid_name: string;
+  instance: string;
+  ended_at: string | null;
+  pot_total: number;
+  payout_amount: number;
+  role: string;
+  paid_at: string | null;
+}
+
+interface PayoutsData {
+  raids: RaidPayout[];
+  total_payout: number;
+  total_raids: number;
+}
 
 export function Dashboard() {
+  const [expandedSpentRaids, setExpandedSpentRaids] = useState<Set<string>>(new Set());
+  const [expandedPayoutRaids, setExpandedPayoutRaids] = useState<Set<string>>(new Set());
+
   const { data: walletData } = useQuery({
     queryKey: ['wallet', 'balance'],
     queryFn: async () => {
@@ -13,149 +69,252 @@ export function Dashboard() {
     },
   });
 
-  const { data: recentRaids } = useQuery({
-    queryKey: ['raids', 'recent'],
+  const { data: itemsWon } = useQuery<ItemsWonData>({
+    queryKey: ['user', 'items-won'],
     queryFn: async () => {
-      const res = await api.get('/raids?limit=5');
+      const res = await api.get('/users/me/items-won');
       return res.data;
     },
   });
+
+  const { data: payouts } = useQuery<PayoutsData>({
+    queryKey: ['user', 'payouts'],
+    queryFn: async () => {
+      const res = await api.get('/users/me/payouts');
+      return res.data;
+    },
+  });
+
+  const toggleSpentRaid = (raidId: string) => {
+    setExpandedSpentRaids((prev) => {
+      const next = new Set(prev);
+      if (next.has(raidId)) {
+        next.delete(raidId);
+      } else {
+        next.add(raidId);
+      }
+      return next;
+    });
+  };
+
+  const togglePayoutRaid = (raidId: string) => {
+    setExpandedPayoutRaids((prev) => {
+      const next = new Set(prev);
+      if (next.has(raidId)) {
+        next.delete(raidId);
+      } else {
+        next.add(raidId);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Balance */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Balance</p>
-              <p className="text-2xl font-bold text-gold-500">
-                {walletData ? formatGold(walletData.balance) : '...'}
-              </p>
+      {/* Balance card */}
+      <div className="bg-gray-800 rounded-lg p-6 max-w-xs">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-sm">Balance</p>
+            <div className="text-2xl font-bold text-gold-500">
+              {walletData ? (
+                <GoldDisplay amount={walletData.balance} iconSize={20} />
+              ) : (
+                '...'
+              )}
             </div>
-            <Wallet className="h-10 w-10 text-gold-500/50" />
           </div>
-        </div>
-
-        {/* Available */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Available</p>
-              <p className="text-2xl font-bold text-green-500">
-                {walletData ? formatGold(walletData.available_balance) : '...'}
-              </p>
-            </div>
-            <TrendingUp className="h-10 w-10 text-green-500/50" />
-          </div>
-        </div>
-
-        {/* Locked */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Locked in Bids</p>
-              <p className="text-2xl font-bold text-yellow-500">
-                {walletData ? formatGold(walletData.locked_amount) : '...'}
-              </p>
-            </div>
-            <Clock className="h-10 w-10 text-yellow-500/50" />
-          </div>
-        </div>
-
-        {/* Active Raids */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Active Raids</p>
-              <p className="text-2xl font-bold text-purple-500">
-                {recentRaids?.filter((r: any) => r.status === 'ACTIVE').length || 0}
-              </p>
-            </div>
-            <Swords className="h-10 w-10 text-purple-500/50" />
-          </div>
+          <Wallet className="h-10 w-10 text-gold-500/50" />
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link
-          to="/wallet"
-          className="bg-gray-800 hover:bg-gray-700 rounded-lg p-6 transition-colors"
-        >
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-gold-500/20 flex items-center justify-center">
-              <Wallet className="h-6 w-6 text-gold-500" />
+      {/* Two column layout for history sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gold Spent History */}
+        <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="bg-gray-900 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <ShoppingBag className="h-5 w-5 text-red-400" />
+              <h2 className="text-lg font-semibold text-white">Gold Spent</h2>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Manage Wallet</h3>
-              <p className="text-gray-400 text-sm">Deposit or withdraw gold</p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/raids"
-          className="bg-gray-800 hover:bg-gray-700 rounded-lg p-6 transition-colors"
-        >
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <Swords className="h-6 w-6 text-purple-500" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Browse Raids</h3>
-              <p className="text-gray-400 text-sm">Join or create a raid</p>
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Total</p>
+              <GoldDisplay
+                amount={itemsWon?.total_spent || 0}
+                className="text-red-400 font-semibold"
+                iconSize={14}
+              />
             </div>
           </div>
-        </Link>
-      </div>
 
-      {/* Recent raids */}
-      <div className="bg-gray-800 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Recent Raids</h2>
-          <Link to="/raids" className="text-gold-500 hover:text-gold-400 text-sm">
-            View all
-          </Link>
-        </div>
-
-        {recentRaids?.length > 0 ? (
-          <div className="space-y-3">
-            {recentRaids.slice(0, 5).map((raid: any) => (
-              <Link
-                key={raid.id}
-                to={`/raids/${raid.id}`}
-                className="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <div>
-                  <h3 className="text-white font-medium">{raid.name}</h3>
-                  <p className="text-gray-400 text-sm">{raid.instance}</p>
-                </div>
-                <div className="text-right">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      raid.status === 'ACTIVE'
-                        ? 'bg-green-500/20 text-green-400'
-                        : raid.status === 'PENDING'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}
+          <div className="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+            {itemsWon?.raids && itemsWon.raids.length > 0 ? (
+              itemsWon.raids.map((raid) => (
+                <div key={raid.raid_id}>
+                  <button
+                    onClick={() => toggleSpentRaid(raid.raid_id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
-                    {raid.status}
-                  </span>
-                  <p className="text-gold-500 text-sm mt-1">
-                    {formatGold(raid.pot_total)}
-                  </p>
+                    <div className="flex items-center space-x-3">
+                      {expandedSpentRaids.has(raid.raid_id) ? (
+                        <ChevronUp className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      )}
+                      <div className="text-left">
+                        <p className="text-white font-medium">{raid.raid_name}</p>
+                        <p className="text-gray-500 text-xs">
+                          {raid.instance} • {raid.items.length} item{raid.items.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <GoldDisplay
+                      amount={raid.total_spent}
+                      className="text-red-400 font-medium"
+                      iconSize={12}
+                    />
+                  </button>
+
+                  {expandedSpentRaids.has(raid.raid_id) && (
+                    <div className="bg-gray-900/50 px-4 py-2 space-y-2">
+                      {raid.items.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-1"
+                        >
+                          <div className="flex items-center space-x-2">
+                            {item.icon_url ? (
+                              <img
+                                src={item.icon_url}
+                                alt=""
+                                className={`w-6 h-6 rounded border ${qualityBorderClass[item.quality]}`}
+                              />
+                            ) : (
+                              <div
+                                className={`w-6 h-6 rounded bg-gray-700 border ${qualityBorderClass[item.quality]}`}
+                              />
+                            )}
+                            <span
+                              className={`text-sm ${ITEM_QUALITY_COLORS[item.quality as ItemQuality]}`}
+                            >
+                              {item.name}
+                            </span>
+                          </div>
+                          <GoldDisplay
+                            amount={item.final_bid}
+                            className="text-gray-400 text-sm"
+                            iconSize={10}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </Link>
-            ))}
+              ))
+            ) : (
+              <div className="px-4 py-8 text-center text-gray-500">
+                No items won yet
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="text-gray-400 text-center py-4">No raids yet</p>
-        )}
+        </div>
+
+        {/* Cut Payout History */}
+        <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="bg-gray-900 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Coins className="h-5 w-5 text-green-400" />
+              <h2 className="text-lg font-semibold text-white">Cut Payouts</h2>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Total</p>
+              <GoldDisplay
+                amount={payouts?.total_payout || 0}
+                className="text-green-400 font-semibold"
+                iconSize={14}
+              />
+            </div>
+          </div>
+
+          <div className="divide-y divide-gray-700 max-h-96 overflow-y-auto">
+            {payouts?.raids && payouts.raids.length > 0 ? (
+              payouts.raids.map((raid) => (
+                <div key={raid.raid_id}>
+                  <button
+                    onClick={() => togglePayoutRaid(raid.raid_id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      {expandedPayoutRaids.has(raid.raid_id) ? (
+                        <ChevronUp className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      )}
+                      <div className="text-left">
+                        <p className="text-white font-medium">{raid.raid_name}</p>
+                        <p className="text-gray-500 text-xs">
+                          {raid.instance} • {raid.role}
+                        </p>
+                      </div>
+                    </div>
+                    <GoldDisplay
+                      amount={raid.payout_amount}
+                      className="text-green-400 font-medium"
+                      iconSize={12}
+                    />
+                  </button>
+
+                  {expandedPayoutRaids.has(raid.raid_id) && (
+                    <div className="bg-gray-900/50 px-4 py-2">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-gray-500">Pot Total</p>
+                          <GoldDisplay
+                            amount={raid.pot_total}
+                            className="text-amber-400"
+                            iconSize={10}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Your Cut</p>
+                          <GoldDisplay
+                            amount={raid.payout_amount}
+                            className="text-green-400"
+                            iconSize={10}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Role</p>
+                          <p className="text-white">{raid.role}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Paid</p>
+                          <p className="text-white">
+                            {raid.paid_at
+                              ? new Date(raid.paid_at).toLocaleDateString('sv-SE')
+                              : '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        to={`/raids/${raid.raid_id}`}
+                        className="block mt-2 text-xs text-gold-500 hover:text-gold-400"
+                      >
+                        View raid details →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-8 text-center text-gray-500">
+                No payouts received yet
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

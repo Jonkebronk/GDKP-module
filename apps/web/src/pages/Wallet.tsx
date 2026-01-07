@@ -221,31 +221,15 @@ export function Wallet() {
       )}
 
       {/* Balance overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gray-800 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Balance</p>
-              <p className="text-3xl font-bold text-gold-500">
-                {formatGold(walletData?.balance || 0)}
-              </p>
-            </div>
-            <WalletIcon className="h-12 w-12 text-gold-500/30" />
+      <div className="bg-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-sm">Available</p>
+            <p className="text-3xl font-bold text-gold-500">
+              {formatGold(walletData?.available_balance || 0)}
+            </p>
           </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6">
-          <p className="text-gray-400 text-sm">Available</p>
-          <p className="text-2xl font-bold text-green-500">
-            {formatGold(walletData?.available_balance || 0)}
-          </p>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6">
-          <p className="text-gray-400 text-sm">Locked in Bids</p>
-          <p className="text-2xl font-bold text-yellow-500">
-            {formatGold(walletData?.locked_amount || 0)}
-          </p>
+          <WalletIcon className="h-12 w-12 text-gold-500/30" />
         </div>
       </div>
 
