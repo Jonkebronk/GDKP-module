@@ -20,7 +20,7 @@ interface UserDisplayProps {
 export function UserDisplay({
   displayName,
   discordUsername,
-  avatar,
+  // avatar - no longer used, we always show anonymous avatar
   showAvatar = false,
   avatarSize = 24,
   className = '',

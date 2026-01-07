@@ -5,11 +5,12 @@ import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
-import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName } from '@gdkp/shared';
+import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
 import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play, Rocket } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
+import { AuctionSettings } from '../components/AuctionSettings';
 
 // Quality to CSS class mapping
 const qualityBorderClass: Record<number, string> = {
@@ -32,6 +33,7 @@ export function RaidRoom() {
   const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
+  const [auctionDuration, setAuctionDuration] = useState(AUCTION_DEFAULTS.DURATION);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
 
   // Listen for bid rejection events
@@ -98,7 +100,7 @@ export function RaidRoom() {
   };
 
   const handleStartAuction = (itemId: string) => {
-    startAuction(itemId);
+    startAuction(itemId, auctionDuration);
   };
 
   const handleSendChat = () => {
@@ -292,6 +294,14 @@ export function RaidRoom() {
               )}
             </div>
           </div>
+
+          {/* Auction Settings - Only for leaders */}
+          {isLeader && (
+            <AuctionSettings
+              duration={auctionDuration}
+              onDurationChange={setAuctionDuration}
+            />
+          )}
 
           {/* Items Queue - WoW Style */}
           <div className="wow-tooltip wow-border-epic">
