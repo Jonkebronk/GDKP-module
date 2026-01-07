@@ -382,7 +382,7 @@ export function Wallet() {
             </button>
 
             <p className="text-gray-500 text-xs text-center">
-              Minimum deposit: $5 USD | Accepts BTC, ETH, USDC, and more
+              Minimum deposit: $5 USD
             </p>
           </div>
         </div>
@@ -427,10 +427,7 @@ export function Wallet() {
             </button>
 
             <p className="text-gray-500 text-xs text-center">
-              Minimum: $10 USD (~9,000g) | Max: {formatGold(walletData?.available_balance || 0)}
-            </p>
-            <p className="text-gray-500 text-xs text-center">
-              Requires wallet address in Profile | Manual processing (24-48h)
+              Minimum: $10 USD | Requires wallet address in Profile
             </p>
           </div>
         </div>
