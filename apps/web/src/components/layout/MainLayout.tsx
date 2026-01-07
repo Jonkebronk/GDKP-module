@@ -105,7 +105,7 @@ export function MainLayout() {
             {/* User info */}
             <div className="flex items-center space-x-4">
               {/* Gold balance */}
-              <div className="hidden sm:flex items-center bg-gray-700 px-3 py-1.5 rounded-full">
+              <div className="hidden sm:flex items-center px-3 py-1.5">
                 {walletData ? (
                   <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
                 ) : (
