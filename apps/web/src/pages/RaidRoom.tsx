@@ -58,6 +58,23 @@ export function RaidRoom() {
     };
   }, []);
 
+  // Listen for auction/raid events that require refetch
+  useEffect(() => {
+    const handleRefetch = () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+    };
+    window.addEventListener('auction:started', handleRefetch);
+    window.addEventListener('auction:ended', handleRefetch);
+    window.addEventListener('raid:completed', handleRefetch);
+    window.addEventListener('raid:cancelled', handleRefetch);
+    return () => {
+      window.removeEventListener('auction:started', handleRefetch);
+      window.removeEventListener('auction:ended', handleRefetch);
+      window.removeEventListener('raid:completed', handleRefetch);
+      window.removeEventListener('raid:cancelled', handleRefetch);
+    };
+  }, [id, queryClient]);
+
   const { data: raid, isLoading, refetch: refetchRaid } = useQuery({
     queryKey: ['raid', id],
     queryFn: async () => {

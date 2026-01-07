@@ -95,6 +95,9 @@ export function useSocket(raidId: string | null) {
         itemName: data.item.name,
         amount: minBid,
       });
+
+      // Trigger refetch of raid data to update item status to ACTIVE
+      window.dispatchEvent(new CustomEvent('auction:started', { detail: data }));
     });
 
     socket.on('bid:new', (data) => {
@@ -180,6 +183,9 @@ export function useSocket(raidId: string | null) {
       }
 
       endAuction();
+
+      // Trigger refetch of raid data to update item statuses
+      window.dispatchEvent(new CustomEvent('auction:ended', { detail: data }));
     });
 
     // Pot distribution events
