@@ -119,18 +119,16 @@ export function Dashboard() {
   });
 
   const toggleSpentRaid = (raidId: string) => {
-    const key = `spent-${raidId}`;
     setExpandedSpentRaids((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [raidId]: !prev[raidId],
     }));
   };
 
   const togglePayoutRaid = (raidId: string) => {
-    const key = `payout-${raidId}`;
     setExpandedPayoutRaids((prev) => ({
       ...prev,
-      [key]: !prev[key],
+      [raidId]: !prev[raidId],
     }));
   };
 
@@ -231,7 +229,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedSpentRaids[`spent-${raid.raid_id}`] ? (
+                      {expandedSpentRaids[raid.raid_id] ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -250,7 +248,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedSpentRaids[`spent-${raid.raid_id}`] && (
+                  {expandedSpentRaids[raid.raid_id] && (
                     <div className="bg-gray-900/50 px-4 py-2 space-y-2">
                       {raid.items.map((item) => (
                         <div
@@ -320,7 +318,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedPayoutRaids[`payout-${raid.raid_id}`] ? (
+                      {expandedPayoutRaids[raid.raid_id] ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -339,7 +337,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedPayoutRaids[`payout-${raid.raid_id}`] && (
+                  {expandedPayoutRaids[raid.raid_id] && (
                     <div className="bg-gray-900/50 px-4 py-2">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
