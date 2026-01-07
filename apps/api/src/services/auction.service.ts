@@ -294,6 +294,7 @@ export class AuctionService {
 
             io.to(`raid:${raidId}`).emit('auction:ended', {
               item_id: itemId,
+              item_name: item.name,
               winner_id: null,
               winner_name: null,
               final_amount: 0,
@@ -357,6 +358,7 @@ export class AuctionService {
           // Emit to all participants
           io.to(`raid:${raidId}`).emit('auction:ended', {
             item_id: itemId,
+            item_name: item.name,
             winner_id: winner.id,
             winner_name: winner.discord_username,
             final_amount: finalAmount,
