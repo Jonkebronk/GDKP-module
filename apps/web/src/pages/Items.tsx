@@ -94,60 +94,61 @@ export function Items() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center space-x-3">
-          <Package className="h-8 w-8 text-gold-500" />
+          <Package className="h-8 w-8 text-gold-500 hidden sm:block" />
           <div>
-            <h1 className="text-2xl font-bold text-white">TBC Raid Items</h1>
-            <p className="text-gray-400 text-sm">Browse loot with WoWhead tooltips</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">TBC Raid Items</h1>
+            <p className="text-gray-400 text-sm hidden sm:block">Browse loot with WoWhead tooltips</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setShowClearConfirm(true)}
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Trash2 className="h-5 w-5" />
-                <span>Clear All</span>
-              </button>
-              <button
-                onClick={() => setShowAddItemModal(true)}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Add Item</span>
-              </button>
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Upload className="h-5 w-5" />
-                <span>Import Loot</span>
-              </button>
-            </>
-          )}
-        </div>
+        {isAdmin && (
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-2 rounded-lg transition-colors"
+              title="Clear All"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+            <button
+              onClick={() => setShowAddItemModal(true)}
+              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg transition-colors"
+              title="Add Item"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="hidden sm:inline">Add</span>
+            </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-3 py-2 rounded-lg transition-colors"
+              title="Import Loot"
+            >
+              <Upload className="h-5 w-5" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
-      <div className="bg-gray-800 rounded-lg p-4">
-        <div className="flex items-center space-x-2 mb-4">
-          <Filter className="h-5 w-5 text-gray-400" />
-          <span className="text-gray-400 font-medium">Filters</span>
+      <div className="bg-gray-800 rounded-lg p-3 sm:p-4">
+        <div className="flex items-center space-x-2 mb-3">
+          <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+          <span className="text-gray-400 font-medium text-sm sm:text-base">Filters</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <div className="relative col-span-2 md:col-span-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search items..."
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+              placeholder="Search..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-9 sm:pl-10 pr-3 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
           </div>
 
@@ -156,16 +157,16 @@ export function Items() {
             <select
               value={selectedInstance}
               onChange={(e) => setSelectedInstance(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
             >
               <option value="">All Raids</option>
               {TBC_RAID_INSTANCES.map((inst) => (
                 <option key={inst.id} value={inst.name}>
-                  {inst.name} (P{inst.phase})
+                  {inst.name}
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
           </div>
 
           {/* Slot filter */}
@@ -173,7 +174,7 @@ export function Items() {
             <select
               value={selectedSlot}
               onChange={(e) => setSelectedSlot(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
             >
               <option value="">All Slots</option>
               {ITEM_SLOTS.map((slot) => (
@@ -182,7 +183,7 @@ export function Items() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
           </div>
 
           {/* Quality filter */}
@@ -190,14 +191,14 @@ export function Items() {
             <select
               value={selectedQuality}
               onChange={(e) => setSelectedQuality(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
             >
-              <option value="">All Qualities</option>
+              <option value="">Quality</option>
               <option value="3">Rare</option>
               <option value="4">Epic</option>
               <option value="5">Legendary</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
           </div>
         </div>
 
@@ -258,15 +259,15 @@ export function Items() {
         </div>
       ) : data?.items?.length > 0 ? (
         <>
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="bg-gray-800 rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[300px]">
               <thead>
                 <tr className="bg-gray-900 border-b border-gray-700">
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm">Name</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden sm:table-cell">Slot</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden md:table-cell">Source</th>
-                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden lg:table-cell">Instance</th>
-                  <th className="w-10 px-2"></th>
+                  <th className="text-left px-3 sm:px-4 py-2 sm:py-3 text-gray-400 font-medium text-xs sm:text-sm">Name</th>
+                  <th className="text-left px-3 sm:px-4 py-2 sm:py-3 text-gray-400 font-medium text-xs sm:text-sm hidden sm:table-cell">Slot</th>
+                  <th className="text-left px-3 sm:px-4 py-2 sm:py-3 text-gray-400 font-medium text-xs sm:text-sm hidden md:table-cell">Source</th>
+                  <th className="text-left px-3 sm:px-4 py-2 sm:py-3 text-gray-400 font-medium text-xs sm:text-sm hidden lg:table-cell">Instance</th>
+                  <th className="w-8 sm:w-10 px-1 sm:px-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
@@ -401,43 +402,47 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
   return (
     <tr className="hover:bg-gray-700/50 transition-colors group">
       {/* Name with WoWhead icon */}
-      <td className="px-4 py-2">
+      <td className="px-3 sm:px-4 py-2">
         <a
           href={getWowheadItemUrl(item.wowhead_id)}
           data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
           data-wh-icon-size="medium"
           target="_blank"
           rel="noopener noreferrer"
-          className={`font-medium hover:underline wowhead-icon-spacing ${getItemQualityClass(item.quality as ItemQuality)}`}
+          className={`font-medium hover:underline wowhead-icon-spacing text-sm sm:text-base ${getItemQualityClass(item.quality as ItemQuality)}`}
           style={{ color: qualityColor }}
         >
           {item.name}
         </a>
+        {/* Show slot on mobile under name */}
+        <span className="block sm:hidden text-gray-500 text-xs mt-0.5">
+          {item.slot || 'Misc'}
+        </span>
       </td>
 
       {/* Slot */}
-      <td className="px-4 py-2 text-gray-400 text-sm hidden sm:table-cell">
+      <td className="px-3 sm:px-4 py-2 text-gray-400 text-xs sm:text-sm hidden sm:table-cell">
         {item.slot || '-'}
       </td>
 
       {/* Source (boss) */}
-      <td className="px-4 py-2 text-gray-400 text-sm hidden md:table-cell truncate max-w-[200px]">
+      <td className="px-3 sm:px-4 py-2 text-gray-400 text-xs sm:text-sm hidden md:table-cell truncate max-w-[200px]">
         {item.boss_name || '-'}
       </td>
 
       {/* Instance */}
-      <td className="px-4 py-2 text-gray-500 text-sm hidden lg:table-cell">
+      <td className="px-3 sm:px-4 py-2 text-gray-500 text-xs sm:text-sm hidden lg:table-cell">
         {item.raid_instance || '-'}
       </td>
 
       {/* Edit button */}
-      <td className="px-2 py-2">
+      <td className="px-1 sm:px-2 py-2">
         <button
           onClick={onEdit}
-          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 sm:p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
           title="Edit item"
         >
-          <Pencil className="h-4 w-4" />
+          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
         </button>
       </td>
     </tr>
