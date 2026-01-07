@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, Trophy, Package, X } from 'lucide-react';
+import { Users, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Coins, Trophy, Package, X } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -27,7 +27,6 @@ export function RaidRoom() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { placeBid, sendChat, startAuction, isConnected } = useSocket(id || null);
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
   const { messages: chatMessages, participants: liveParticipants } = useChatStore();
 
@@ -59,7 +58,7 @@ export function RaidRoom() {
     };
   }, []);
 
-  const { data: raid, isLoading } = useQuery({
+  const { data: raid, isLoading, refetch: refetchRaid } = useQuery({
     queryKey: ['raid', id],
     queryFn: async () => {
       const res = await api.get(`/raids/${id}`);
@@ -69,6 +68,20 @@ export function RaidRoom() {
   });
 
   const isLeader = raid?.leader_id === user?.id;
+  const isParticipant = raid?.participants?.some((p: any) => p.user_id === user?.id);
+
+  // Only connect to socket if user is a participant
+  const { placeBid, sendChat, startAuction, isConnected } = useSocket(isParticipant ? id || null : null);
+
+  // Join raid mutation
+  const joinRaidMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/raids/${id}/join`);
+    },
+    onSuccess: () => {
+      refetchRaid();
+    },
+  });
 
   // Auto-scroll auction feed
   useEffect(() => {
@@ -164,6 +177,33 @@ export function RaidRoom() {
 
   return (
     <div className="space-y-6">
+      {/* Join Raid Banner - Show when user is not a participant */}
+      {!isParticipant && (raid.status === 'PENDING' || raid.status === 'ACTIVE') && (
+        <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <UserPlus className="h-6 w-6 text-green-500" />
+            <div>
+              <p className="text-green-400 font-medium">Join this raid</p>
+              <p className="text-green-400/70 text-sm">Click to join and participate in auctions</p>
+            </div>
+          </div>
+          <button
+            onClick={() => joinRaidMutation.mutate()}
+            disabled={joinRaidMutation.isPending}
+            className="bg-green-500 hover:bg-green-600 disabled:bg-green-500/50 text-black font-semibold px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
+          >
+            {joinRaidMutation.isPending ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-black"></div>
+            ) : (
+              <>
+                <UserPlus className="h-5 w-5" />
+                <span>Join Raid</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Start Raid Banner - Show when raid is PENDING */}
       {isPending && isLeader && (
         <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-4 flex items-center justify-between">
