@@ -7,7 +7,6 @@ import { LoginPage } from './pages/Login';
 import { AuthCallback } from './pages/AuthCallback';
 import { AliasSetupPage } from './pages/AliasSetup';
 import { Dashboard } from './pages/Dashboard';
-import { Wallet } from './pages/Wallet';
 import { Raids } from './pages/Raids';
 import { RaidRoom } from './pages/RaidRoom';
 import { RaidHistory } from './pages/RaidHistory';
@@ -102,7 +101,6 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="wallet" element={<Wallet />} />
           <Route path="raids" element={<Raids />} />
           <Route path="raids/:id" element={<RaidRoom />} />
           <Route path="items" element={<Items />} />

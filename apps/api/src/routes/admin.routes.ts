@@ -4,12 +4,6 @@ import { prisma } from '../config/database.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { logger } from '../config/logger.js';
 
-const updateExchangeRatesSchema = z.object({
-  SEK: z.number().positive(),
-  EUR: z.number().positive(),
-  USD: z.number().positive(),
-});
-
 const adjustBalanceSchema = z.object({
   user_id: z.string().uuid(),
   amount: z.number().int(),
@@ -46,7 +40,6 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
           discord_username: true,
           discord_avatar: true,
           alias: true,
-          crypto_wallet_address: true,
           gold_balance: true,
           role: true,
           created_at: true,
@@ -106,37 +99,6 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     ]);
 
     return { users, total };
-  });
-
-  // Get exchange rates
-  fastify.get('/exchange-rates', { preHandler: [requireAdmin] }, async () => {
-    const config = await prisma.config.findUnique({
-      where: { key: 'exchange_rates' },
-    });
-
-    return config?.value || { SEK: 100, EUR: 1000, USD: 900 };
-  });
-
-  // Update exchange rates
-  fastify.put('/exchange-rates', { preHandler: [requireAdmin] }, async (request) => {
-    const data = updateExchangeRatesSchema.parse(request.body);
-
-    const config = await prisma.config.upsert({
-      where: { key: 'exchange_rates' },
-      update: {
-        value: { ...data, updated_at: new Date().toISOString() },
-        updated_by: request.user.id,
-      },
-      create: {
-        key: 'exchange_rates',
-        value: { ...data, updated_at: new Date().toISOString() },
-        updated_by: request.user.id,
-      },
-    });
-
-    logger.info({ userId: request.user.id, rates: data }, 'Exchange rates updated');
-
-    return config.value;
   });
 
   // Adjust user balance (admin action)
@@ -236,6 +198,129 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     logger.info({ adminId: request.user.id, usersCleared: result.users_cleared }, 'All gold balances cleared');
 
     return result;
+  });
+
+  // Get pending gold reports
+  fastify.get('/gold-reports', { preHandler: [requireAdmin] }, async () => {
+    const reports = await prisma.goldReport.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { created_at: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            discord_username: true,
+            discord_avatar: true,
+            alias: true,
+            gold_balance: true,
+          },
+        },
+      },
+    });
+
+    return {
+      reports: reports.map((r) => ({
+        ...r,
+        reported_amount: Number(r.reported_amount),
+        user: {
+          ...r.user,
+          gold_balance: Number(r.user.gold_balance),
+        },
+      })),
+    };
+  });
+
+  // Approve gold report
+  fastify.post('/gold-reports/:id/approve', { preHandler: [requireAdmin] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    return await prisma.$transaction(async (tx) => {
+      // Get the report
+      const report = await tx.goldReport.findUnique({
+        where: { id },
+      });
+
+      if (!report) {
+        throw new Error('Report not found');
+      }
+
+      if (report.status !== 'PENDING') {
+        throw new Error('Report already processed');
+      }
+
+      // Update report status
+      await tx.goldReport.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          reviewed_at: new Date(),
+          reviewed_by: request.user.id,
+        },
+      });
+
+      // Set user balance to reported amount
+      const user = await tx.user.update({
+        where: { id: report.user_id },
+        data: { gold_balance: report.reported_amount },
+      });
+
+      // Create transaction record
+      await tx.transaction.create({
+        data: {
+          user_id: report.user_id,
+          type: 'ADMIN_ADJUST',
+          gold_amount: report.reported_amount,
+          status: 'COMPLETED',
+          completed_at: new Date(),
+          metadata: {
+            admin_id: request.user.id,
+            reason: 'Gold report approved',
+            report_id: id,
+          },
+        },
+      });
+
+      logger.info(
+        { adminId: request.user.id, userId: report.user_id, amount: Number(report.reported_amount) },
+        'Gold report approved'
+      );
+
+      return {
+        success: true,
+        user_id: user.id,
+        new_balance: Number(user.gold_balance),
+      };
+    });
+  });
+
+  // Reject gold report
+  fastify.post('/gold-reports/:id/reject', { preHandler: [requireAdmin] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const report = await prisma.goldReport.findUnique({
+      where: { id },
+    });
+
+    if (!report) {
+      throw new Error('Report not found');
+    }
+
+    if (report.status !== 'PENDING') {
+      throw new Error('Report already processed');
+    }
+
+    await prisma.goldReport.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        reviewed_at: new Date(),
+        reviewed_by: request.user.id,
+      },
+    });
+
+    logger.info({ adminId: request.user.id, reportId: id }, 'Gold report rejected');
+
+    return { success: true };
   });
 };
 

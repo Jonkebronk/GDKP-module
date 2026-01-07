@@ -10,11 +10,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 // Routes
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
-import walletRoutes from './routes/wallet.routes.js';
 import raidRoutes from './routes/raid.routes.js';
 import auctionRoutes from './routes/auction.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import webhookRoutes from './routes/webhook.routes.js';
 import itemRoutes from './routes/items.routes.js';
 
 export async function createApp() {
@@ -56,11 +54,9 @@ export async function createApp() {
   // API routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(userRoutes, { prefix: '/api/users' });
-  await app.register(walletRoutes, { prefix: '/api/wallet' });
   await app.register(raidRoutes, { prefix: '/api/raids' });
   await app.register(auctionRoutes, { prefix: '/api/auctions' });
   await app.register(adminRoutes, { prefix: '/api/admin' });
-  await app.register(webhookRoutes, { prefix: '/api/webhooks' });
   await app.register(itemRoutes, { prefix: '/api/items' });
 
   return app;

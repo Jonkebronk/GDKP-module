@@ -4,7 +4,6 @@ import { getDisplayName } from '@gdkp/shared';
 import { GoldDisplay } from '../GoldDisplay';
 import {
   Home,
-  Wallet,
   Swords,
   User,
   LogOut,
@@ -16,12 +15,9 @@ import {
   History,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../../api/client';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
-  { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/items', label: 'Items', icon: Package },
   { path: '/raid-history', label: 'History', icon: History },
   { path: '/profile', label: 'Profile', icon: User },
@@ -37,15 +33,6 @@ export function MainLayout() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const { data: walletData } = useQuery({
-    queryKey: ['wallet', 'balance'],
-    queryFn: async () => {
-      const res = await api.get('/wallet/balance');
-      return res.data;
-    },
-    refetchInterval: 30000,
-  });
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -110,11 +97,7 @@ export function MainLayout() {
             <div className="flex items-center space-x-2">
               {/* Gold balance */}
               <div className="hidden sm:flex items-center px-2 py-1">
-                {walletData ? (
-                  <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
-                ) : (
-                  <span className="text-amber-400 font-semibold">...</span>
-                )}
+                <GoldDisplay amount={user?.gold_balance || 0} className="text-amber-400 font-semibold" iconSize={14} />
               </div>
 
               {/* User avatar */}
@@ -201,10 +184,9 @@ export function MainLayout() {
               )}
 
               {/* Mobile gold balance */}
-              <div className="sm:hidden px-3 py-2 text-amber-400 font-semibold">
-                Balance: {walletData ? (
-                  <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
-                ) : '...'}
+              <div className="sm:hidden px-3 py-2 text-amber-400 font-semibold flex items-center space-x-1">
+                <span>Balance:</span>
+                <GoldDisplay amount={user?.gold_balance || 0} className="text-amber-400 font-semibold" iconSize={14} />
               </div>
             </div>
           </div>

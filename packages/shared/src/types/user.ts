@@ -6,7 +6,6 @@ export interface User {
   discord_username: string;
   discord_avatar: string | null;
   alias: string | null;
-  crypto_wallet_address: string | null;
   gold_balance: number;
   role: UserRole;
   created_at: Date;
@@ -19,8 +18,6 @@ export interface UserProfile {
   discord_avatar: string | null;
   alias: string | null;
   gold_balance: number;
-  available_balance: number; // balance minus locked bids
-  has_wallet: boolean;
 }
 
 export interface AuthUser {
@@ -29,6 +26,7 @@ export interface AuthUser {
   discord_username: string;
   discord_avatar: string | null;
   alias: string | null;
+  gold_balance: number;
   role: UserRole;
 }
 

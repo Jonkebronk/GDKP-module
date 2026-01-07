@@ -13,24 +13,25 @@ datasource db {
 // ============================================
 
 model User {
-  id                    String   @id @default(uuid()) @db.Uuid
-  discord_id            String   @unique
-  discord_username      String
-  discord_avatar        String?
-  alias                 String?  @db.VarChar(32) // User's display name (anonymous)
-  crypto_wallet_address String?  @db.VarChar(255) // User's crypto wallet for withdrawals
-  gold_balance          Decimal  @default(0) @db.Decimal(15, 2)
-  role                  UserRole @default(USER)
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  id               String   @id @default(uuid()) @db.Uuid
+  discord_id       String   @unique
+  discord_username String
+  discord_avatar   String?
+  alias            String?  @db.VarChar(32) // User's display name (anonymous)
+  gold_balance     Decimal  @default(0) @db.Decimal(15, 2)
+  role             UserRole @default(USER)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
   // Relations
-  raids_led      Raid[]            @relation("RaidLeader")
-  participations RaidParticipant[]
-  bids           Bid[]
-  items_won      Item[]            @relation("ItemWinner")
-  transactions   Transaction[]
-  chat_messages  ChatMessage[]
+  raids_led       Raid[]            @relation("RaidLeader")
+  participations  RaidParticipant[]
+  bids            Bid[]
+  items_won       Item[]            @relation("ItemWinner")
+  transactions    Transaction[]
+  chat_messages   ChatMessage[]
+  gold_reports    GoldReport[]
+  reviewed_reports GoldReport[]     @relation("GoldReportReviewer")
 
   @@index([discord_id])
   @@index([role])
@@ -166,23 +167,14 @@ model Bid {
 // ============================================
 
 model Transaction {
-  id                   String            @id @default(uuid()) @db.Uuid
-  user_id              String            @db.Uuid
-  type                 TransactionType
-  gold_amount          Decimal           @db.Decimal(15, 2)
-  real_amount          Decimal?          @db.Decimal(10, 2)
-  currency             String?           @db.VarChar(10) // USD, BTC, ETH, etc.
-  exchange_rate        Decimal?          @db.Decimal(10, 6)
-  coinbase_charge_id   String?           @db.VarChar(255)
-  coinbase_charge_code String?           @db.VarChar(50)
-  crypto_currency      String?           @db.VarChar(20) // BTC, ETH, USDC, etc.
-  transaction_hash     String?           @db.VarChar(255) // Blockchain tx hash
-  status               TransactionStatus @default(PENDING)
-  idempotency_key      String?           @unique @db.VarChar(255)
-  metadata             Json?             @db.JsonB
-  created_at           DateTime          @default(now())
-  completed_at         DateTime?
-  error_message        String?
+  id           String            @id @default(uuid()) @db.Uuid
+  user_id      String            @db.Uuid
+  type         TransactionType
+  gold_amount  Decimal           @db.Decimal(15, 2)
+  status       TransactionStatus @default(COMPLETED)
+  metadata     Json?             @db.JsonB
+  created_at   DateTime          @default(now())
+  completed_at DateTime?
 
   // Relations
   user User @relation(fields: [user_id], references: [id])
@@ -190,8 +182,6 @@ model Transaction {
   @@index([user_id])
   @@index([type])
   @@index([status])
-  @@index([coinbase_charge_id])
-  @@index([idempotency_key])
   @@index([user_id, type])
   @@index([created_at])
 }
@@ -284,13 +274,29 @@ model ChatMessage {
   @@index([raid_id, created_at])
 }
 
-// For Coinbase webhook idempotency
-model WebhookEvent {
-  id           String   @id @db.VarChar(255) // Coinbase event ID
-  event_type   String   @db.VarChar(100)
-  processed_at DateTime @default(now())
-  payload      Json     @db.JsonB
+// ============================================
+// GOLD REPORTS
+// ============================================
 
-  @@index([event_type])
-  @@index([processed_at])
+model GoldReport {
+  id              String           @id @default(uuid()) @db.Uuid
+  user_id         String           @db.Uuid
+  reported_amount Decimal          @db.Decimal(15, 2)
+  status          GoldReportStatus @default(PENDING)
+  created_at      DateTime         @default(now())
+  reviewed_at     DateTime?
+  reviewed_by     String?          @db.Uuid
+
+  user     User  @relation(fields: [user_id], references: [id])
+  reviewer User? @relation("GoldReportReviewer", fields: [reviewed_by], references: [id])
+
+  @@index([user_id])
+  @@index([status])
+  @@index([created_at])
+}
+
+enum GoldReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

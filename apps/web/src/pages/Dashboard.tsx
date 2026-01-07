@@ -2,10 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
-import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check, Smartphone, Download } from 'lucide-react';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check, Smartphone, Download, Clock, Send } from 'lucide-react';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
+
+interface GoldReport {
+  id: string;
+  reported_amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+}
 
 interface ActiveRaid {
   id: string;
@@ -91,14 +98,35 @@ export function Dashboard() {
   const [expandedSpent, setExpandedSpent] = useState<string | null>(null);
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [goldReportAmount, setGoldReportAmount] = useState('');
 
-  const { data: walletData } = useQuery({
-    queryKey: ['wallet', 'balance'],
+  // Fetch pending gold report
+  const { data: goldReportData } = useQuery<{ report: GoldReport | null }>({
+    queryKey: ['user', 'gold-report'],
     queryFn: async () => {
-      const res = await api.get('/wallet/balance');
+      const res = await api.get('/users/me/gold-report');
       return res.data;
     },
   });
+
+  // Submit gold report mutation
+  const submitGoldReportMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      const res = await api.post('/users/me/gold-report', { amount });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'gold-report'] });
+      setGoldReportAmount('');
+    },
+  });
+
+  const handleSubmitGoldReport = () => {
+    const amount = parseInt(goldReportAmount, 10);
+    if (!isNaN(amount) && amount > 0) {
+      submitGoldReportMutation.mutate(amount);
+    }
+  };
 
   const { data: activeRaids } = useQuery<ActiveRaid[]>({
     queryKey: ['raids', 'active'],
@@ -151,7 +179,7 @@ export function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
 
-      {/* Balance + Active Raids row */}
+      {/* Balance + Gold Report + Active Raids row */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Balance card */}
         <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
@@ -159,15 +187,44 @@ export function Dashboard() {
             <div>
               <p className="text-gray-400 text-sm">Balance</p>
               <div className="text-2xl font-bold text-gold-500">
-                {walletData ? (
-                  <GoldDisplay amount={walletData.balance} iconSize={20} />
-                ) : (
-                  '...'
-                )}
+                <GoldDisplay amount={user?.gold_balance || 0} iconSize={20} />
               </div>
             </div>
             <Wallet className="h-10 w-10 text-gold-500/50" />
           </div>
+        </div>
+
+        {/* Gold Report Card */}
+        <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
+          <p className="text-gray-400 text-sm mb-2">Rapportera Guld</p>
+          {goldReportData?.report ? (
+            <div className="flex items-center space-x-3">
+              <Clock className="h-5 w-5 text-amber-400 animate-pulse" />
+              <div>
+                <p className="text-amber-400 text-sm">Väntar på godkännande</p>
+                <GoldDisplay amount={goldReportData.report.reported_amount} iconSize={16} className="text-white font-semibold" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                value={goldReportAmount}
+                onChange={(e) => setGoldReportAmount(e.target.value)}
+                placeholder="Guld summa..."
+                className="w-32 bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+                min="1"
+              />
+              <button
+                onClick={handleSubmitGoldReport}
+                disabled={submitGoldReportMutation.isPending || !goldReportAmount}
+                className="flex items-center space-x-1 bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+              >
+                <Send className="h-4 w-4" />
+                <span>{submitGoldReportMutation.isPending ? '...' : 'Skicka'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Active Raids - Compact Card with Background */}

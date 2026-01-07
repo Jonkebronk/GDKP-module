@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { createApp } from './app.js';
 import { createSocketServer } from './socket/index.js';
 import { logger } from './config/logger.js';
-import { startExchangeRateJob, stopExchangeRateJob } from './jobs/exchange-rate.job.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -24,13 +23,9 @@ async function main() {
     logger.info(`Server running at http://${HOST}:${PORT}`);
     logger.info(`WebSocket server ready`);
 
-    // Start background jobs
-    startExchangeRateJob();
-
     // Graceful shutdown
     const shutdown = async () => {
       logger.info('Shutting down gracefully...');
-      await stopExchangeRateJob();
       io.close();
       await app.close();
       process.exit(0);

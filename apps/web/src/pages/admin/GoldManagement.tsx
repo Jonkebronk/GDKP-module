@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Coins, Search, Plus, Minus, Check, AlertCircle, Trash2 } from 'lucide-react';
+import { Coins, Search, Plus, Minus, Check, AlertCircle, Trash2, Clock, X, CheckCircle } from 'lucide-react';
 
 interface User {
   id: string;
@@ -11,6 +11,20 @@ interface User {
   alias: string | null;
   gold_balance: number;
   role: string;
+}
+
+interface GoldReport {
+  id: string;
+  user_id: string;
+  reported_amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+  user: {
+    id: string;
+    discord_username: string;
+    discord_avatar: string | null;
+    alias: string | null;
+  };
 }
 
 export function GoldManagement() {
@@ -57,6 +71,42 @@ export function GoldManagement() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       setSuccessMessage(`Cleared gold for ${data.users_cleared} users`);
       setShowClearConfirm(false);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    },
+  });
+
+  // Fetch pending gold reports
+  const { data: goldReportsData } = useQuery<{ reports: GoldReport[] }>({
+    queryKey: ['admin', 'gold-reports'],
+    queryFn: async () => {
+      const res = await api.get('/admin/gold-reports');
+      return res.data;
+    },
+  });
+
+  // Approve gold report mutation
+  const approveReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      const res = await api.post(`/admin/gold-reports/${reportId}/approve`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setSuccessMessage('Rapporten godkänd och balansen uppdaterad');
+      setTimeout(() => setSuccessMessage(''), 5000);
+    },
+  });
+
+  // Reject gold report mutation
+  const rejectReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      const res = await api.post(`/admin/gold-reports/${reportId}/reject`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
+      setSuccessMessage('Rapporten avvisad');
       setTimeout(() => setSuccessMessage(''), 5000);
     },
   });
@@ -133,6 +183,64 @@ export function GoldManagement() {
           <span className="text-red-400">
             {(adjustMutation.error as Error)?.message || 'Failed to adjust balance'}
           </span>
+        </div>
+      )}
+
+      {/* Pending Gold Reports */}
+      {goldReportsData?.reports && goldReportsData.reports.length > 0 && (
+        <div className="wow-tooltip wow-border-rare">
+          <div className="wow-tooltip-header p-3 border-b border-gray-700 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-amber-400" />
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">
+                Inrapporterat Guld ({goldReportsData.reports.length})
+              </h2>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-700 max-h-64 overflow-y-auto">
+            {goldReportsData.reports.map((report) => (
+              <div key={report.id} className="flex items-center justify-between p-3 hover:bg-gray-700/50">
+                <div className="flex items-center space-x-3">
+                  <img
+                    src="/anonymous-avatar.png"
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                  <div>
+                    <p className="text-white font-medium">
+                      {report.user.alias || report.user.discord_username}
+                    </p>
+                    <p className="text-gray-500 text-xs">
+                      {new Date(report.created_at).toLocaleString('sv-SE')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="text-amber-400 font-bold">
+                    {formatGold(report.reported_amount)}
+                  </span>
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => approveReportMutation.mutate(report.id)}
+                      disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
+                      className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg transition-colors"
+                      title="Godkänn"
+                    >
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </button>
+                    <button
+                      onClick={() => rejectReportMutation.mutate(report.id)}
+                      disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
+                      className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded-lg transition-colors"
+                      title="Avvisa"
+                    >
+                      <X className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

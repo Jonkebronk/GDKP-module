@@ -4,15 +4,15 @@ import { prisma } from '../config/database.js';
 import { requireAuth } from '../middleware/auth.js';
 import { AppError, ERROR_CODES } from '@gdkp/shared';
 
-const updateProfileSchema = z.object({
-  crypto_wallet_address: z.string().max(255).optional().nullable(),
-});
-
 const updateAliasSchema = z.object({
   alias: z.string()
     .min(2, 'Alias must be at least 2 characters')
     .max(32, 'Alias must be at most 32 characters')
     .regex(/^[a-zA-Z0-9_-]+$/, 'Alias can only contain letters, numbers, underscores, and hyphens'),
+});
+
+const goldReportSchema = z.object({
+  amount: z.number().int().positive(),
 });
 
 const userRoutes: FastifyPluginAsync = async (fastify) => {
@@ -51,38 +51,6 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       gold_balance: Number(user.gold_balance),
       role: user.role,
       created_at: user.created_at,
-    };
-  });
-
-  // Update current user profile
-  fastify.patch('/me', { preHandler: [requireAuth] }, async (request) => {
-    const data = updateProfileSchema.parse(request.body);
-
-    // Basic wallet address validation (if provided)
-    if (data.crypto_wallet_address && data.crypto_wallet_address.length < 26) {
-      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid wallet address format', 400);
-    }
-
-    const user = await prisma.user.update({
-      where: { id: request.user.id },
-      data: {
-        crypto_wallet_address: data.crypto_wallet_address,
-      },
-      select: {
-        id: true,
-        discord_username: true,
-        discord_avatar: true,
-        alias: true,
-        crypto_wallet_address: true,
-        gold_balance: true,
-        role: true,
-      },
-    });
-
-    return {
-      ...user,
-      gold_balance: Number(user.gold_balance),
-      has_wallet: !!user.crypto_wallet_address,
     };
   });
 
@@ -254,11 +222,62 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       transactions: transactions.map((t) => ({
         ...t,
         gold_amount: Number(t.gold_amount),
-        real_amount: t.real_amount ? Number(t.real_amount) : null,
-        exchange_rate: t.exchange_rate ? Number(t.exchange_rate) : null,
       })),
       total,
       has_more: Number(offset) + transactions.length < total,
+    };
+  });
+
+  // Get user's pending gold report
+  fastify.get('/me/gold-report', { preHandler: [requireAuth] }, async (request) => {
+    const report = await prisma.goldReport.findFirst({
+      where: {
+        user_id: request.user.id,
+        status: 'PENDING',
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (!report) {
+      return { report: null };
+    }
+
+    return {
+      report: {
+        ...report,
+        reported_amount: Number(report.reported_amount),
+      },
+    };
+  });
+
+  // Submit a gold report
+  fastify.post('/me/gold-report', { preHandler: [requireAuth] }, async (request) => {
+    const { amount } = goldReportSchema.parse(request.body);
+
+    // Check if user already has a pending report
+    const existingReport = await prisma.goldReport.findFirst({
+      where: {
+        user_id: request.user.id,
+        status: 'PENDING',
+      },
+    });
+
+    if (existingReport) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'You already have a pending gold report', 400);
+    }
+
+    const report = await prisma.goldReport.create({
+      data: {
+        user_id: request.user.id,
+        reported_amount: amount,
+      },
+    });
+
+    return {
+      report: {
+        ...report,
+        reported_amount: Number(report.reported_amount),
+      },
     };
   });
 };
