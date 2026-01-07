@@ -165,14 +165,16 @@ export function Dashboard() {
         {activeRaids && activeRaids.length > 0 && activeRaids.slice(0, 1).map((raid) => {
           const inRaid = isInRaid(raid);
           return (
-            <div key={raid.id} className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
-              <div className="flex items-center justify-between gap-4">
+            <div key={raid.id} className="bg-gray-800 rounded-lg p-5 flex-shrink-0">
+              <div className="flex items-center justify-between gap-6">
                 <div className="flex items-center space-x-3">
                   <Swords className="h-10 w-10 text-purple-400/50" />
                   <div>
-                    <p className="text-gray-400 text-sm">{raid.instance}</p>
-                    <p className="text-white font-semibold flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-gray-400" />
+                    <p className="text-white font-semibold">{raid.name}</p>
+                    <p className="text-gray-400 text-sm flex items-center space-x-2">
+                      <span>{raid.instance}</span>
+                      <span>•</span>
+                      <Users className="h-3 w-3" />
                       <span>{raid.participant_count}</span>
                     </p>
                   </div>
