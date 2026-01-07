@@ -75,7 +75,7 @@ export function PotDistribution({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', raidId] });
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
       setShowConfirmDistribute(false);
       setShowSummary(true); // Show summary automatically
       onDistributed?.();
