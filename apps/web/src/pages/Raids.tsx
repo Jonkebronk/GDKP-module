@@ -3,21 +3,54 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { formatGold, WOW_INSTANCES } from '@gdkp/shared';
-import { Plus, Users, Coins, Calendar, X } from 'lucide-react';
+import { Plus, Users, Calendar, X, Trash2 } from 'lucide-react';
 import { SimpleUserDisplay } from '../components/UserDisplay';
+import { useAuthStore } from '../stores/authStore';
+
+// Gold display component with WoW-style coin icon
+function GoldDisplay({ amount, className = '' }: { amount: number; className?: string }) {
+  return (
+    <span className={`inline-flex items-center space-x-1 ${className}`}>
+      <span className="text-amber-400 font-medium">{formatGold(amount, { abbreviated: true })}</span>
+      <span className="text-amber-500">●</span>
+    </span>
+  );
+}
 
 export function Raids() {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'active' | 'mine'>('all');
+  const [filter, setFilter] = useState<'active' | 'history'>('active');
 
   const { data: raids, isLoading } = useQuery({
     queryKey: ['raids', filter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (filter === 'active') params.set('status', 'ACTIVE');
-      if (filter === 'mine') params.set('mine', 'true');
+      if (filter === 'active') {
+        // Active includes PENDING and ACTIVE
+        params.set('status', 'ACTIVE,PENDING');
+      }
+      // History will fetch all and filter client-side
       const res = await api.get(`/raids?${params}`);
-      return res.data;
+      const data = res.data;
+
+      if (filter === 'history') {
+        return data.filter((r: any) => r.status === 'COMPLETED' || r.status === 'CANCELLED');
+      }
+      if (filter === 'active') {
+        return data.filter((r: any) => r.status === 'ACTIVE' || r.status === 'PENDING');
+      }
+      return data;
+    },
+  });
+
+  const deleteRaidMutation = useMutation({
+    mutationFn: async (raidId: string) => {
+      await api.delete(`/raids/${raidId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raids'] });
     },
   });
 
@@ -36,7 +69,7 @@ export function Raids() {
 
       {/* Filters */}
       <div className="flex space-x-2">
-        {(['all', 'active', 'mine'] as const).map((f) => (
+        {(['active', 'history'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -46,7 +79,7 @@ export function Raids() {
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
             }`}
           >
-            {f === 'all' ? 'All Raids' : f === 'active' ? 'Active' : 'My Raids'}
+            {f === 'active' ? 'Active' : 'History'}
           </button>
         ))}
       </div>
@@ -59,54 +92,71 @@ export function Raids() {
       ) : raids?.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {raids.map((raid: any) => (
-            <Link
+            <div
               key={raid.id}
-              to={`/raids/${raid.id}`}
-              className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors"
+              className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors relative group"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">{raid.name}</h3>
-                  <p className="text-gray-400 text-sm">{raid.instance}</p>
-                </div>
-                <span
-                  className={`px-2 py-1 rounded text-xs font-medium ${
-                    raid.status === 'ACTIVE'
-                      ? 'bg-green-500/20 text-green-400'
-                      : raid.status === 'PENDING'
-                      ? 'bg-yellow-500/20 text-yellow-400'
-                      : 'bg-gray-500/20 text-gray-400'
-                  }`}
+              {/* Delete button - only for leader on raids without completed auctions */}
+              {raid.leader_id === user?.id && (raid.status === 'PENDING' || raid.status === 'CANCELLED') && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this raid?')) {
+                      deleteRaidMutation.mutate(raid.id);
+                    }
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete raid"
                 >
-                  {raid.status}
-                </span>
-              </div>
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
 
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-1 text-gray-400">
-                    <Users className="h-4 w-4" />
-                    <span>{raid.participant_count}</span>
+              <Link to={`/raids/${raid.id}`} className="block">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{raid.name}</h3>
+                    <p className="text-gray-400 text-sm">{raid.instance}</p>
                   </div>
-                  <div className="flex items-center space-x-1 text-gold-500">
-                    <Coins className="h-4 w-4" />
-                    <span>{formatGold(raid.pot_total, { abbreviated: true })}</span>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      raid.status === 'ACTIVE'
+                        ? 'bg-green-500/20 text-green-400'
+                        : raid.status === 'PENDING'
+                        ? 'bg-yellow-500/20 text-yellow-400'
+                        : raid.status === 'COMPLETED'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-gray-500/20 text-gray-400'
+                    }`}
+                  >
+                    {raid.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1 text-gray-400">
+                      <Users className="h-4 w-4" />
+                      <span>{raid.participant_count}</span>
+                    </div>
+                    <GoldDisplay amount={raid.pot_total} />
+                  </div>
+                  <div className="flex items-center space-x-1 text-gray-500">
+                    <Calendar className="h-4 w-4" />
+                    <span>{new Date(raid.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-1 text-gray-500">
-                  <Calendar className="h-4 w-4" />
-                  <span>{new Date(raid.created_at).toLocaleDateString()}</span>
-                </div>
-              </div>
 
-              <div className="mt-4 text-gray-400 text-sm">
-                <SimpleUserDisplay
-                  user={raid.leader}
-                  showAvatar
-                  avatarSize={24}
-                />
-              </div>
-            </Link>
+                <div className="mt-4 text-gray-400 text-sm">
+                  <SimpleUserDisplay
+                    user={raid.leader}
+                    showAvatar
+                    avatarSize={24}
+                  />
+                </div>
+              </Link>
+            </div>
           ))}
         </div>
       ) : (

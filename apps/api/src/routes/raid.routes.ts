@@ -479,6 +479,44 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return result;
   });
 
+  // Delete raid (only for leader, only if PENDING or CANCELLED with no bids)
+  fastify.delete('/:id', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+      include: {
+        items: {
+          where: { status: { not: 'PENDING' } },
+        },
+      },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.leader_id !== request.user.id) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only the raid leader can delete the raid', 403);
+    }
+
+    // Only allow deletion if no auctions have been completed
+    if (raid.items.length > 0) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot delete raid with completed auctions', 400);
+    }
+
+    // Delete in order: chat messages, bids, items, participants, raid
+    await prisma.$transaction([
+      prisma.chatMessage.deleteMany({ where: { raid_id: id } }),
+      prisma.bid.deleteMany({ where: { item: { raid_id: id } } }),
+      prisma.item.deleteMany({ where: { raid_id: id } }),
+      prisma.raidParticipant.deleteMany({ where: { raid_id: id } }),
+      prisma.raid.delete({ where: { id } }),
+    ]);
+
+    return { deleted: true };
+  });
+
   // Cancel raid and refund all auction winners
   fastify.post('/:id/cancel', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
