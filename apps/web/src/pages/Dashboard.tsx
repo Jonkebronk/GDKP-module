@@ -175,14 +175,14 @@ export function Dashboard() {
                   <div className="flex items-center space-x-4">
                     <div>
                       <p className="text-white font-medium">{raid.name}</p>
-                      <p className="text-gray-500 text-xs flex items-center space-x-2">
+                      <p className="text-white text-xs font-semibold flex items-center space-x-2">
                         <span>{raid.instance}</span>
-                        <span>•</span>
+                        <span className="text-gray-500">•</span>
                         <span className="flex items-center">
                           <Users className="h-3 w-3 mr-1" />
                           {raid.participant_count}
                         </span>
-                        <span>•</span>
+                        <span className="text-gray-500">•</span>
                         <GoldDisplay amount={raid.pot_total} iconSize={10} className="text-amber-400" />
                       </p>
                     </div>
