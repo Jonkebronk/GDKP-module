@@ -96,17 +96,11 @@ export function Profile() {
       {/* User info */}
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex items-center space-x-4 mb-6">
-          {user?.discord_avatar ? (
-            <img
-              src={user.discord_avatar}
-              alt={user ? getDisplayName(user) : ''}
-              className="w-20 h-20 rounded-full"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center">
-              <User className="h-10 w-10 text-gray-500" />
-            </div>
-          )}
+          <img
+            src="/anonymous-avatar.png"
+            alt={user ? getDisplayName(user) : ''}
+            className="w-20 h-20 rounded-full bg-gray-700"
+          />
           <div>
             <h2 className="text-xl font-bold text-white">{user ? getDisplayName(user) : ''}</h2>
             {user?.role === 'ADMIN' && (
