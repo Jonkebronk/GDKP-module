@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Wallet } from './pages/Wallet';
 import { Raids } from './pages/Raids';
 import { RaidRoom } from './pages/RaidRoom';
+import { RaidHistory } from './pages/RaidHistory';
 import { Profile } from './pages/Profile';
 import { Items } from './pages/Items';
 import { AliasMappings } from './pages/admin/AliasMappings';
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="raids" element={<Raids />} />
           <Route path="raids/:id" element={<RaidRoom />} />
           <Route path="items" element={<Items />} />
+          <Route path="raid-history" element={<RaidHistory />} />
           <Route path="profile" element={<Profile />} />
 
           {/* Admin routes */}
