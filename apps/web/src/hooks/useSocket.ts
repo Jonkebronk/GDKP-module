@@ -148,15 +148,18 @@ export function useSocket(raidId: string | null) {
     });
 
     socket.on('auction:ended', (data) => {
-      // Capture item name before endAuction resets the state
+      // Capture item name - use data.item_name for manual awards, or activeItem for regular auctions
       const currentItem = useAuctionStore.getState().activeItem;
-      const itemName = currentItem?.name || 'Unknown Item';
+      const itemName = data.item_name || currentItem?.name || 'Unknown Item';
+      const isManualAward = data.is_manual_award;
 
-      // Gargul-style "Stop your bids!"
-      addAuctionEvent({
-        type: 'stop_bids',
-        message: 'Stop your bids!',
-      });
+      // Gargul-style "Stop your bids!" - only for regular auctions
+      if (!isManualAward) {
+        addAuctionEvent({
+          type: 'stop_bids',
+          message: 'Stop your bids!',
+        });
+      }
 
       // Award message
       if (data.winner_name && data.final_amount > 0) {
@@ -174,7 +177,7 @@ export function useSocket(raidId: string | null) {
           message: `Pot was updated, it now holds ${data.pot_total}g`,
           amount: data.pot_total,
         });
-      } else {
+      } else if (!isManualAward) {
         addAuctionEvent({
           type: 'awarded',
           message: `[${itemName}] received no bids.`,
@@ -182,7 +185,10 @@ export function useSocket(raidId: string | null) {
         });
       }
 
-      endAuction();
+      // Only end auction if there was an active one
+      if (!isManualAward) {
+        endAuction();
+      }
 
       // Trigger refetch of raid data to update item statuses
       window.dispatchEvent(new CustomEvent('auction:ended', { detail: data }));

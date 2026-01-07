@@ -473,23 +473,20 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    // Notify via socket
-    fastify.io.to(`raid:${id}`).emit('auction:completed', {
-      itemId,
-      itemName: item.name,
-      winnerId,
-      winnerName: updatedItem.winner?.alias || updatedItem.winner?.discord_username,
-      finalBid: price,
-      isManualAward: true,
-    });
-
     // Get updated pot total
     const raid = await prisma.raid.findUnique({ where: { id } });
-    if (raid) {
-      fastify.io.to(`raid:${id}`).emit('pot:updated', {
-        pot_total: Number(raid.pot_total),
-      });
-    }
+    const potTotal = raid ? Number(raid.pot_total) : price;
+
+    // Notify via socket - use auction:ended so frontend auction feed picks it up
+    fastify.io.to(`raid:${id}`).emit('auction:ended', {
+      item_id: itemId,
+      item_name: item.name,
+      winner_id: winnerId,
+      winner_name: updatedItem.winner?.alias || updatedItem.winner?.discord_username,
+      final_amount: price,
+      pot_total: potTotal,
+      is_manual_award: true,
+    });
 
     return {
       awarded: true,

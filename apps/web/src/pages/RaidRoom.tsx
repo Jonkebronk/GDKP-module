@@ -143,6 +143,7 @@ export function RaidRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      queryClient.invalidateQueries({ queryKey: ['raid', id, 'distribution-preview'] });
       setManualAwardItem(null);
       setManualAwardPrice('');
       setManualAwardWinner('');
