@@ -206,7 +206,7 @@ export function PotDistribution({
                   )}
                   <SimpleUserDisplay
                     user={share}
-                    className="text-white text-sm"
+                    className="text-white text-sm font-semibold"
                   />
                   <span className="text-gray-500 text-xs">
                     ({share.share_percentage.toFixed(1)}%)
