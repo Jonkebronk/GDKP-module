@@ -14,6 +14,9 @@ import { socketAuth } from './middleware/socketAuth.js';
 import { registerAuctionHandlers } from './handlers/auction.handler.js';
 import { registerRaidHandlers } from './handlers/raid.handler.js';
 import { registerChatHandlers } from './handlers/chat.handler.js';
+import { AuctionService } from '../services/auction.service.js';
+
+const auctionService = new AuctionService();
 
 export type TypedServer = Server<
   ClientToServerEvents,
@@ -70,5 +73,11 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   });
 
   logger.info('Socket.io server initialized');
+
+  // Recover any stale auctions from before server restart
+  auctionService.recoverStaleAuctions(io).catch((err) => {
+    logger.error({ error: err }, 'Failed to recover stale auctions on startup');
+  });
+
   return io;
 }

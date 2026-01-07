@@ -26,13 +26,45 @@ const activeCountdowns = new Map<string, NodeJS.Timeout>();
 
 export class AuctionService {
   /**
+   * Recover any stale auctions on server startup
+   * This handles cases where the server restarted while auctions were active
+   */
+  async recoverStaleAuctions(io: TypedServer) {
+    try {
+      const activeItems = await prisma.item.findMany({
+        where: { status: 'ACTIVE' },
+        include: { raid: true },
+      });
+
+      logger.info({ count: activeItems.length }, 'Checking for stale auctions to recover');
+
+      for (const item of activeItems) {
+        const now = new Date();
+
+        if (!item.ends_at || now > item.ends_at) {
+          // Auction should have ended - complete it
+          logger.info({ itemId: item.id, endsAt: item.ends_at }, 'Completing stale auction');
+          await this.completeAuction(io, item.raid_id, item.id);
+        } else {
+          // Auction still has time - restart countdown
+          logger.info({ itemId: item.id, remaining: item.ends_at.getTime() - now.getTime() }, 'Restarting countdown for active auction');
+          this.startCountdown(io, item.raid_id, item.id);
+        }
+      }
+    } catch (error) {
+      logger.error({ error }, 'Failed to recover stale auctions');
+    }
+  }
+
+  /**
    * Start an auction on an item
    */
   async startAuction(
     itemId: string,
     userId: string,
     duration?: number,
-    minBid?: number
+    minBid?: number,
+    increment?: number
   ): Promise<StartAuctionResult> {
     try {
       // Validate duration
