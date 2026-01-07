@@ -364,7 +364,7 @@ export function RaidRoom() {
           ) : (
             <div className="wow-tooltip wow-border-common p-8 text-center">
               <Gavel className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">No active auction</p>
+              <p className="text-gray-500 text-sm">No active auction</p>
             </div>
           )}
 
@@ -378,7 +378,7 @@ export function RaidRoom() {
               className="h-40 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
             >
               {auctionEvents.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Auction events will appear here</p>
+                <p className="text-gray-500 text-sm text-center py-4">Auction events will appear here</p>
               ) : (
                 auctionEvents.map((event) => (
                   <GargulMessage key={event.id} event={event} />
@@ -419,7 +419,7 @@ export function RaidRoom() {
 
             <div className="p-3 space-y-2 max-h-60 overflow-y-auto">
               {raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No items pending auction</p>
+                <p className="text-gray-500 text-sm text-center py-4">No items pending auction</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {raid.items
