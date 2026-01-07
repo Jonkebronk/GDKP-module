@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { formatGold } from '@gdkp/shared';
 import { Coins, Search, Plus, Minus, Check, AlertCircle, Trash2, Clock, X, CheckCircle } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 interface User {
   id: string;
@@ -29,6 +30,7 @@ interface GoldReport {
 
 export function GoldManagement() {
   const queryClient = useQueryClient();
+  const { checkAuth } = useAuthStore();
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [amount, setAmount] = useState('');
@@ -54,6 +56,7 @@ export function GoldManagement() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      checkAuth(); // Refresh current user's balance in header
       setSuccessMessage(`Balance updated! New balance: ${formatGold(data.new_balance)}`);
       setAmount('');
       setReason('');
@@ -69,6 +72,7 @@ export function GoldManagement() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      checkAuth(); // Refresh current user's balance in header
       setSuccessMessage(`Cleared gold for ${data.users_cleared} users`);
       setShowClearConfirm(false);
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -93,6 +97,7 @@ export function GoldManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      checkAuth(); // Refresh current user's balance in header
       setSuccessMessage('Report approved and balance updated');
       setTimeout(() => setSuccessMessage(''), 5000);
     },
