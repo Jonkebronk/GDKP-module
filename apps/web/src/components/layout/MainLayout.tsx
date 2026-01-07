@@ -23,7 +23,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/items', label: 'Items', icon: Package },
-  { path: '/raid-history', label: 'Raid History', icon: History },
+  { path: '/raid-history', label: 'History', icon: History },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
