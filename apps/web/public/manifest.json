@@ -1,7 +1,7 @@
 {
-  "name": "The Pink Crusade",
-  "short_name": "Pink Crusade",
-  "description": "The Pink Crusade - Auction platform for WoW raids",
+  "name": "The Pint Crusade",
+  "short_name": "Pint Crusade",
+  "description": "The Pint Crusade - Auction platform for WoW raids",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
