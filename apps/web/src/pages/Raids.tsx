@@ -215,7 +215,7 @@ export function Raids() {
 function CreateRaidModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [instance, setInstance] = useState<string>(WOW_INSTANCES[0]);
-  const [leaderCut, setLeaderCut] = useState(10);
+  const [leaderCut, setLeaderCut] = useState(15);
 
   const createMutation = useMutation({
     mutationFn: async () => {
