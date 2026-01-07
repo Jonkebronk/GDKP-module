@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
@@ -24,7 +24,6 @@ const qualityBorderClass: Record<number, string> = {
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
