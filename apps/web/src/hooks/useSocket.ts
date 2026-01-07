@@ -219,7 +219,7 @@ export function useSocket(raidId: string | null) {
     });
 
     socket.on('error', (error) => {
-      console.error('Socket error:', error);
+      console.error('Socket error:', error.code, error.message, error);
       window.dispatchEvent(new CustomEvent('socket:error', { detail: error }));
     });
 
