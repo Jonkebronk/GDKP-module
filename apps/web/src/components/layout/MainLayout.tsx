@@ -52,7 +52,7 @@ export function MainLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <Swords className="h-8 w-8 text-gold-500" />
+              <img src="/gnome-logo.png" alt="GDKP" className="h-8 w-8 rounded-full object-cover" />
               <span className="text-xl font-bold text-white">GDKP</span>
             </Link>
 
