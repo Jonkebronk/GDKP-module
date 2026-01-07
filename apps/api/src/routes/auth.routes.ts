@@ -154,6 +154,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true };
   });
 
+  // Gate validation - secret passphrase to unlock login
+  fastify.post('/gate', async (request) => {
+    const { passphrase } = request.body as { passphrase?: string };
+    const correct = passphrase === env.GATE_PASSPHRASE;
+    return { success: correct };
+  });
+
   // Refresh token
   fastify.post('/refresh', { preHandler: [requireAuth] }, async (request) => {
     // Fetch fresh user data to get current alias

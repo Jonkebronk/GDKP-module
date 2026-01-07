@@ -36,6 +36,9 @@ const envSchema = z.object({
 
   // Admin users (comma-separated Discord usernames)
   ADMIN_DISCORD_USERNAMES: z.string().default(''),
+
+  // Gate passphrase for secret community access
+  GATE_PASSPHRASE: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
