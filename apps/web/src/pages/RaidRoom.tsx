@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Coins, Trophy, Package, X } from 'lucide-react';
+import { Users, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Coins, Trophy, Package, X, Square } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -40,8 +40,15 @@ export function RaidRoom() {
   const [manualAwardItem, setManualAwardItem] = useState<any>(null);
   const [manualAwardPrice, setManualAwardPrice] = useState('');
   const [manualAwardWinner, setManualAwardWinner] = useState('');
+  const [autoPlayActive, setAutoPlayActive] = useState(false);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  const autoPlayRef = useRef(autoPlayActive);
+
+  // Keep autoPlay ref in sync
+  useEffect(() => {
+    autoPlayRef.current = autoPlayActive;
+  }, [autoPlayActive]);
 
   // Listen for bid rejection events
   useEffect(() => {
@@ -116,6 +123,34 @@ export function RaidRoom() {
     }
   }, [chatMessages]);
 
+  // Auto-play: start next auction when current ends
+  useEffect(() => {
+    const handleAutoPlay = async () => {
+      if (!autoPlayRef.current) return;
+
+      // Wait for data to refresh
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Refetch to get latest items
+      const { data: freshRaid } = await refetchRaid();
+      if (!freshRaid) return;
+
+      // Find next pending item
+      const nextItem = freshRaid.items.find((i: any) => i.status === 'PENDING');
+      if (nextItem) {
+        startAuction(nextItem.id, auctionDuration, auctionMinBid, auctionIncrement);
+      } else {
+        // No more items, disable auto-play
+        setAutoPlayActive(false);
+      }
+    };
+
+    window.addEventListener('auction:ended', handleAutoPlay);
+    return () => {
+      window.removeEventListener('auction:ended', handleAutoPlay);
+    };
+  }, [refetchRaid, startAuction, auctionDuration, auctionMinBid, auctionIncrement]);
+
   // Start raid mutation
   const startRaidMutation = useMutation({
     mutationFn: async () => {
@@ -160,6 +195,23 @@ export function RaidRoom() {
 
   const handleStartAuction = (itemId: string) => {
     startAuction(itemId, auctionDuration, auctionMinBid, auctionIncrement);
+  };
+
+  const handleToggleAutoPlay = () => {
+    if (autoPlayActive) {
+      // Turn off
+      setAutoPlayActive(false);
+    } else {
+      // Turn on
+      setAutoPlayActive(true);
+      // If no active auction, start the first pending item
+      if (!activeItem) {
+        const firstPending = raid?.items?.find((i: any) => i.status === 'PENDING');
+        if (firstPending) {
+          startAuction(firstPending.id, auctionDuration, auctionMinBid, auctionIncrement);
+        }
+      }
+    }
   };
 
   const handleSendChat = () => {
@@ -407,13 +459,33 @@ export function RaidRoom() {
                 <span>Up For Auction ({raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length})</span>
               </h2>
               {isLeader && (
-                <button
-                  onClick={() => setItemPickerOpen(true)}
-                  className="flex items-center space-x-1 bg-amber-500 hover:bg-amber-600 text-black text-sm font-medium px-3 py-1.5 rounded transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Items</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  {/* Auto-play button */}
+                  {raid.items.filter((i: any) => i.status === 'PENDING').length > 0 && (
+                    <button
+                      onClick={handleToggleAutoPlay}
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all ${
+                        autoPlayActive
+                          ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                          : 'bg-green-500 hover:bg-green-600 text-white'
+                      }`}
+                      title={autoPlayActive ? 'Stop Auto-Play' : 'Start Auto-Play'}
+                    >
+                      {autoPlayActive ? (
+                        <Square className="h-5 w-5" />
+                      ) : (
+                        <Play className="h-5 w-5 ml-0.5" />
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setItemPickerOpen(true)}
+                    className="flex items-center space-x-1 bg-amber-500 hover:bg-amber-600 text-black text-sm font-medium px-3 py-1.5 rounded transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Items</span>
+                  </button>
+                </div>
               )}
             </div>
 
