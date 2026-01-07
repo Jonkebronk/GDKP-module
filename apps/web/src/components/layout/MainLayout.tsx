@@ -26,8 +26,8 @@ const navItems = [
 ];
 
 const adminNavItems = [
-  { path: '/admin/gold', label: 'Gold', icon: Coins },
-  { path: '/admin/aliases', label: 'Aliases', icon: Shield },
+  { path: '/admin/gold', label: 'Gold', icon: Coins, color: 'gold' },
+  { path: '/admin/aliases', label: 'Aliases', icon: Shield, color: 'green' },
 ];
 
 export function MainLayout() {
@@ -47,7 +47,7 @@ export function MainLayout() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-gray-800 border-b border-gray-700">
+      <header className="sticky top-0 z-50 bg-black border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -83,15 +83,14 @@ export function MainLayout() {
                   {adminNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
+                    const colorClasses = item.color === 'gold'
+                      ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
+                      : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          isActive
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'text-red-400/70 hover:bg-red-500/10 hover:text-red-400'
-                        }`}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${colorClasses}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
@@ -174,16 +173,15 @@ export function MainLayout() {
                   {adminNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;
+                    const colorClasses = item.color === 'gold'
+                      ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
+                      : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link
                         key={item.path}
                         to={item.path}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
-                          isActive
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'text-red-400/70 hover:bg-red-500/10 hover:text-red-400'
-                        }`}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${colorClasses}`}
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
