@@ -409,14 +409,6 @@ export function RaidRoom() {
               )}
             </div>
 
-            {/* Manual award hint for leaders */}
-            {isLeader && raid.items.filter((i: any) => i.status === 'PENDING').length > 0 && (
-              <div className="px-3 pb-2">
-                <p className="text-xs text-gray-500 italic">
-                  💡 Click the gavel icon to manually award an item without bidding
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Items Won */}
