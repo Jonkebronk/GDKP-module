@@ -207,23 +207,30 @@ export function RaidRoom() {
     if (autoPlayActive) {
       // Turn off
       setAutoPlayActive(false);
-    } else {
-      // Turn on
-      setAutoPlayActive(true);
+      return;
+    }
 
-      // Check if there's an active auction in raid data
-      const hasActiveAuction = raid?.items?.some((i: any) => i.status === 'ACTIVE');
+    // Turn on auto-play
+    setAutoPlayActive(true);
 
-      // If no active auction, start the first pending item
-      if (!hasActiveAuction) {
-        const firstPending = raid?.items?.find((i: any) => i.status === 'PENDING');
-        if (firstPending && isConnected) {
-          console.log('Auto-play: Starting first auction', firstPending.id);
+    // Check if there's an active auction in raid data
+    const hasActiveAuction = raid?.items?.some((i: any) => i.status === 'ACTIVE');
+    console.log('Auto-play toggled ON, hasActiveAuction:', hasActiveAuction, 'isConnected:', isConnected);
+
+    // If no active auction, start the first pending item
+    if (!hasActiveAuction) {
+      const firstPending = raid?.items?.find((i: any) => i.status === 'PENDING');
+      console.log('Auto-play: First pending item:', firstPending?.name, firstPending?.id);
+
+      if (firstPending) {
+        // Small delay to ensure socket is ready
+        setTimeout(() => {
+          console.log('Auto-play: Starting auction for', firstPending.name);
           startAuction(firstPending.id, auctionDuration, auctionMinBid, auctionIncrement);
-        } else if (!isConnected) {
-          console.error('Auto-play: Socket not connected');
-          setAutoPlayActive(false);
-        }
+        }, 100);
+      } else {
+        console.log('Auto-play: No pending items found');
+        setAutoPlayActive(false);
       }
     }
   };
