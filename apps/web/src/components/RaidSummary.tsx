@@ -70,7 +70,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-gray-900 border border-amber-500/50 rounded-lg max-w-4xl w-full my-8">
+      <div className="bg-gray-900 border border-amber-500/50 rounded-lg max-w-full w-full my-8 mx-4">
         {/* Header with raid background */}
         <div
           className="relative overflow-hidden border-b border-amber-500/30"
