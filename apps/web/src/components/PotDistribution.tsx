@@ -214,7 +214,7 @@ export function PotDistribution({
                   <span className="text-gold-500 font-medium">
                     {formatGold(share.share_amount)}
                   </span>
-                  {isLeader && share.role !== 'LEADER' && (
+                  {isLeader && share.role !== 'LEADER' ? (
                     <button
                       onClick={() => {
                         if (confirm(`Remove ${share.alias || share.discord_username} from the raid?`)) {
@@ -227,7 +227,9 @@ export function PotDistribution({
                     >
                       <UserMinus className="h-3 w-3" />
                     </button>
-                  )}
+                  ) : isLeader ? (
+                    <div className="w-5 h-5" />
+                  ) : null}
                 </div>
               </div>
             ))}
