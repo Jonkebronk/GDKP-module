@@ -65,7 +65,7 @@ export function MainLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
                       isActive
                         ? 'bg-gray-700 text-gold-500'
                         : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -90,7 +90,7 @@ export function MainLayout() {
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${colorClasses}`}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${colorClasses}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
@@ -154,7 +154,7 @@ export function MainLayout() {
                     key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-semibold ${
                       isActive
                         ? 'bg-gray-700 text-gold-500'
                         : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -181,7 +181,7 @@ export function MainLayout() {
                         key={item.path}
                         to={item.path}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${colorClasses}`}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-semibold ${colorClasses}`}
                       >
                         <Icon className="h-5 w-5" />
                         <span>{item.label}</span>
