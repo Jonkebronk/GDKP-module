@@ -105,7 +105,7 @@ export function MainLayout() {
             <div className="flex items-center space-x-4">
               {/* Gold balance */}
               <div className="hidden sm:flex items-center space-x-2 bg-gray-700 px-3 py-1.5 rounded-full">
-                <span className="text-gold-500 font-semibold">
+                <span className="text-amber-400 font-semibold">
                   {walletData ? formatGold(walletData.balance) : '...'}
                 </span>
               </div>
@@ -192,7 +192,7 @@ export function MainLayout() {
               )}
 
               {/* Mobile gold balance */}
-              <div className="sm:hidden px-3 py-2 text-gold-500 font-semibold">
+              <div className="sm:hidden px-3 py-2 text-amber-400 font-semibold">
                 Balance: {walletData ? formatGold(walletData.balance) : '...'}
               </div>
             </div>
