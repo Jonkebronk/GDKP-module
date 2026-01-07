@@ -142,67 +142,52 @@ export function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
 
-      {/* Balance card */}
-      <div className="bg-gray-800 rounded-lg p-6 max-w-xs">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-gray-400 text-sm">Balance</p>
-            <div className="text-2xl font-bold text-gold-500">
-              {walletData ? (
-                <GoldDisplay amount={walletData.balance} iconSize={20} />
-              ) : (
-                '...'
-              )}
+      {/* Balance + Active Raids row */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Balance card */}
+        <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-gray-400 text-sm">Balance</p>
+              <div className="text-2xl font-bold text-gold-500">
+                {walletData ? (
+                  <GoldDisplay amount={walletData.balance} iconSize={20} />
+                ) : (
+                  '...'
+                )}
+              </div>
             </div>
+            <Wallet className="h-10 w-10 text-gold-500/50" />
           </div>
-          <Wallet className="h-10 w-10 text-gold-500/50" />
         </div>
-      </div>
 
-      {/* Active Raids */}
-      {activeRaids && activeRaids.length > 0 && (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
-          <div className="bg-gray-900 px-4 py-3 border-b border-gray-700 flex items-center space-x-2">
-            <Swords className="h-5 w-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Active Raids</h2>
-          </div>
-          <div className="divide-y divide-gray-700">
-            {activeRaids.map((raid) => {
-              const inRaid = isInRaid(raid);
-              return (
-                <div
-                  key={raid.id}
-                  className="flex items-center justify-between px-5 py-4 hover:bg-gray-700/50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <p className="text-white font-semibold text-lg">{raid.name}</p>
-                      <p className="text-white text-sm font-medium flex items-center space-x-3">
-                        <span>{raid.instance}</span>
-                        <span className="text-gray-500">•</span>
-                        <span className="flex items-center">
-                          <Users className="h-4 w-4 mr-1" />
-                          {raid.participant_count}
-                        </span>
-                        <span className="text-gray-500">•</span>
-                        <GoldDisplay amount={raid.pot_total} iconSize={12} className="text-amber-400" />
-                      </p>
+        {/* Active Raids - Compact */}
+        {activeRaids && activeRaids.length > 0 && (
+          <div className="bg-gray-800 rounded-lg overflow-hidden flex-1">
+            <div className="divide-y divide-gray-700">
+              {activeRaids.map((raid) => {
+                const inRaid = isInRaid(raid);
+                return (
+                  <div
+                    key={raid.id}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <Swords className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-white font-semibold truncate">{raid.name}</p>
+                        <p className="text-white text-sm font-medium flex items-center space-x-2">
+                          <span>{raid.instance}</span>
+                          <span className="text-gray-500">•</span>
+                          <Users className="h-3 w-3" />
+                          <span>{raid.participant_count}</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        raid.status === 'ACTIVE'
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}
-                    >
-                      {raid.status}
-                    </span>
                     {inRaid ? (
                       <Link
                         to={`/raids/${raid.id}`}
-                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                       >
                         <Check className="h-4 w-4" />
                         <span>Joined</span>
@@ -211,19 +196,19 @@ export function Dashboard() {
                       <button
                         onClick={() => joinRaidMutation.mutate(raid.id)}
                         disabled={joinRaidMutation.isPending}
-                        className="flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                       >
                         <LogIn className="h-4 w-4" />
                         <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
                       </button>
                     )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Two column layout for history sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
