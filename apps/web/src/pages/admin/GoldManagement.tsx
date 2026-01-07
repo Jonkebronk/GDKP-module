@@ -63,10 +63,7 @@ export function GoldManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Coins className="h-8 w-8 text-amber-500" />
-        <h1 className="text-2xl font-bold text-white">Gold Management</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-white">Gold Management</h1>
 
       {/* Success Message */}
       {successMessage && (

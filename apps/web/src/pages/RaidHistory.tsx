@@ -26,10 +26,7 @@ export function RaidHistory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <History className="h-7 w-7 text-purple-400" />
-        <h1 className="text-2xl font-bold text-white">Raid History</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-white">Raid History</h1>
 
       {isLoading ? (
         <div className="text-center py-12">

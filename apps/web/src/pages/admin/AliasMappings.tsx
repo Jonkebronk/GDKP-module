@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../api/client';
-import { Search, Users, Shield, Calendar } from 'lucide-react';
+import { Search, Users, Calendar } from 'lucide-react';
 
 interface UserMapping {
   id: string;
@@ -41,10 +41,7 @@ export function AliasMappings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-            <Shield className="h-7 w-7 text-gold-500" />
-            <span>Alias Mappings</span>
-          </h1>
+          <h1 className="text-2xl font-bold text-white">Alias Mappings</h1>
           <p className="text-gray-400 text-sm mt-1">
             View the mapping between user aliases and their real Discord identities
           </p>

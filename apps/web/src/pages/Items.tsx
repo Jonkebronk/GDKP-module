@@ -113,12 +113,9 @@ export function Items() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <Package className="h-8 w-8 text-gold-500 hidden sm:block" />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">TBC Raid Items</h1>
-            <p className="text-gray-400 text-sm hidden sm:block">Browse loot with WoWhead tooltips</p>
-          </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">TBC Raid Items</h1>
+          <p className="text-gray-400 text-sm hidden sm:block">Browse loot with WoWhead tooltips</p>
         </div>
         {isAdmin && (
           <div className="flex items-center space-x-2">

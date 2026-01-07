@@ -432,9 +432,6 @@ export function Dashboard() {
               </ol>
             </div>
 
-            <p className="text-gray-500 text-xs text-center">
-              Installing as an app gives you a fullscreen experience and quick access from your home screen.
-            </p>
           </div>
         )}
       </div>
