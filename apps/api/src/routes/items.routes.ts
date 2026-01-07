@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { TBC_RAID_INSTANCES, ITEM_SLOTS } from '@gdkp/shared';
 import { prisma } from '../config/database.js';
 import {
@@ -183,6 +183,60 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   /**
+   * POST /items/:wowheadId/refresh-quality - Refresh item quality from WoWhead (admin only)
+   */
+  fastify.post('/:wowheadId/refresh-quality', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { wowheadId } = request.params as { wowheadId: string };
+    const wowheadIdNum = parseInt(wowheadId);
+
+    if (isNaN(wowheadIdNum) || wowheadIdNum <= 0) {
+      return reply.status(400).send({ error: 'Invalid WoWhead ID' });
+    }
+
+    // Find item in database
+    const existingItem = await prisma.tbcRaidItem.findUnique({
+      where: { wowhead_id: wowheadIdNum },
+    });
+
+    if (!existingItem) {
+      return reply.status(404).send({ error: 'Item not found in database' });
+    }
+
+    // Fetch quality from WoWhead
+    try {
+      const response = await fetch(`https://nether.wowhead.com/tooltip/item/${wowheadIdNum}?dataEnv=5&locale=0`);
+      if (!response.ok) {
+        return reply.status(404).send({ error: 'Item not found on WoWhead' });
+      }
+
+      const data = await response.json() as { quality?: number };
+      const newQuality = data.quality ?? 4;
+
+      // Update item quality
+      const updatedItem = await prisma.tbcRaidItem.update({
+        where: { wowhead_id: wowheadIdNum },
+        data: { quality: newQuality },
+      });
+
+      logger.info({
+        wowheadId: wowheadIdNum,
+        oldQuality: existingItem.quality,
+        newQuality,
+        name: existingItem.name,
+      }, 'Refreshed item quality from WoWhead');
+
+      return {
+        success: true,
+        item: updatedItem,
+        oldQuality: existingItem.quality,
+        newQuality,
+      };
+    } catch {
+      return reply.status(500).send({ error: 'Failed to fetch from WoWhead' });
+    }
+  });
+
+  /**
    * GET /items/instances - Get list of TBC raid instances
    */
   fastify.get('/instances', { preHandler: [requireAuth] }, async () => {
@@ -264,11 +318,33 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
         return { error: 'Item not found on WoWhead' };
       }
 
+      const itemQuality = data.quality ?? 4;
+      const itemIcon = data.icon || 'inv_misc_questionmark';
+
+      // Save to database for future lookups
+      try {
+        await prisma.tbcRaidItem.create({
+          data: {
+            wowhead_id: wowheadId,
+            name: data.name,
+            icon: itemIcon,
+            quality: itemQuality,
+            slot: 'Unknown',
+            raid_instance: 'Unknown',
+            boss_name: 'Unknown',
+            phase: 1,
+          },
+        });
+        logger.info({ wowheadId, name: data.name, quality: itemQuality }, 'Saved WoWhead item to database');
+      } catch {
+        // Item might already exist (race condition), ignore
+      }
+
       return {
         id: wowheadId,
         name: data.name,
-        icon: data.icon || 'inv_misc_questionmark',
-        quality: data.quality || 4,
+        icon: itemIcon,
+        quality: itemQuality,
         source: 'wowhead',
       };
     } catch {
