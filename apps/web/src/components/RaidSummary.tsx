@@ -55,9 +55,9 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
       ``,
       `─── POT BREAKDOWN ───`,
       `Total Pot: ${data.pot_total}g`,
-      `Leader Cut: ${data.leader_cut_amount}g (${data.leader_cut_percent}%)`,
+      `Management Cut: ${data.leader_cut_amount}g (${data.leader_cut_percent}%)`,
       `Distributed: ${data.distributed_amount}g`,
-      `Participants: ${data.participant_count}`,
+      `Players: ${data.participant_count}`,
       ``,
       `─── PAYOUTS ───`,
       ...data.participants.map(p =>
@@ -80,8 +80,8 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
     const rows = [
       headers.join(','),
       `"Raid","${data.raid_name}","${data.pot_total}","${data.instance}"`,
-      `"Leader Cut","${data.leader_name}","${data.leader_cut_amount}","${data.leader_cut_percent}%"`,
-      `"Distributed","","${data.distributed_amount}","${data.participant_count} participants"`,
+      `"Management Cut","${data.leader_name}","${data.leader_cut_amount}","${data.leader_cut_percent}%"`,
+      `"Distributed","","${data.distributed_amount}","${data.participant_count} players"`,
       '',
       '"--- Payouts ---","","",""',
       ...data.participants.map(p =>
@@ -174,7 +174,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
             </div>
             <div className="bg-gray-800 rounded-lg p-3 text-center">
               <Crown className="h-5 w-5 text-amber-500 mx-auto mb-1" />
-              <p className="text-xs text-gray-400">Leader Cut ({data.leader_cut_percent}%)</p>
+              <p className="text-xs text-gray-400">Management Cut ({data.leader_cut_percent}%)</p>
               <p className="text-lg font-bold text-amber-400">{formatGold(data.leader_cut_amount)}</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-3 text-center">
@@ -184,7 +184,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
             </div>
             <div className="bg-gray-800 rounded-lg p-3 text-center">
               <p className="text-2xl mb-1">👥</p>
-              <p className="text-xs text-gray-400">Participants</p>
+              <p className="text-xs text-gray-400">Players</p>
               <p className="text-lg font-bold text-white">{data.participant_count}</p>
             </div>
           </div>
