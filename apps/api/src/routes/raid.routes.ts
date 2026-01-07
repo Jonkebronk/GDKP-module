@@ -657,7 +657,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       name: item.name,
       icon_url: item.icon_url,
       winner_name: item.winner ? getDisplayName(item.winner) : 'No winner',
-      final_bid: Number(item.current_bid),
+      final_bid: item.winner ? Number(item.current_bid) : 0,
       quality: item.quality,
     }));
 
