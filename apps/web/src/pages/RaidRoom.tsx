@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -87,11 +87,13 @@ export function RaidRoom() {
     };
     window.addEventListener('auction:started', handleRefetch);
     window.addEventListener('auction:ended', handleRefetch);
+    window.addEventListener('auction:restarted', handleRefetch);
     window.addEventListener('raid:completed', handleRefetch);
     window.addEventListener('raid:cancelled', handleRefetch);
     return () => {
       window.removeEventListener('auction:started', handleRefetch);
       window.removeEventListener('auction:ended', handleRefetch);
+      window.removeEventListener('auction:restarted', handleRefetch);
       window.removeEventListener('raid:completed', handleRefetch);
       window.removeEventListener('raid:cancelled', handleRefetch);
     };
@@ -194,6 +196,24 @@ export function RaidRoom() {
       setManualAwardItem(null);
       setManualAwardPrice('');
       setManualAwardWinner('');
+    },
+  });
+
+  // Re-auction mutation
+  const reauctionMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await api.post(`/auctions/${itemId}/reauction`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      queryClient.invalidateQueries({ queryKey: ['raid', id, 'distribution-preview'] });
+      // Add event to auction feed
+      addEvent({
+        type: 'system',
+        message: `🔄 Re-auction: ${data.item.name} (was ${formatGold(data.previous_amount)} to ${data.previous_winner})`,
+        timestamp: Date.now(),
+      });
     },
   });
 
@@ -583,8 +603,84 @@ export function RaidRoom() {
                         onStart={() => {}}
                         onDelete={() => {}}
                         onManualAward={() => {}}
+                        onReauction={() => reauctionMutation.mutate(item.id)}
                         isDeleting={false}
+                        isReauctioning={reauctionMutation.isPending}
                       />
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Unsold Items (completed with no winner or cancelled) */}
+          {raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length > 0 && (
+            <div className="wow-tooltip wow-border-common">
+              <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center space-x-2">
+                  <Package className="h-4 w-4" />
+                  <span>Unsold ({raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length})</span>
+                </h2>
+              </div>
+
+              <div className="p-3 space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {raid.items
+                    .filter((item: any) => (item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
+                    .map((item: any) => (
+                      <div
+                        key={item.id}
+                        className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
+                            {item.icon_url ? (
+                              <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
+                                <span className="text-gray-500">?</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <a
+                              href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+                              className="font-medium text-sm hover:underline truncate block"
+                              style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
+                            >
+                              {item.name}
+                            </a>
+                            <p className="text-xs text-gray-500">No bids</p>
+                          </div>
+                          {/* Re-auction and Manual Award buttons */}
+                          {isLeader && (
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => reauctionMutation.mutate(item.id)}
+                                disabled={reauctionMutation.isPending}
+                                className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 p-1.5 rounded transition-colors disabled:opacity-50"
+                                title="Re-auction item"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setManualAwardItem(item);
+                                  setManualAwardPrice('');
+                                  setManualAwardWinner('');
+                                }}
+                                className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 p-1.5 rounded transition-colors"
+                                title="Manually award item"
+                              >
+                                <Gavel className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     ))}
                 </div>
               </div>
@@ -879,10 +975,12 @@ interface ItemCardProps {
   onStart: () => void;
   onDelete: () => void;
   onManualAward: () => void;
+  onReauction?: () => void;
   isDeleting: boolean;
+  isReauctioning?: boolean;
 }
 
-function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, isDeleting }: ItemCardProps) {
+function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauction, isDeleting, isReauctioning }: ItemCardProps) {
   const quality = item.quality || 4;
   const qualityColor = ITEM_QUALITY_COLORS[quality as keyof typeof ITEM_QUALITY_COLORS] || '#a335ee';
   const borderClass = qualityBorderClass[quality] || 'wow-border-epic';
@@ -957,6 +1055,17 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, isDeleting
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
+        )}
+        {/* Re-auction button for completed items */}
+        {isCompleted && isLeader && onReauction && (
+          <button
+            onClick={onReauction}
+            disabled={isReauctioning}
+            className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 p-1.5 rounded transition-colors disabled:opacity-50"
+            title="Re-auction item"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
         )}
       </div>
     </div>

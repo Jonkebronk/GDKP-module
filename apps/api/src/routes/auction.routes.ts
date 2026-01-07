@@ -143,6 +143,101 @@ const auctionRoutes: FastifyPluginAsync = async (fastify) => {
       min_increment: Number(updated.min_increment),
     };
   });
+
+  // Re-auction a completed item
+  fastify.post('/:id/reauction', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+
+    const item = await prisma.item.findUnique({
+      where: { id },
+      include: {
+        winner: {
+          select: { id: true, discord_username: true, alias: true },
+        },
+        raid: {
+          include: {
+            participants: {
+              where: { user_id: request.user.id },
+            },
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      throw new AppError(ERROR_CODES.AUCTION_NOT_FOUND, 'Item not found', 404);
+    }
+
+    // Verify user is leader
+    const participant = item.raid.participants[0];
+    if (!participant || participant.role !== 'LEADER') {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders can re-auction items', 403);
+    }
+
+    if (item.status !== 'COMPLETED' && item.status !== 'CANCELLED') {
+      throw new AppError(ERROR_CODES.AUCTION_NOT_ACTIVE, 'Can only re-auction completed or cancelled items', 400);
+    }
+
+    if (item.raid.status !== 'ACTIVE') {
+      throw new AppError(ERROR_CODES.RAID_NOT_ACTIVE, 'Raid is not active', 400);
+    }
+
+    const previousWinnerName = item.winner?.alias || item.winner?.discord_username || null;
+    const previousAmount = item.winner_id ? Number(item.current_bid) : 0;
+
+    // Subtract from pot and reset item (only subtract if there was a winner with a bid)
+    const [updatedRaid, updatedItem] = await prisma.$transaction([
+      // Decrement pot_total by the winning bid amount (only if there was a winner)
+      prisma.raid.update({
+        where: { id: item.raid_id },
+        data: previousAmount > 0 ? { pot_total: { decrement: previousAmount } } : {},
+      }),
+      // Reset item to pending state
+      prisma.item.update({
+        where: { id },
+        data: {
+          status: 'PENDING',
+          winner_id: null,
+          current_bid: item.starting_bid,
+          ends_at: null,
+          completed_at: null,
+        },
+      }),
+      // Delete previous bids for this item
+      prisma.bid.deleteMany({
+        where: { item_id: id },
+      }),
+    ]);
+
+    const newPotTotal = Number(updatedRaid.pot_total);
+
+    // Broadcast re-auction event
+    fastify.io.to(`raid:${item.raid_id}`).emit('auction:restarted', {
+      item_id: id,
+      item_name: item.name,
+      previous_winner: previousWinnerName,
+      previous_amount: previousAmount,
+      new_pot_total: newPotTotal,
+    });
+
+    // Also send raid update for pot change
+    fastify.io.to(`raid:${item.raid_id}`).emit('raid:updated', {
+      pot_total: newPotTotal,
+    });
+
+    return {
+      success: true,
+      item: {
+        ...updatedItem,
+        starting_bid: Number(updatedItem.starting_bid),
+        current_bid: Number(updatedItem.current_bid),
+        min_increment: Number(updatedItem.min_increment),
+      },
+      new_pot_total: newPotTotal,
+      previous_winner: previousWinnerName,
+      previous_amount: previousAmount,
+    };
+  });
 };
 
 export default auctionRoutes;

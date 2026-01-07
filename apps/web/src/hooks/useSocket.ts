@@ -195,6 +195,21 @@ export function useSocket(raidId: string | null) {
       window.dispatchEvent(new CustomEvent('auction:ended', { detail: data }));
     });
 
+    // Re-auction event
+    socket.on('auction:restarted', (data) => {
+      addAuctionEvent({
+        type: 'system',
+        message: `🔄 [${data.item_name}] re-auctioned! Previous: ${data.previous_winner} for ${data.previous_amount}g`,
+      });
+      addAuctionEvent({
+        type: 'pot_updated',
+        message: `Pot was updated, it now holds ${data.new_pot_total}g`,
+        amount: data.new_pot_total,
+      });
+      // Trigger refetch
+      window.dispatchEvent(new CustomEvent('auction:restarted', { detail: data }));
+    });
+
     // Pot distribution events
     socket.on('pot:payout', (data) => {
       console.log('Received payout:', data);

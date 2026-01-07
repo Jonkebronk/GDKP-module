@@ -43,6 +43,13 @@ export interface ServerToClientEvents {
   'auction:extended': (data: { item_id: string; new_ends_at: string }) => void;
   'auction:ending': (data: { item_id: string; remaining_ms: number }) => void;
   'auction:ended': (data: AuctionEndedPayload) => void;
+  'auction:restarted': (data: {
+    item_id: string;
+    item_name: string;
+    previous_winner: string;
+    previous_amount: number;
+    new_pot_total: number;
+  }) => void;
 
   // Bidding
   'bid:accepted': (data: BidAcceptedPayload) => void;
