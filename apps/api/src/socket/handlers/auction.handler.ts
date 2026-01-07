@@ -14,7 +14,7 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
   const { user_id, username } = socket.data;
 
   // Start an auction
-  socket.on('auction:start', async ({ item_id, duration, min_bid }) => {
+  socket.on('auction:start', async ({ item_id, duration, min_bid, increment }) => {
     try {
       const raid_id = socket.data.current_raid_id;
       if (!raid_id) {
@@ -22,7 +22,7 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
         return;
       }
 
-      const result = await auctionService.startAuction(item_id, user_id, duration, min_bid);
+      const result = await auctionService.startAuction(item_id, user_id, duration, min_bid, increment);
 
       if (!result.success) {
         socket.emit('error', { code: result.error!, message: result.message! });

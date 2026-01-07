@@ -131,8 +131,9 @@ export class AuctionService {
         const now = new Date();
         const endsAt = new Date(now.getTime() + auctionDuration * 1000);
 
-        // Use provided minBid or item's default starting_bid
+        // Use provided values or item's defaults
         const startingBid = minBid !== undefined ? minBid : Number(item.starting_bid);
+        const minIncrement = increment !== undefined ? increment : Number(item.min_increment);
 
         const updatedItem = await tx.item.update({
           where: { id: itemId },
@@ -140,6 +141,7 @@ export class AuctionService {
             status: 'ACTIVE',
             starting_bid: startingBid,
             current_bid: startingBid,
+            min_increment: minIncrement,
             started_at: now,
             ends_at: endsAt,
             auction_duration: auctionDuration,

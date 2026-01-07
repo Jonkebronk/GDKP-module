@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Clock, Coins } from 'lucide-react';
+import { Settings, Clock, Coins, TrendingUp } from 'lucide-react';
 import { AUCTION_DEFAULTS } from '@gdkp/shared';
 
 interface AuctionSettingsProps {
@@ -7,6 +7,8 @@ interface AuctionSettingsProps {
   onDurationChange: (duration: number) => void;
   minBid: number;
   onMinBidChange: (minBid: number) => void;
+  increment: number;
+  onIncrementChange: (increment: number) => void;
 }
 
 const DURATION_PRESETS = [
@@ -25,7 +27,15 @@ const MIN_BID_PRESETS = [
   { label: '1000g', value: 1000 },
 ];
 
-export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidChange }: AuctionSettingsProps) {
+const INCREMENT_PRESETS = [
+  { label: '10g', value: 10 },
+  { label: '25g', value: 25 },
+  { label: '50g', value: 50 },
+  { label: '100g', value: 100 },
+  { label: '250g', value: 250 },
+];
+
+export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidChange, increment, onIncrementChange }: AuctionSettingsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -39,14 +49,18 @@ export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidCh
           <Settings className="h-4 w-4" />
           <span>Auction Settings</span>
         </h2>
-        <div className="flex items-center space-x-4 text-gray-400">
+        <div className="flex items-center space-x-3 text-gray-400 text-sm">
           <div className="flex items-center space-x-1">
-            <Clock className="h-4 w-4" />
+            <Clock className="h-3 w-3" />
             <span className="text-white font-medium">{duration}s</span>
           </div>
           <div className="flex items-center space-x-1">
-            <Coins className="h-4 w-4 text-amber-500" />
+            <Coins className="h-3 w-3 text-amber-500" />
             <span className="text-amber-400 font-medium">{minBid}g</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <TrendingUp className="h-3 w-3 text-green-500" />
+            <span className="text-green-400 font-medium">+{increment}g</span>
           </div>
           <span className="text-xs">{isExpanded ? '▲' : '▼'}</span>
         </div>
@@ -136,6 +150,45 @@ export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidCh
                 className="w-24 bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
               <span className="text-gray-400 text-sm">gold</span>
+            </div>
+          </div>
+
+          {/* Increment Setting */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-2">Bid Increment</label>
+            <div className="flex flex-wrap gap-2">
+              {INCREMENT_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => onIncrementChange(preset.value)}
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                    increment === preset.value
+                      ? 'bg-green-500 text-black'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  +{preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Increment Input */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Custom increment (gold)</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                value={increment}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 10;
+                  const clamped = Math.max(1, val);
+                  onIncrementChange(clamped);
+                }}
+                min={1}
+                className="w-24 bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <span className="text-gray-400 text-sm">gold (min 1)</span>
             </div>
           </div>
 

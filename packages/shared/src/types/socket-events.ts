@@ -17,6 +17,7 @@ export interface ClientToServerEvents {
     item_id: string;
     duration?: number;
     min_bid?: number;
+    increment?: number;
   }) => void;
 
   'bid:place': (data: { item_id: string; amount: number }) => void;
