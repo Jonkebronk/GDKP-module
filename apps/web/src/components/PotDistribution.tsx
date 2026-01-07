@@ -213,7 +213,7 @@ export function PotDistribution({
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-gold-500 font-medium">
+                  <span className="text-gold-500 font-medium tabular-nums min-w-[70px] text-right">
                     {formatGold(share.share_amount)}
                   </span>
                   {isLeader && share.role !== 'LEADER' ? (
