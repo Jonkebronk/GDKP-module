@@ -99,7 +99,7 @@ export function Profile() {
           <img
             src="/anonymous-avatar.png"
             alt={user ? getDisplayName(user) : ''}
-            className="w-20 h-20 rounded-full bg-gray-700"
+            className="w-20 h-20 rounded-full"
           />
           <div>
             <h2 className="text-xl font-bold text-white">{user ? getDisplayName(user) : ''}</h2>
