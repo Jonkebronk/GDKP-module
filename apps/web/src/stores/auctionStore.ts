@@ -4,7 +4,7 @@ import type { Item, Bid } from '@gdkp/shared';
 
 export interface AuctionEvent {
   id: string;
-  type: 'auction_start' | 'bid_placed' | 'countdown' | 'stop_bids' | 'awarded' | 'pot_updated';
+  type: 'auction_start' | 'bid_placed' | 'countdown' | 'stop_bids' | 'awarded' | 'pot_updated' | 'system';
   message: string;
   timestamp: Date;
   itemName?: string;

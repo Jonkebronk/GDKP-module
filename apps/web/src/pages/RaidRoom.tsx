@@ -42,7 +42,7 @@ export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
+  const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents, addAuctionEvent } = useAuctionStore();
   const { participants: liveParticipants } = useChatStore();
 
   const [bidAmount, setBidAmount] = useState('');
@@ -209,10 +209,9 @@ export function RaidRoom() {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
       queryClient.invalidateQueries({ queryKey: ['raid', id, 'distribution-preview'] });
       // Add event to auction feed
-      addEvent({
+      addAuctionEvent({
         type: 'system',
         message: `🔄 Re-auction: ${data.item.name} (was ${formatGold(data.previous_amount)} to ${data.previous_winner})`,
-        timestamp: Date.now(),
       });
     },
   });
