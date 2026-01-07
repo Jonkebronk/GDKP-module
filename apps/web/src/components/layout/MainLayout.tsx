@@ -21,12 +21,12 @@ import { api } from '../../api/client';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
-  { path: '/raids', label: 'Raids', icon: Swords },
   { path: '/items', label: 'Items', icon: Package },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
 const adminNavItems = [
+  { path: '/raids', label: 'Raids', icon: Swords, color: 'purple' },
   { path: '/admin/gold', label: 'Gold', icon: Coins, color: 'gold' },
   { path: '/admin/aliases', label: 'Aliases', icon: Shield, color: 'green' },
 ];
@@ -86,6 +86,8 @@ export function MainLayout() {
                     const isActive = location.pathname === item.path;
                     const colorClasses = item.color === 'gold'
                       ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
+                      : item.color === 'purple'
+                      ? isActive ? 'bg-purple-500/20 text-purple-400' : 'text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400'
                       : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link
@@ -178,6 +180,8 @@ export function MainLayout() {
                     const isActive = location.pathname === item.path;
                     const colorClasses = item.color === 'gold'
                       ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
+                      : item.color === 'purple'
+                      ? isActive ? 'bg-purple-500/20 text-purple-400' : 'text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400'
                       : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link

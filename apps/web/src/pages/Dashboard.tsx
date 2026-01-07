@@ -2,10 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
-import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn } from 'lucide-react';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check } from 'lucide-react';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
+
+interface ActiveRaid {
+  id: string;
+  name: string;
+  instance: string;
+  status: string;
+  pot_total: number;
+  participant_count: number;
+  participants: Array<{ user_id: string }>;
+}
 
 // Quality border classes
 const qualityBorderClass: Record<number, string> = {
@@ -59,6 +69,9 @@ interface PayoutsData {
 }
 
 export function Dashboard() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [expandedSpentRaids, setExpandedSpentRaids] = useState<Record<string, boolean>>({});
   const [expandedPayoutRaids, setExpandedPayoutRaids] = useState<Record<string, boolean>>({});
 
@@ -67,6 +80,25 @@ export function Dashboard() {
     queryFn: async () => {
       const res = await api.get('/wallet/balance');
       return res.data;
+    },
+  });
+
+  const { data: activeRaids } = useQuery<ActiveRaid[]>({
+    queryKey: ['raids', 'active'],
+    queryFn: async () => {
+      const res = await api.get('/raids?status=ACTIVE,PENDING');
+      return res.data;
+    },
+  });
+
+  const joinRaidMutation = useMutation({
+    mutationFn: async (raidId: string) => {
+      await api.post(`/raids/${raidId}/join`);
+      return raidId;
+    },
+    onSuccess: (raidId) => {
+      queryClient.invalidateQueries({ queryKey: ['raids'] });
+      navigate(`/raids/${raidId}`);
     },
   });
 
@@ -100,6 +132,10 @@ export function Dashboard() {
     }));
   };
 
+  const isInRaid = (raid: ActiveRaid) => {
+    return raid.participants?.some((p) => p.user_id === user?.id);
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
@@ -120,6 +156,80 @@ export function Dashboard() {
           <Wallet className="h-10 w-10 text-gold-500/50" />
         </div>
       </div>
+
+      {/* Active Raids - Join Section */}
+      {activeRaids && activeRaids.length > 0 && (
+        <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="bg-gray-900 px-4 py-3 border-b border-gray-700 flex items-center space-x-2">
+            <Swords className="h-5 w-5 text-purple-400" />
+            <h2 className="text-lg font-semibold text-white">Active Raids</h2>
+          </div>
+          <div className="divide-y divide-gray-700">
+            {activeRaids.map((raid) => {
+              const inRaid = isInRaid(raid);
+              return (
+                <div
+                  key={raid.id}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div>
+                      <p className="text-white font-medium">{raid.name}</p>
+                      <p className="text-gray-500 text-xs flex items-center space-x-2">
+                        <span>{raid.instance}</span>
+                        <span>•</span>
+                        <span className="flex items-center">
+                          <Users className="h-3 w-3 mr-1" />
+                          {raid.participant_count}
+                        </span>
+                        <span>•</span>
+                        <GoldDisplay amount={raid.pot_total} iconSize={10} className="text-amber-400" />
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        raid.status === 'ACTIVE'
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}
+                    >
+                      {raid.status}
+                    </span>
+                    {inRaid ? (
+                      <Link
+                        to={`/raids/${raid.id}`}
+                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span>Joined</span>
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => joinRaidMutation.mutate(raid.id)}
+                        disabled={joinRaidMutation.isPending}
+                        className="flex items-center space-x-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <LogIn className="h-4 w-4" />
+                        <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* No active raids message */}
+      {activeRaids && activeRaids.length === 0 && (
+        <div className="bg-gray-800 rounded-lg p-6 text-center">
+          <Swords className="h-10 w-10 text-gray-600 mx-auto mb-2" />
+          <p className="text-gray-400">No active raids at the moment</p>
+        </div>
+      )}
 
       {/* Two column layout for history sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
