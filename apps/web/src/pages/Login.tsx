@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Swords } from 'lucide-react';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -19,61 +18,22 @@ export function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black px-4">
+      <div className="max-w-md w-full space-y-8 text-center">
         {/* Logo */}
-        <div className="text-center">
-          <Swords className="mx-auto h-16 w-16 text-gold-500" />
-          <h1 className="mt-6 text-4xl font-bold text-white">GDKP Platform</h1>
-          <p className="mt-2 text-gray-400">
-            Real-time auction platform for WoW raids
-          </p>
-        </div>
-
-        {/* Features */}
-        <div className="bg-gray-800 rounded-lg p-6 space-y-4">
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-gold-500/20 flex items-center justify-center">
-              <span className="text-gold-500 text-sm">1</span>
-            </div>
-            <div>
-              <h3 className="text-white font-medium">Live Auctions</h3>
-              <p className="text-gray-400 text-sm">
-                Real-time bidding with anti-snipe protection
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-gold-500/20 flex items-center justify-center">
-              <span className="text-gold-500 text-sm">2</span>
-            </div>
-            <div>
-              <h3 className="text-white font-medium">Automatic Pot Split</h3>
-              <p className="text-gray-400 text-sm">
-                Fair distribution based on configurable rules
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-gold-500/20 flex items-center justify-center">
-              <span className="text-gold-500 text-sm">3</span>
-            </div>
-            <div>
-              <h3 className="text-white font-medium">Integrated Wallet</h3>
-              <p className="text-gray-400 text-sm">
-                Deposit and withdraw via PayPal
-              </p>
-            </div>
-          </div>
+        <div>
+          <img
+            src="/gnome-logo.png"
+            alt="GDKP"
+            className="mx-auto h-24 w-24 rounded-full object-cover"
+          />
         </div>
 
         {/* Discord Login Button */}
@@ -91,8 +51,8 @@ export function LoginPage() {
           Login with Discord
         </a>
 
-        <p className="text-center text-gray-500 text-sm">
-          By logging in, you agree to our Terms of Service and Privacy Policy
+        <p className="text-gray-500 text-sm">
+          The first rule of Fight Club is: You do not talk about Fight Club
         </p>
       </div>
     </div>
