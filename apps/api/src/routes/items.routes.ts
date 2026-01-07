@@ -40,6 +40,26 @@ const rclcImportSchema = z.object({
   raid_id: z.string().uuid().optional(),
 });
 
+const wowheadZoneImportSchema = z.object({
+  url: z.string().url().refine(
+    (url) => url.includes('wowhead.com') && url.includes('zone='),
+    { message: 'Must be a WoWhead zone URL (e.g. https://www.wowhead.com/tbc/zone=3457/karazhan)' }
+  ),
+});
+
+// Zone ID to instance name mapping
+const ZONE_ID_TO_INSTANCE: Record<string, string> = {
+  '3457': 'Karazhan',
+  '3923': "Gruul's Lair",
+  '3836': "Magtheridon's Lair",
+  '3607': 'Serpentshrine Cavern',
+  '3845': 'Tempest Keep',
+  '3606': 'Mount Hyjal',
+  '3959': 'Black Temple',
+  '4075': 'Sunwell Plateau',
+  '3805': "Zul'Aman",
+};
+
 const addItemSchema = z.object({
   wowhead_id: z.number().int().positive(),
   name: z.string().min(1).max(255),
@@ -525,6 +545,182 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
         unmatched_items: [],
         errors: ['Unknown error during import'],
       };
+    }
+  });
+
+  /**
+   * POST /items/import/wowhead-zone - Import all drops from a WoWhead zone URL
+   */
+  fastify.post('/import/wowhead-zone', { preHandler: [requireAuth] }, async (request, reply) => {
+    const { url } = wowheadZoneImportSchema.parse(request.body);
+
+    logger.info({ userId: request.user.id, url }, 'Starting WoWhead zone import');
+
+    try {
+      // Parse zone ID from URL
+      const zoneMatch = url.match(/zone[=:](\d+)/i);
+      if (!zoneMatch) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Could not parse zone ID from URL',
+        });
+      }
+
+      const zoneId = zoneMatch[1];
+      const instanceName = ZONE_ID_TO_INSTANCE[zoneId] || 'Unknown';
+
+      // Fetch the WoWhead zone page to get item drops
+      const zoneUrl = `https://www.wowhead.com/tbc/zone=${zoneId}#drops`;
+      const response = await fetch(zoneUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+
+      if (!response.ok) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Failed to fetch zone data from WoWhead',
+        });
+      }
+
+      const html = await response.text();
+
+      // Extract item IDs from the page
+      const itemIds: number[] = [];
+
+      // Match item links in the page: /tbc/item=12345
+      const itemLinkMatches = html.matchAll(/\/tbc\/item[=:](\d+)/g);
+      for (const m of itemLinkMatches) {
+        const id = parseInt(m[1]);
+        if (id > 0 && !itemIds.includes(id)) {
+          itemIds.push(id);
+        }
+      }
+
+      // Also match from listview data: "id":12345
+      const idMatches = html.matchAll(/"id"\s*:\s*(\d+)/g);
+      for (const m of idMatches) {
+        const id = parseInt(m[1]);
+        if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
+          itemIds.push(id);
+        }
+      }
+
+      if (itemIds.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'No items found on zone page. Try importing items manually.',
+        });
+      }
+
+      logger.info({ zoneId, instanceName, itemCount: itemIds.length }, 'Found items on WoWhead zone page');
+
+      // Import each item
+      let imported = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+      const importedItems: { id: number; name: string; quality: number }[] = [];
+
+      for (const wowheadId of itemIds) {
+        // Check if item already exists
+        const existing = await prisma.tbcRaidItem.findUnique({
+          where: { wowhead_id: wowheadId },
+        });
+
+        if (existing) {
+          skipped++;
+          continue;
+        }
+
+        // Fetch item data from WoWhead tooltip API
+        try {
+          const tooltipRes = await fetch(
+            `https://nether.wowhead.com/tooltip/item/${wowheadId}?dataEnv=5&locale=0`
+          );
+
+          if (!tooltipRes.ok) {
+            errors.push(`Failed to fetch item ${wowheadId}`);
+            continue;
+          }
+
+          const tooltipData = await tooltipRes.json() as {
+            name?: string;
+            icon?: string;
+            quality?: number;
+            tooltip?: string;
+          };
+
+          if (!tooltipData.name) {
+            errors.push(`No name for item ${wowheadId}`);
+            continue;
+          }
+
+          // Try to extract slot from tooltip HTML
+          let slot = 'Unknown';
+          const tooltipHtml = tooltipData.tooltip || '';
+          const slotMatch = tooltipHtml.match(/<!--(Head|Neck|Shoulder|Back|Chest|Wrist|Hands|Waist|Legs|Feet|Finger|Trinket|One-Hand|Two-Hand|Main Hand|Off Hand|Ranged|Relic|Thrown|Wand|Shield|Held In Off-hand)-->/i);
+          if (slotMatch) {
+            slot = slotMatch[1];
+          }
+
+          // Create the item
+          await prisma.tbcRaidItem.create({
+            data: {
+              wowhead_id: wowheadId,
+              name: tooltipData.name,
+              icon: tooltipData.icon || 'inv_misc_questionmark',
+              quality: tooltipData.quality ?? 4,
+              slot,
+              raid_instance: instanceName,
+              boss_name: 'Unknown',
+              phase: 1,
+            },
+          });
+
+          imported++;
+          importedItems.push({
+            id: wowheadId,
+            name: tooltipData.name,
+            quality: tooltipData.quality ?? 4,
+          });
+
+          // Small delay to avoid rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        } catch (err) {
+          errors.push(`Error importing item ${wowheadId}: ${err instanceof Error ? err.message : 'Unknown'}`);
+        }
+      }
+
+      logger.info(
+        { userId: request.user.id, zoneId, instanceName, imported, skipped, errorCount: errors.length },
+        'WoWhead zone import completed'
+      );
+
+      return {
+        success: true,
+        zone_id: zoneId,
+        instance: instanceName,
+        imported,
+        skipped,
+        total_found: itemIds.length,
+        items: importedItems,
+        errors: errors.slice(0, 10),
+      };
+    } catch (error) {
+      logger.error({ error, userId: request.user.id }, 'WoWhead zone import failed');
+
+      if (error instanceof Error) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        error: 'Unknown error during import',
+      });
     }
   });
 };

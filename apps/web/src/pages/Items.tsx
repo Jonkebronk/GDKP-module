@@ -486,18 +486,30 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
 }
 
 function ImportModal({ onClose }: { onClose: () => void }) {
-  const [importType, setImportType] = useState<'gargul' | 'rclootcouncil'>('gargul');
+  const [importType, setImportType] = useState<'gargul' | 'rclootcouncil' | 'wowhead-zone'>('wowhead-zone');
   const [importData, setImportData] = useState('');
+  const [zoneUrl, setZoneUrl] = useState('');
   const [result, setResult] = useState<{
     success: boolean;
-    imported_count: number;
-    matched_count: number;
-    unmatched_items: string[];
-    errors: string[];
+    imported_count?: number;
+    matched_count?: number;
+    unmatched_items?: string[];
+    errors?: string[];
+    // WoWhead zone import result
+    imported?: number;
+    skipped?: number;
+    total_found?: number;
+    instance?: string;
+    items?: { id: number; name: string; quality: number }[];
   } | null>(null);
+  const queryClient = useQueryClient();
 
   const importMutation = useMutation({
     mutationFn: async () => {
+      if (importType === 'wowhead-zone') {
+        const res = await api.post('/items/import/wowhead-zone', { url: zoneUrl });
+        return res.data;
+      }
       const endpoint =
         importType === 'gargul' ? '/items/import/gargul' : '/items/import/rclootcouncil';
       const payload = importType === 'gargul' ? { data: importData } : { csv: importData };
@@ -507,6 +519,8 @@ function ImportModal({ onClose }: { onClose: () => void }) {
     },
     onSuccess: (data) => {
       setResult(data);
+      // Invalidate items query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['items'] });
     },
     onError: (error: any) => {
       setResult({
@@ -514,7 +528,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
         imported_count: 0,
         matched_count: 0,
         unmatched_items: [],
-        errors: [error.response?.data?.message || 'Import failed'],
+        errors: [error.response?.data?.error || error.response?.data?.message || 'Import failed'],
       });
     },
   });
@@ -535,6 +549,16 @@ function ImportModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-sm text-gray-400 mb-2">Import Format</label>
               <div className="flex space-x-2">
+                <button
+                  onClick={() => setImportType('wowhead-zone')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    importType === 'wowhead-zone'
+                      ? 'bg-gold-600 text-white'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  }`}
+                >
+                  WoWhead Zone
+                </button>
                 <button
                   onClick={() => setImportType('gargul')}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -560,7 +584,19 @@ function ImportModal({ onClose }: { onClose: () => void }) {
 
             {/* Instructions */}
             <div className="bg-gray-700/50 rounded-lg p-4 text-sm">
-              {importType === 'gargul' ? (
+              {importType === 'wowhead-zone' ? (
+                <>
+                  <p className="text-gray-300 font-medium mb-2">Import all drops from a raid zone:</p>
+                  <ol className="text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Go to WoWhead TBC and find your raid zone</li>
+                    <li>Copy the zone URL from your browser</li>
+                    <li>Paste it below and click Import</li>
+                  </ol>
+                  <p className="text-gray-500 text-xs mt-2">
+                    Supported raids: Karazhan, Gruul, Magtheridon, SSC, TK, Hyjal, BT, Sunwell, ZA
+                  </p>
+                </>
+              ) : importType === 'gargul' ? (
                 <>
                   <p className="text-gray-300 font-medium mb-2">How to export from Gargul:</p>
                   <ol className="text-gray-400 space-y-1 list-decimal list-inside">
@@ -589,28 +625,47 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
 
-            {/* Import data textarea */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">
-                {importType === 'gargul' ? 'Gargul Export String' : 'RCLootCouncil CSV'}
-              </label>
-              <textarea
-                value={importData}
-                onChange={(e) => setImportData(e.target.value)}
-                placeholder={
-                  importType === 'gargul'
-                    ? 'Paste Gargul export string here...'
-                    : 'Paste CSV content here...'
-                }
-                rows={10}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
-              />
-            </div>
+            {/* Import data input */}
+            {importType === 'wowhead-zone' ? (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">WoWhead Zone URL</label>
+                <input
+                  type="text"
+                  value={zoneUrl}
+                  onChange={(e) => setZoneUrl(e.target.value)}
+                  placeholder="https://www.wowhead.com/tbc/zone=3457/karazhan"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Example: https://www.wowhead.com/tbc/zone=3457/karazhan
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  {importType === 'gargul' ? 'Gargul Export String' : 'RCLootCouncil CSV'}
+                </label>
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder={
+                    importType === 'gargul'
+                      ? 'Paste Gargul export string here...'
+                      : 'Paste CSV content here...'
+                  }
+                  rows={10}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
+                />
+              </div>
+            )}
 
             {/* Import button */}
             <button
               onClick={() => importMutation.mutate()}
-              disabled={!importData.trim() || importMutation.isPending}
+              disabled={
+                (importType === 'wowhead-zone' ? !zoneUrl.trim() : !importData.trim()) ||
+                importMutation.isPending
+              }
               className="w-full bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
               {importMutation.isPending ? (
@@ -621,7 +676,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
               ) : (
                 <>
                   <Upload className="h-5 w-5" />
-                  <span>Import Loot History</span>
+                  <span>{importType === 'wowhead-zone' ? 'Import Zone Items' : 'Import Loot History'}</span>
                 </>
               )}
             </button>
@@ -631,35 +686,65 @@ function ImportModal({ onClose }: { onClose: () => void }) {
             {/* Result status */}
             <div
               className={`flex items-center space-x-3 p-4 rounded-lg ${
-                result.success && result.imported_count > 0
+                result.success && (result.imported_count || result.imported || 0) > 0
                   ? 'bg-green-500/20 text-green-400'
-                  : result.errors.length > 0
+                  : (result.errors?.length || 0) > 0
                     ? 'bg-red-500/20 text-red-400'
                     : 'bg-yellow-500/20 text-yellow-400'
               }`}
             >
-              {result.success && result.imported_count > 0 ? (
+              {result.success && (result.imported_count || result.imported || 0) > 0 ? (
                 <CheckCircle className="h-6 w-6 flex-shrink-0" />
               ) : (
                 <AlertCircle className="h-6 w-6 flex-shrink-0" />
               )}
               <div>
                 <p className="font-medium">
-                  {result.success && result.imported_count > 0
+                  {result.success && (result.imported_count || result.imported || 0) > 0
                     ? 'Import Successful!'
-                    : result.errors.length > 0
+                    : (result.errors?.length || 0) > 0
                       ? 'Import Failed'
                       : 'Partial Import'}
                 </p>
                 <p className="text-sm opacity-80">
-                  {result.imported_count} items imported, {result.matched_count} matched to
-                  database
+                  {result.imported !== undefined ? (
+                    // WoWhead zone import result
+                    <>
+                      {result.imported} items imported from {result.instance}, {result.skipped} skipped (already exist)
+                    </>
+                  ) : (
+                    // Gargul/RCLootCouncil result
+                    <>
+                      {result.imported_count} items imported, {result.matched_count} matched to database
+                    </>
+                  )}
                 </p>
               </div>
             </div>
 
-            {/* Unmatched items */}
-            {result.unmatched_items.length > 0 && (
+            {/* WoWhead zone import: Show imported items */}
+            {result.items && result.items.length > 0 && (
+              <div className="bg-gray-700/50 rounded-lg p-4">
+                <p className="text-gray-300 font-medium mb-2">
+                  Imported Items ({result.items.length}):
+                </p>
+                <div className="text-gray-400 text-sm max-h-48 overflow-y-auto space-y-1">
+                  {result.items.slice(0, 20).map((item) => (
+                    <p key={item.id} style={{ color: ITEM_QUALITY_COLORS[item.quality as ItemQuality] }}>
+                      {item.name}
+                    </p>
+                  ))}
+                  {result.items.length > 20 && (
+                    <p className="text-gray-500">
+                      ...and {result.items.length - 20} more
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Unmatched items (Gargul/RCLC) */}
+            {result.unmatched_items && result.unmatched_items.length > 0 && (
               <div className="bg-gray-700/50 rounded-lg p-4">
                 <p className="text-gray-300 font-medium mb-2">
                   Unmatched Items ({result.unmatched_items.length}):
@@ -678,7 +763,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
             )}
 
             {/* Errors */}
-            {result.errors.length > 0 && (
+            {result.errors && result.errors.length > 0 && (
               <div className="bg-red-500/10 rounded-lg p-4">
                 <p className="text-red-400 font-medium mb-2">Errors:</p>
                 <div className="text-red-300 text-sm">
@@ -695,6 +780,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
                 onClick={() => {
                   setResult(null);
                   setImportData('');
+                  setZoneUrl('');
                 }}
                 className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
               >
