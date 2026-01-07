@@ -97,6 +97,7 @@ export function GoldManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'gold-report'] }); // Clear pending report on Dashboard
       checkAuth(); // Refresh current user's balance in header
       setSuccessMessage('Report approved and balance updated');
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -111,6 +112,7 @@ export function GoldManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'gold-report'] }); // Clear pending report on Dashboard
       setSuccessMessage('Report rejected');
       setTimeout(() => setSuccessMessage(''), 5000);
     },
