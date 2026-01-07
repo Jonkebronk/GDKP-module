@@ -55,13 +55,6 @@ export interface UpdateRaidInput {
 }
 
 export const WOW_INSTANCES = [
-  'Molten Core',
-  'Blackwing Lair',
-  "Onyxia's Lair",
-  'Zul\'Gurub',
-  'Ruins of Ahn\'Qiraj',
-  'Temple of Ahn\'Qiraj',
-  'Naxxramas',
   'Karazhan',
   'Gruul\'s Lair',
   'Magtheridon\'s Lair',
@@ -69,6 +62,7 @@ export const WOW_INSTANCES = [
   'Tempest Keep',
   'Mount Hyjal',
   'Black Temple',
+  "Zul'Aman",
   'Sunwell Plateau',
   'Custom',
 ] as const;
