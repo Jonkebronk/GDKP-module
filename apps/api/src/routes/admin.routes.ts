@@ -216,6 +216,27 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       message: `Deleted ${deleted.count} TBC items from database`,
     };
   });
+
+  // Clear all user gold balances
+  fastify.post('/clear-all-gold', { preHandler: [requireAdmin] }, async (request) => {
+    const result = await prisma.$transaction(async (tx) => {
+      // Count users with balance > 0
+      const usersWithBalance = await tx.user.count({
+        where: { gold_balance: { gt: 0 } },
+      });
+
+      // Reset all gold balances to 0
+      await tx.user.updateMany({
+        data: { gold_balance: 0 },
+      });
+
+      return { users_cleared: usersWithBalance };
+    });
+
+    logger.info({ adminId: request.user.id, usersCleared: result.users_cleared }, 'All gold balances cleared');
+
+    return result;
+  });
 };
 
 export default adminRoutes;

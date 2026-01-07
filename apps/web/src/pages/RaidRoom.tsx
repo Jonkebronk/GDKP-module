@@ -1,13 +1,13 @@
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -43,10 +43,9 @@ export function RaidRoom() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
-  const { messages: chatMessages, participants: liveParticipants } = useChatStore();
+  const { participants: liveParticipants } = useChatStore();
 
   const [bidAmount, setBidAmount] = useState('');
-  const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
   const [auctionDuration, setAuctionDuration] = useState<number>(AUCTION_DEFAULTS.DURATION);
@@ -57,7 +56,6 @@ export function RaidRoom() {
   const [manualAwardWinner, setManualAwardWinner] = useState('');
   const [autoPlayActive, setAutoPlayActive] = useState(false);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef(autoPlayActive);
 
   // Keep autoPlay ref in sync
@@ -112,7 +110,7 @@ export function RaidRoom() {
   const isParticipant = raid?.participants?.some((p: any) => p.user_id === user?.id);
 
   // Only connect to socket if user is a participant
-  const { placeBid, sendChat, startAuction, isConnected } = useSocket(isParticipant ? id || null : null);
+  const { placeBid, startAuction, isConnected } = useSocket(isParticipant ? id || null : null);
 
   // Join raid mutation
   const joinRaidMutation = useMutation({
@@ -130,13 +128,6 @@ export function RaidRoom() {
       auctionFeedRef.current.scrollTop = auctionFeedRef.current.scrollHeight;
     }
   }, [auctionEvents]);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
 
   // Auto-play: start next auction when current ends
   useEffect(() => {
@@ -250,13 +241,6 @@ export function RaidRoom() {
     }
   };
 
-  const handleSendChat = () => {
-    if (chatMessage.trim()) {
-      sendChat(chatMessage);
-      setChatMessage('');
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -282,6 +266,24 @@ export function RaidRoom() {
   const getItemQuality = (item: any) => item.quality || 4; // Default to epic
 
   const isPending = raid.status === 'PENDING';
+
+  // Calculate total spending per player from completed items
+  const playerSpending = useMemo(() => {
+    const spending: Record<string, { user: any; total: number; items: number }> = {};
+
+    raid.items
+      .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
+      .forEach((item: any) => {
+        const id = item.winner_id;
+        if (!spending[id]) {
+          spending[id] = { user: item.winner, total: 0, items: 0 };
+        }
+        spending[id].total += Number(item.current_bid);
+        spending[id].items += 1;
+      });
+
+    return Object.values(spending).sort((a, b) => b.total - a.total);
+  }, [raid.items]);
 
   return (
     <div className="space-y-6">
@@ -636,46 +638,37 @@ export function RaidRoom() {
             </div>
           </div>
 
-          {/* Chat */}
+          {/* Total Spend */}
           <div className="wow-tooltip wow-border-common">
             <div className="wow-tooltip-header p-3 border-b border-gray-700">
-              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Chat</h2>
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                <Coins className="h-4 w-4" />
+                <span>Total Spend</span>
+              </h2>
             </div>
-            <div ref={chatRef} className="h-48 overflow-y-auto p-3 space-y-2">
-              {chatMessages.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">Chat messages will appear here</p>
+            <div className="h-48 overflow-y-auto p-3 space-y-2">
+              {playerSpending.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Player spending will appear here</p>
               ) : (
-                chatMessages.map((msg) => (
-                  <div key={msg.id} className="text-sm">
-                    {msg.is_system ? (
-                      <span className="text-gray-400 italic">{msg.message}</span>
-                    ) : (
-                      <>
-                        <span className="text-amber-400 font-medium">{msg.username}: </span>
-                        <span className="text-gray-300">{msg.message}</span>
-                      </>
-                    )}
+                playerSpending.map(({ user, total, items }) => (
+                  <div key={user?.id || 'unknown'} className="flex items-center justify-between py-1">
+                    <div className="flex items-center space-x-2">
+                      <SimpleUserDisplay
+                        user={{
+                          discord_username: user?.discord_username || 'Unknown',
+                          discord_avatar: user?.discord_avatar,
+                          alias: user?.alias,
+                        }}
+                        showAvatar
+                        avatarSize={20}
+                        className="text-gray-300 text-sm"
+                      />
+                      <span className="text-gray-500 text-xs">({items} item{items !== 1 ? 's' : ''})</span>
+                    </div>
+                    <span className="text-amber-400 font-medium">{formatGold(total)}</span>
                   </div>
                 ))
               )}
-            </div>
-            <div className="p-3 border-t border-gray-700">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <button
-                  onClick={handleSendChat}
-                  className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           </div>
         </div>

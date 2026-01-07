@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Coins, Search, Plus, Minus, Check, AlertCircle } from 'lucide-react';
+import { Coins, Search, Plus, Minus, Check, AlertCircle, Trash2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -21,6 +21,7 @@ export function GoldManagement() {
   const [reason, setReason] = useState('');
   const [isAdding, setIsAdding] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin', 'users', search],
@@ -47,6 +48,19 @@ export function GoldManagement() {
     },
   });
 
+  const clearAllGoldMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/admin/clear-all-gold');
+      return res.data as { users_cleared: number };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setSuccessMessage(`Cleared gold for ${data.users_cleared} users`);
+      setShowClearConfirm(false);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser || !amount || !reason) return;
@@ -63,7 +77,46 @@ export function GoldManagement() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Gold Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">Gold Management</h1>
+        <button
+          onClick={() => setShowClearConfirm(true)}
+          className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span>Clear All Gold</span>
+        </button>
+      </div>
+
+      {/* Clear All Gold Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border border-red-500/50 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-red-400 mb-4">Clear All Gold</h2>
+            <p className="text-gray-300 mb-4">
+              This will reset the gold balance to <span className="text-amber-400 font-bold">0</span> for all users.
+            </p>
+            <p className="text-red-400 text-sm mb-6">
+              This action cannot be undone. Use this before starting a new raid to reset everyone's wallet.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => clearAllGoldMutation.mutate()}
+                disabled={clearAllGoldMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white py-2 rounded-lg transition-colors font-medium"
+              >
+                {clearAllGoldMutation.isPending ? 'Clearing...' : 'Clear All Gold'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Message */}
       {successMessage && (
