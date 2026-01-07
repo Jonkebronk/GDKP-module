@@ -118,7 +118,7 @@ export function MainLayout() {
                   alt={user ? getDisplayName(user) : ''}
                   className="h-8 w-8 rounded-full object-cover"
                 />
-                <span className="hidden sm:inline text-sm text-gray-300">
+                <span className="hidden sm:inline text-sm text-white font-semibold">
                   {user ? getDisplayName(user) : ''}
                 </span>
               </div>
