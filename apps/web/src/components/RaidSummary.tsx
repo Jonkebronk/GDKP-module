@@ -1,6 +1,16 @@
 import { useRef } from 'react';
-import { formatGold } from '@gdkp/shared';
+import { formatGold, ITEM_QUALITY_COLORS } from '@gdkp/shared';
 import { Download, Copy, Check, Crown, Trophy, Coins } from 'lucide-react';
+
+// Quality border classes
+const qualityBorderClass: Record<number, string> = {
+  0: 'border-gray-500',
+  1: 'border-gray-300',
+  2: 'border-green-500',
+  3: 'border-blue-500',
+  4: 'border-purple-500',
+  5: 'border-orange-500',
+};
 import { useState } from 'react';
 
 interface ItemWon {
@@ -219,12 +229,12 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                   <div key={item.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/50">
                     <div className="flex items-center space-x-3">
                       {item.icon_url ? (
-                        <img src={item.icon_url} alt="" className="w-8 h-8 rounded border border-purple-500" />
+                        <img src={item.icon_url} alt="" className={`w-8 h-8 rounded border ${qualityBorderClass[item.quality ?? 4]}`} />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-gray-700 border border-purple-500" />
+                        <div className={`w-8 h-8 rounded bg-gray-700 border ${qualityBorderClass[item.quality ?? 4]}`} />
                       )}
                       <div>
-                        <p className="text-purple-400 font-medium text-sm">{item.name}</p>
+                        <p className={`font-medium text-sm ${ITEM_QUALITY_COLORS[item.quality ?? 4]}`}>{item.name}</p>
                         <p className="text-gray-500 text-xs">→ {item.winner_name}</p>
                       </div>
                     </div>
