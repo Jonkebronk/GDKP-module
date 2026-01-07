@@ -187,14 +187,12 @@ export function Raids() {
 
 function CreateRaidModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
-  const [name, setName] = useState('');
   const [instance, setInstance] = useState<string>(WOW_INSTANCES[0]);
   const [leaderCut, setLeaderCut] = useState(10);
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post('/raids', {
-        name,
         instance,
         split_config: {
           type: 'equal',
@@ -220,17 +218,6 @@ function CreateRaidModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Raid Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., MC Guild Run"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
-            />
-          </div>
-
           <div>
             <label className="block text-sm text-gray-400 mb-1">Instance</label>
             <select
@@ -265,7 +252,7 @@ function CreateRaidModal({ onClose }: { onClose: () => void }) {
 
           <button
             onClick={() => createMutation.mutate()}
-            disabled={!name || createMutation.isPending}
+            disabled={createMutation.isPending}
             className="w-full bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
           >
             {createMutation.isPending ? 'Creating...' : 'Create Raid'}

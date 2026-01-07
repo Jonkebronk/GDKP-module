@@ -8,7 +8,6 @@ import { PotDistributionService } from '../services/pot-distribution.service.js'
 const potDistributionService = new PotDistributionService();
 
 const createRaidSchema = z.object({
-  name: z.string().min(3).max(100),
   instance: z.string(),
   split_config: z.object({
     type: z.enum(['equal', 'custom', 'role_based']),
@@ -129,9 +128,13 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/', { preHandler: [requireAuth] }, async (request) => {
     const data = createRaidSchema.parse(request.body);
 
+    // Auto-generate raid name as "GDKP YYYY-MM-DD"
+    const today = new Date().toISOString().split('T')[0];
+    const raidName = `GDKP ${today}`;
+
     const raid = await prisma.raid.create({
       data: {
-        name: data.name,
+        name: raidName,
         instance: data.instance,
         leader_id: request.user.id,
         split_config: data.split_config,
