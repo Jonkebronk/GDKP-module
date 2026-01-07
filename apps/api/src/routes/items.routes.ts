@@ -589,13 +589,26 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
       // Extract item IDs specifically from the "drops" listview section
       const itemIds: number[] = [];
 
-      // Find the drops listview data block: new Listview({...id: 'drops'...data: [...]})
-      // The pattern looks for the drops section specifically
-      const dropsMatch = html.match(/new Listview\(\{[^}]*id:\s*['"]drops['"][^}]*data:\s*(\[[^\]]+\])/s);
+      // Find the drops listview - look for id: 'drops' and then find the data array
+      // The data array can be very long with nested objects, so we need a different approach
+      const dropsListviewMatch = html.match(/new Listview\(\{[^{]*id:\s*['"]drops['"][^{]*data:\s*\[/);
 
-      if (dropsMatch) {
-        // Extract item IDs from the drops data array
-        const dropsData = dropsMatch[1];
+      if (dropsListviewMatch) {
+        // Find where this listview starts and extract items from that section
+        const startIndex = dropsListviewMatch.index! + dropsListviewMatch[0].length;
+
+        // Find the end of the data array by counting brackets
+        let bracketCount = 1;
+        let endIndex = startIndex;
+        for (let i = startIndex; i < html.length && bracketCount > 0; i++) {
+          if (html[i] === '[') bracketCount++;
+          if (html[i] === ']') bracketCount--;
+          endIndex = i;
+        }
+
+        const dropsData = html.substring(startIndex, endIndex);
+
+        // Extract all item IDs from the drops data
         const idMatches = dropsData.matchAll(/"id"\s*:\s*(\d+)/g);
         for (const m of idMatches) {
           const id = parseInt(m[1]);
@@ -605,15 +618,15 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Fallback: Try to find WH.Gatherer data for drops tab specifically
+      // Fallback: Try WH.Gatherer.addData for item type (3) with drops
       if (itemIds.length === 0) {
-        // Look for the drops tab data in WH.Gatherer format
-        const gathererMatch = html.match(/WH\.Gatherer\.addData\(\s*3\s*,\s*10\s*,\s*\{([^}]+)\}/);
-        if (gathererMatch) {
-          const dataStr = gathererMatch[1];
+        // WH.Gatherer.addData(TYPE, ID, DATA) - type 3 is items
+        const gathererMatches = html.matchAll(/WH\.Gatherer\.addData\(\s*3\s*,\s*\d+\s*,\s*(\{[^}]+\})\)/g);
+        for (const m of gathererMatches) {
+          const dataStr = m[1];
           const idMatches = dataStr.matchAll(/"(\d+)":/g);
-          for (const m of idMatches) {
-            const id = parseInt(m[1]);
+          for (const idm of idMatches) {
+            const id = parseInt(idm[1]);
             if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
               itemIds.push(id);
             }
@@ -621,17 +634,22 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      // Second fallback: look for loot-table-drops section
+      // Second fallback: Find all listviews with template:'item' and extract from those
       if (itemIds.length === 0) {
-        const lootTableMatch = html.match(/id="loot-table-drops"[^>]*>[\s\S]*?<\/table>/);
-        if (lootTableMatch) {
-          const tableHtml = lootTableMatch[0];
-          const itemMatches = tableHtml.matchAll(/\/tbc\/item[=:](\d+)/g);
-          for (const m of itemMatches) {
-            const id = parseInt(m[1]);
-            if (id > 0 && !itemIds.includes(id)) {
-              itemIds.push(id);
+        const listviewMatches = html.matchAll(/new Listview\(\{[^}]*template:\s*['"]item['"][^}]*\}/g);
+        for (const lvm of listviewMatches) {
+          const startPos = html.indexOf('data:', lvm.index);
+          if (startPos > 0 && startPos < lvm.index! + 500) {
+            // Find items in the next 50000 characters (data arrays can be large)
+            const searchSection = html.substring(startPos, startPos + 50000);
+            const itemMatches = searchSection.matchAll(/"id"\s*:\s*(\d+)/g);
+            for (const m of itemMatches) {
+              const id = parseInt(m[1]);
+              if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
+                itemIds.push(id);
+              }
             }
+            break; // Just use the first item listview
           }
         }
       }
