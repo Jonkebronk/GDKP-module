@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
-import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check } from 'lucide-react';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check, Smartphone, Download } from 'lucide-react';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
@@ -74,6 +74,7 @@ export function Dashboard() {
   const { user } = useAuthStore();
   const [expandedSpent, setExpandedSpent] = useState<string | null>(null);
   const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   const { data: walletData } = useQuery({
     queryKey: ['wallet', 'balance'],
@@ -380,6 +381,62 @@ export function Dashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Install App Guide */}
+      <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowInstallGuide(!showInstallGuide)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <Smartphone className="h-5 w-5 text-amber-400" />
+            <span className="text-white font-medium">Install as App</span>
+          </div>
+          {showInstallGuide ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {showInstallGuide && (
+          <div className="px-4 pb-4 space-y-4">
+            {/* iPhone */}
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <div className="w-6 h-6 bg-gray-700 rounded flex items-center justify-center text-xs">
+                  <span>iOS</span>
+                </div>
+                <h3 className="text-white font-medium">iPhone / iPad</h3>
+              </div>
+              <ol className="text-gray-400 text-sm space-y-2 list-decimal list-inside">
+                <li>Open this site in <span className="text-white">Safari</span></li>
+                <li>Tap the <span className="text-white">Share button</span> (square with arrow)</li>
+                <li>Scroll down and tap <span className="text-white">"Add to Home Screen"</span></li>
+                <li>Tap <span className="text-white">"Add"</span> in the top right</li>
+              </ol>
+            </div>
+
+            {/* Android */}
+            <div className="bg-gray-900/50 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <Download className="w-5 h-5 text-green-400" />
+                <h3 className="text-white font-medium">Android</h3>
+              </div>
+              <ol className="text-gray-400 text-sm space-y-2 list-decimal list-inside">
+                <li>Open this site in <span className="text-white">Chrome</span></li>
+                <li>Tap the <span className="text-white">three dots menu</span> (top right)</li>
+                <li>Tap <span className="text-white">"Install app"</span> or <span className="text-white">"Add to Home screen"</span></li>
+                <li>Tap <span className="text-white">"Install"</span> to confirm</li>
+              </ol>
+            </div>
+
+            <p className="text-gray-500 text-xs text-center">
+              Installing as an app gives you a fullscreen experience and quick access from your home screen.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
