@@ -259,7 +259,6 @@ export function useSocket(raidId: string | null) {
         username: data.username,
         avatar: data.avatar,
         alias: data.alias,
-        display_name: data.display_name,
       });
     });
 

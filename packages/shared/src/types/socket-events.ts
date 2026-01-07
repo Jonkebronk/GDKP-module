@@ -34,7 +34,7 @@ export interface ServerToClientEvents {
   // Raid
   'raid:state': (data: RaidState) => void;
   'raid:updated': (data: Partial<Raid>) => void;
-  'user:joined': (data: { user_id: string; username: string; avatar: string | null; alias?: string | null; display_name?: string | null }) => void;
+  'user:joined': (data: { user_id: string; username: string; avatar: string | null; alias?: string | null }) => void;
   'user:left': (data: { user_id: string; username: string }) => void;
 
   // Auction
@@ -88,7 +88,6 @@ export interface SocketData {
   username: string; // Display name (alias or discord_username)
   discord_username: string; // Real Discord username (for admin)
   alias: string | null;
-  display_name: string | null;
   avatar: string | null;
   role: 'USER' | 'ADMIN';
   current_raid_id?: string;

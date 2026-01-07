@@ -6,7 +6,6 @@ interface Participant {
   username: string;
   avatar: string | null;
   alias?: string | null;
-  display_name?: string | null;
   role?: string;
 }
 

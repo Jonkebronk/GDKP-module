@@ -21,12 +21,12 @@ export function registerRaidHandlers(io: TypedServer, socket: TypedSocket) {
           raid: {
             include: {
               leader: {
-                select: { id: true, discord_username: true, discord_avatar: true, alias: true, display_name: true },
+                select: { id: true, discord_username: true, discord_avatar: true, alias: true },
               },
               participants: {
                 include: {
                   user: {
-                    select: { id: true, discord_username: true, discord_avatar: true, alias: true, display_name: true },
+                    select: { id: true, discord_username: true, discord_avatar: true, alias: true },
                   },
                 },
               },
@@ -179,7 +179,6 @@ export function registerRaidHandlers(io: TypedServer, socket: TypedSocket) {
         username,
         avatar: socket.data.avatar,
         alias: socket.data.alias,
-        display_name: socket.data.display_name,
       });
 
       logger.info({ user_id, raid_id }, 'User joined raid');
