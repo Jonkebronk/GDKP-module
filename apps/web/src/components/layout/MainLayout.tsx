@@ -39,15 +39,15 @@ export function MainLayout() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black border-b border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2 min-w-fit">
+            <Link to="/" className="flex items-center space-x-2 mr-6">
               <img src="/gnome-logo.png" alt="The Pint Crusade" className="h-8 w-8 rounded-full object-cover" />
               <span className="text-lg font-bold text-pink-400 whitespace-nowrap">The Pint Crusade</span>
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-1 flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
