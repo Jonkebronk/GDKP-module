@@ -22,6 +22,57 @@ const qualityBorderClass: Record<number, string> = {
   5: 'wow-border-legendary',
 };
 
+// Raid-specific background styles
+const raidBackgrounds: Record<string, { gradient: string; accent: string }> = {
+  'Karazhan': {
+    gradient: 'from-purple-900/40 via-violet-900/30 to-gray-900/50',
+    accent: 'text-purple-400',
+  },
+  "Gruul's Lair": {
+    gradient: 'from-orange-900/40 via-amber-900/30 to-gray-900/50',
+    accent: 'text-orange-400',
+  },
+  "Magtheridon's Lair": {
+    gradient: 'from-red-900/40 via-rose-900/30 to-gray-900/50',
+    accent: 'text-red-400',
+  },
+  'Serpentshrine Cavern': {
+    gradient: 'from-cyan-900/40 via-teal-900/30 to-gray-900/50',
+    accent: 'text-cyan-400',
+  },
+  'Tempest Keep': {
+    gradient: 'from-blue-900/40 via-indigo-900/30 to-gray-900/50',
+    accent: 'text-blue-400',
+  },
+  'The Eye': {
+    gradient: 'from-blue-900/40 via-indigo-900/30 to-gray-900/50',
+    accent: 'text-blue-400',
+  },
+  'Mount Hyjal': {
+    gradient: 'from-green-900/40 via-emerald-900/30 to-gray-900/50',
+    accent: 'text-green-400',
+  },
+  'Black Temple': {
+    gradient: 'from-emerald-900/40 via-gray-900/30 to-gray-900/50',
+    accent: 'text-emerald-400',
+  },
+  'Sunwell Plateau': {
+    gradient: 'from-amber-900/40 via-yellow-900/30 to-gray-900/50',
+    accent: 'text-amber-400',
+  },
+  'Zul\'Aman': {
+    gradient: 'from-yellow-900/40 via-orange-900/30 to-gray-900/50',
+    accent: 'text-yellow-400',
+  },
+};
+
+const getRaidBackground = (instance: string) => {
+  return raidBackgrounds[instance] || {
+    gradient: 'from-gray-800/50 via-gray-900/50 to-gray-900/50',
+    accent: 'text-gray-400',
+  };
+};
+
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -323,11 +374,11 @@ export function RaidRoom() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with raid-specific background */}
+      <div className={`flex items-center justify-between p-4 rounded-lg bg-gradient-to-r ${getRaidBackground(raid.instance).gradient} border border-gray-700/50`}>
         <div>
           <h1 className="text-2xl font-bold text-white">{raid.name}</h1>
-          <p className="text-gray-400">{raid.instance}</p>
+          <p className={getRaidBackground(raid.instance).accent}>{raid.instance}</p>
         </div>
         <div className="flex items-center space-x-2">
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
