@@ -22,67 +22,21 @@ const qualityBorderClass: Record<number, string> = {
   5: 'wow-border-legendary',
 };
 
-// Raid-specific background styles with images
-const raidBackgrounds: Record<string, { gradient: string; accent: string; image: string }> = {
-  'Karazhan': {
-    gradient: 'from-purple-900/80 via-violet-900/70 to-gray-900/90',
-    accent: 'text-purple-400',
-    image: '/raids/karazhan.jpg',
-  },
-  "Gruul's Lair": {
-    gradient: 'from-orange-900/80 via-amber-900/70 to-gray-900/90',
-    accent: 'text-orange-400',
-    image: '/raids/gruul.jpg',
-  },
-  "Magtheridon's Lair": {
-    gradient: 'from-red-900/80 via-rose-900/70 to-gray-900/90',
-    accent: 'text-red-400',
-    image: '/raids/magtheridon.jpg',
-  },
-  'Serpentshrine Cavern': {
-    gradient: 'from-cyan-900/80 via-teal-900/70 to-gray-900/90',
-    accent: 'text-cyan-400',
-    image: '/raids/ssc.jpg',
-  },
-  'Tempest Keep': {
-    gradient: 'from-blue-900/80 via-indigo-900/70 to-gray-900/90',
-    accent: 'text-blue-400',
-    image: '/raids/tempest-keep.jpg',
-  },
-  'The Eye': {
-    gradient: 'from-blue-900/80 via-indigo-900/70 to-gray-900/90',
-    accent: 'text-blue-400',
-    image: '/raids/tempest-keep.jpg',
-  },
-  'Mount Hyjal': {
-    gradient: 'from-green-900/80 via-emerald-900/70 to-gray-900/90',
-    accent: 'text-green-400',
-    image: '/raids/hyjal.jpg',
-  },
-  'Black Temple': {
-    gradient: 'from-emerald-900/80 via-gray-900/70 to-gray-900/90',
-    accent: 'text-emerald-400',
-    image: '/raids/black-temple.jpg',
-  },
-  'Sunwell Plateau': {
-    gradient: 'from-amber-900/80 via-yellow-900/70 to-gray-900/90',
-    accent: 'text-amber-400',
-    image: '/raids/sunwell.jpg',
-  },
-  'Zul\'Aman': {
-    gradient: 'from-yellow-900/80 via-orange-900/70 to-gray-900/90',
-    accent: 'text-yellow-400',
-    image: '/raids/zulaman.jpg',
-  },
+// Raid background images
+const raidBackgrounds: Record<string, string> = {
+  'Karazhan': '/raids/karazhan.jpg',
+  "Gruul's Lair": '/raids/gruul.jpg',
+  "Magtheridon's Lair": '/raids/magtheridon.jpg',
+  'Serpentshrine Cavern': '/raids/ssc.jpg',
+  'Tempest Keep': '/raids/tempest-keep.jpg',
+  'The Eye': '/raids/tempest-keep.jpg',
+  'Mount Hyjal': '/raids/hyjal.jpg',
+  'Black Temple': '/raids/black-temple.jpg',
+  'Sunwell Plateau': '/raids/sunwell.jpg',
+  "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instance: string) => {
-  return raidBackgrounds[instance] || {
-    gradient: 'from-gray-800/80 via-gray-900/70 to-gray-900/90',
-    accent: 'text-gray-400',
-    image: '',
-  };
-};
+const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
@@ -389,19 +343,19 @@ export function RaidRoom() {
       <div
         className="relative rounded-lg overflow-hidden border border-gray-700/50"
         style={{
-          backgroundImage: getRaidBackground(raid.instance).image ? `url(${getRaidBackground(raid.instance).image})` : undefined,
+          backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        {/* Gradient overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-r ${getRaidBackground(raid.instance).gradient}`} />
+        {/* Dark gradient overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
 
         {/* Content */}
         <div className="relative flex items-center justify-between p-4">
           <div>
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">{raid.name}</h1>
-            <p className={`${getRaidBackground(raid.instance).accent} drop-shadow-md`}>{raid.instance}</p>
+            <p className="text-gray-300 drop-shadow-md">{raid.instance}</p>
           </div>
           <div className="flex items-center space-x-2">
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />

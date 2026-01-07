@@ -11,6 +11,22 @@ const qualityBorderClass: Record<number, string> = {
   5: 'border-orange-500',
 };
 
+// Raid background images
+const raidBackgrounds: Record<string, string> = {
+  'Karazhan': '/raids/karazhan.jpg',
+  "Gruul's Lair": '/raids/gruul.jpg',
+  "Magtheridon's Lair": '/raids/magtheridon.jpg',
+  'Serpentshrine Cavern': '/raids/ssc.jpg',
+  'Tempest Keep': '/raids/tempest-keep.jpg',
+  'The Eye': '/raids/tempest-keep.jpg',
+  'Mount Hyjal': '/raids/hyjal.jpg',
+  'Black Temple': '/raids/black-temple.jpg',
+  'Sunwell Plateau': '/raids/sunwell.jpg',
+  "Zul'Aman": '/raids/zulaman.jpg',
+};
+
+const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+
 interface ItemWon {
   id: string;
   name: string;
@@ -49,13 +65,27 @@ interface RaidSummaryProps {
 }
 
 export function RaidSummary({ data, onClose }: RaidSummaryProps) {
+  const raidBg = getRaidBackground(data.instance);
+
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-gray-900 border border-amber-500/50 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-amber-900/50 to-amber-800/30 p-4 border-b border-amber-500/30">
-          <h2 className="text-xl font-bold text-amber-400">{data.raid_name}</h2>
-          <p className="text-gray-400 text-sm">{data.instance} • {new Date(data.completed_at).toLocaleDateString('sv-SE')}</p>
+        {/* Header with raid background */}
+        <div
+          className="relative overflow-hidden border-b border-amber-500/30"
+          style={{
+            backgroundImage: raidBg ? `url(${raidBg})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {/* Dark gradient overlay for readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
+          {/* Content */}
+          <div className="relative p-4">
+            <h2 className="text-xl font-bold text-amber-400 drop-shadow-lg">{data.raid_name}</h2>
+            <p className="text-gray-300 text-sm drop-shadow-md">{data.instance} • {new Date(data.completed_at).toLocaleDateString('sv-SE')}</p>
+          </div>
         </div>
 
         <div className="p-4 space-y-4">
@@ -118,7 +148,12 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                         <div className={`w-8 h-8 rounded bg-gray-700 border ${qualityBorderClass[item.quality ?? 4]}`} />
                       )}
                       <div>
-                        <p className={`font-medium text-sm ${ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality]}`}>{item.name}</p>
+                        <p
+                          className="font-medium text-sm"
+                          style={{ color: ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality] }}
+                        >
+                          {item.name}
+                        </p>
                         <p className="text-gray-500 text-xs">→ {item.winner_name}</p>
                       </div>
                     </div>
