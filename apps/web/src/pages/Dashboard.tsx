@@ -350,7 +350,8 @@ export function Dashboard() {
                               />
                             )}
                             <span
-                              className={`text-sm ${ITEM_QUALITY_COLORS[item.quality as ItemQuality]}`}
+                              className="text-sm"
+                              style={{ color: ITEM_QUALITY_COLORS[item.quality as ItemQuality] || '#a335ee' }}
                             >
                               {item.name}
                             </span>

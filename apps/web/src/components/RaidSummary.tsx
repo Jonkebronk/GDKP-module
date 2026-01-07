@@ -156,6 +156,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                             rel="noopener noreferrer"
                             data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
                             className="font-medium text-sm hover:underline"
+                            style={{ color: ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality] }}
                           >
                             {item.name}
                           </a>
