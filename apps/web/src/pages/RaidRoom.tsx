@@ -5,8 +5,9 @@ import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
+import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play, Rocket } from 'lucide-react';
+import { Users, Coins, Clock, Send, Gavel, Plus, Trash2, Play, Rocket, Trophy, Package, X } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -28,6 +29,7 @@ export function RaidRoom() {
   const { user } = useAuthStore();
   const { placeBid, sendChat, startAuction, isConnected } = useSocket(id || null);
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents } = useAuctionStore();
+  const { messages: chatMessages, participants: liveParticipants } = useChatStore();
 
   const [bidAmount, setBidAmount] = useState('');
   const [chatMessage, setChatMessage] = useState('');
@@ -35,6 +37,7 @@ export function RaidRoom() {
   const [bidError, setBidError] = useState<string | null>(null);
   const [auctionDuration, setAuctionDuration] = useState<number>(AUCTION_DEFAULTS.DURATION);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   // Listen for bid rejection events
   useEffect(() => {
@@ -70,6 +73,13 @@ export function RaidRoom() {
       auctionFeedRef.current.scrollTop = auctionFeedRef.current.scrollHeight;
     }
   }, [auctionEvents]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   // Start raid mutation
   const startRaidMutation = useMutation({
@@ -359,14 +369,19 @@ export function RaidRoom() {
             <div className="wow-tooltip-header p-3 border-b border-gray-700">
               <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
                 <Users className="h-4 w-4" />
-                <span>Participants ({raid.participants.length})</span>
+                <span>Participants ({liveParticipants.length > 0 ? liveParticipants.length : raid.participants.length})</span>
               </h2>
             </div>
             <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
-              {raid.participants.map((p: any) => (
-                <div key={p.id} className="flex items-center space-x-2">
+              {(liveParticipants.length > 0 ? liveParticipants : raid.participants.map((p: any) => ({
+                user_id: p.user_id,
+                username: p.user?.discord_username || 'Unknown',
+                avatar: p.user?.discord_avatar || null,
+                role: p.role,
+              }))).map((p: any) => (
+                <div key={p.user_id} className="flex items-center space-x-2">
                   <SimpleUserDisplay
-                    user={p.user}
+                    user={{ discord_username: p.username, discord_avatar: p.avatar }}
                     showAvatar
                     avatarSize={24}
                     className="text-gray-300 text-sm"
@@ -384,8 +399,23 @@ export function RaidRoom() {
             <div className="wow-tooltip-header p-3 border-b border-gray-700">
               <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Chat</h2>
             </div>
-            <div className="h-48 overflow-y-auto p-3 space-y-2">
-              <p className="text-gray-500 text-sm text-center py-4">Chat messages will appear here</p>
+            <div ref={chatRef} className="h-48 overflow-y-auto p-3 space-y-2">
+              {chatMessages.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Chat messages will appear here</p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div key={msg.id} className="text-sm">
+                    {msg.is_system ? (
+                      <span className="text-gray-400 italic">{msg.message}</span>
+                    ) : (
+                      <>
+                        <span className="text-amber-400 font-medium">{msg.username}: </span>
+                        <span className="text-gray-300">{msg.message}</span>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
             <div className="p-3 border-t border-gray-700">
               <div className="flex space-x-2">

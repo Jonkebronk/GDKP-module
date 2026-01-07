@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import type { ClientToServerEvents, ServerToClientEvents } from '@gdkp/shared';
 import { useAuthStore } from '../stores/authStore';
 import { useAuctionStore } from '../stores/auctionStore';
+import { useChatStore } from '../stores/chatStore';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -19,6 +20,14 @@ export function useSocket(raidId: string | null) {
     setConnection,
     addAuctionEvent,
   } = useAuctionStore();
+  const {
+    addMessage,
+    setMessages,
+    addParticipant,
+    removeParticipant,
+    setParticipants,
+    reset: resetChat,
+  } = useChatStore();
 
   useEffect(() => {
     if (!token || !raidId) return;
@@ -54,6 +63,21 @@ export function useSocket(raidId: string | null) {
     socket.on('raid:state', (state) => {
       if (state.active_auction) {
         setActiveItem(state.active_auction);
+      }
+      // Set chat history
+      if (state.chat_history) {
+        setMessages(state.chat_history);
+      }
+      // Set participants
+      if (state.participants) {
+        setParticipants(
+          state.participants.map((p: any) => ({
+            user_id: p.user_id,
+            username: p.user?.discord_username || 'Unknown',
+            avatar: p.user?.discord_avatar || null,
+            role: p.role,
+          }))
+        );
       }
     });
 
@@ -207,10 +231,33 @@ export function useSocket(raidId: string | null) {
       window.dispatchEvent(new CustomEvent('bid:accepted', { detail: data }));
     });
 
+    // Chat events
+    socket.on('chat:message', (data) => {
+      addMessage(data);
+    });
+
+    socket.on('chat:sent', (data) => {
+      console.log('Chat message sent:', data);
+    });
+
+    // Participant events
+    socket.on('user:joined', (data) => {
+      addParticipant({
+        user_id: data.user_id,
+        username: data.username,
+        avatar: data.avatar,
+      });
+    });
+
+    socket.on('user:left', (data) => {
+      removeParticipant(data.user_id);
+    });
+
     return () => {
       socket.emit('leave:raid', { raid_id: raidId });
       socket.disconnect();
       socketRef.current = null;
+      resetChat();
     };
   }, [token, raidId, user]);
 
