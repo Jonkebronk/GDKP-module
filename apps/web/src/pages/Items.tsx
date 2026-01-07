@@ -400,31 +400,18 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
 
   return (
     <tr className="hover:bg-gray-700/50 transition-colors group">
-      {/* Name with icon */}
+      {/* Name with WoWhead icon */}
       <td className="px-4 py-2">
-        <div className="flex items-center space-x-3">
-          <img
-            src={`https://wow.zamimg.com/images/wow/icons/small/${item.icon || 'inv_misc_questionmark'}.jpg`}
-            alt=""
-            className="w-6 h-6 rounded flex-shrink-0"
-            style={{
-              borderWidth: 1,
-              borderStyle: 'solid',
-              borderColor: qualityColor,
-            }}
-          />
-          <a
-            href={getWowheadItemUrl(item.wowhead_id)}
-            data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
-            data-wh-icon-size="0"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`font-medium hover:underline truncate ${getItemQualityClass(item.quality as ItemQuality)}`}
-            style={{ color: qualityColor }}
-          >
-            {item.name}
-          </a>
-        </div>
+        <a
+          href={getWowheadItemUrl(item.wowhead_id)}
+          data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`font-medium hover:underline ${getItemQualityClass(item.quality as ItemQuality)}`}
+          style={{ color: qualityColor }}
+        >
+          {item.name}
+        </a>
       </td>
 
       {/* Slot */}
