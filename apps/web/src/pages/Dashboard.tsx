@@ -72,7 +72,8 @@ export function Dashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [expandedRaids, setExpandedRaids] = useState<Record<string, boolean>>({});
+  const [expandedSpent, setExpandedSpent] = useState<string | null>(null);
+  const [expandedPayout, setExpandedPayout] = useState<string | null>(null);
 
   const { data: walletData } = useQuery({
     queryKey: ['wallet', 'balance'],
@@ -118,19 +119,11 @@ export function Dashboard() {
   });
 
   const toggleSpentRaid = (raidId: string) => {
-    const key = `spent_${raidId}`;
-    setExpandedRaids((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setExpandedSpent((prev) => (prev === raidId ? null : raidId));
   };
 
   const togglePayoutRaid = (raidId: string) => {
-    const key = `payout_${raidId}`;
-    setExpandedRaids((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setExpandedPayout((prev) => (prev === raidId ? null : raidId));
   };
 
   const isInRaid = (raid: ActiveRaid) => {
@@ -230,7 +223,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedRaids[`spent_${raid.raid_id}`] ? (
+                      {expandedSpent === raid.raid_id ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -249,7 +242,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedRaids[`spent_${raid.raid_id}`] && (
+                  {expandedSpent === raid.raid_id && (
                     <div className="bg-gray-900/50 px-4 py-2 space-y-2">
                       {raid.items.map((item) => (
                         <div
@@ -319,7 +312,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedRaids[`payout_${raid.raid_id}`] ? (
+                      {expandedPayout === raid.raid_id ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -338,7 +331,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedRaids[`payout_${raid.raid_id}`] && (
+                  {expandedPayout === raid.raid_id && (
                     <div className="bg-gray-900/50 px-4 py-2">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
