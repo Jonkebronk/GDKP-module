@@ -32,7 +32,7 @@ export function LoginPage() {
           <img
             src="/gnome-logo.png"
             alt="GDKP"
-            className="mx-auto h-24 w-24 rounded-full object-cover"
+            className="mx-auto h-48 w-48 rounded-full object-cover"
           />
         </div>
 
