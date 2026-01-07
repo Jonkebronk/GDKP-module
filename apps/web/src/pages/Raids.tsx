@@ -7,6 +7,22 @@ import { Plus, Users, Calendar, X, Trash2 } from 'lucide-react';
 import { SimpleUserDisplay } from '../components/UserDisplay';
 import { useAuthStore } from '../stores/authStore';
 
+// Raid background images
+const raidBackgrounds: Record<string, string> = {
+  'Karazhan': '/raids/karazhan.jpg',
+  "Gruul's Lair": '/raids/gruul.jpg',
+  "Magtheridon's Lair": '/raids/magtheridon.jpg',
+  'Serpentshrine Cavern': '/raids/ssc.jpg',
+  'Tempest Keep': '/raids/tempest-keep.jpg',
+  'The Eye': '/raids/tempest-keep.jpg',
+  'Mount Hyjal': '/raids/hyjal.jpg',
+  'Black Temple': '/raids/black-temple.jpg',
+  'Sunwell Plateau': '/raids/sunwell.jpg',
+  "Zul'Aman": '/raids/zulaman.jpg',
+};
+
+const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+
 // Gold display component with WoW-style coin icon
 function GoldDisplay({ amount, className = '' }: { amount: number; className?: string }) {
   return (
@@ -100,68 +116,79 @@ export function Raids() {
           {raids.map((raid: any) => (
             <div
               key={raid.id}
-              className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors relative group"
+              className="rounded-lg overflow-hidden relative group"
+              style={{
+                backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
             >
-              {/* Delete button - for raid leader */}
-              {raid.leader_id === user?.id && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (confirm('Are you sure you want to delete this raid?')) {
-                      deleteRaidMutation.mutate(raid.id);
-                    }
-                  }}
-                  className="absolute top-2 right-2 p-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Delete raid"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              {/* Dark overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/70 to-black/80" />
 
-              <Link to={`/raids/${raid.id}`} className="block">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">{raid.name}</h3>
-                    <p className="text-gray-400 text-sm">{raid.instance}</p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      raid.status === 'ACTIVE'
-                        ? 'bg-green-500/20 text-green-400'
-                        : raid.status === 'PENDING'
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : raid.status === 'COMPLETED'
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}
+              {/* Content */}
+              <div className="relative p-6">
+                {/* Delete button - for raid leader */}
+                {raid.leader_id === user?.id && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (confirm('Are you sure you want to delete this raid?')) {
+                        deleteRaidMutation.mutate(raid.id);
+                      }
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    title="Delete raid"
                   >
-                    {raid.status}
-                  </span>
-                </div>
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1 text-gray-400">
-                      <Users className="h-4 w-4" />
-                      <span>{raid.participant_count}</span>
+                <Link to={`/raids/${raid.id}`} className="block">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white drop-shadow-lg">{raid.name}</h3>
+                      <p className="text-gray-300 text-sm drop-shadow-md">{raid.instance}</p>
                     </div>
-                    <GoldDisplay amount={raid.pot_total} />
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        raid.status === 'ACTIVE'
+                          ? 'bg-green-500/20 text-green-400'
+                          : raid.status === 'PENDING'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : raid.status === 'COMPLETED'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}
+                    >
+                      {raid.status}
+                    </span>
                   </div>
-                  <div className="flex items-center space-x-1 text-gray-500">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(raid.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
 
-                <div className="mt-4 text-gray-400 text-sm">
-                  <SimpleUserDisplay
-                    user={raid.leader}
-                    showAvatar
-                    avatarSize={24}
-                  />
-                </div>
-              </Link>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-1 text-gray-300">
+                        <Users className="h-4 w-4" />
+                        <span>{raid.participant_count}</span>
+                      </div>
+                      <GoldDisplay amount={raid.pot_total} />
+                    </div>
+                    <div className="flex items-center space-x-1 text-gray-400">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(raid.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-gray-300 text-sm">
+                    <SimpleUserDisplay
+                      user={raid.leader}
+                      showAvatar
+                      avatarSize={24}
+                    />
+                  </div>
+                </Link>
+              </div>
             </div>
           ))}
         </div>
