@@ -279,9 +279,9 @@ export function useSocket(raidId: string | null) {
     }
   }, [raidId]);
 
-  const startAuction = useCallback((itemId: string, duration?: number) => {
+  const startAuction = useCallback((itemId: string, duration?: number, minBid?: number) => {
     if (socketRef.current?.connected) {
-      socketRef.current.emit('auction:start', { item_id: itemId, duration });
+      socketRef.current.emit('auction:start', { item_id: itemId, duration, min_bid: minBid });
     }
   }, []);
 

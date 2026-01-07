@@ -35,6 +35,7 @@ export function RaidRoom() {
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
   const [auctionDuration, setAuctionDuration] = useState<number>(AUCTION_DEFAULTS.DURATION);
+  const [auctionMinBid, setAuctionMinBid] = useState<number>(0);
   const [manualAwardItem, setManualAwardItem] = useState<any>(null);
   const [manualAwardPrice, setManualAwardPrice] = useState('');
   const [manualAwardWinner, setManualAwardWinner] = useState('');
@@ -156,7 +157,7 @@ export function RaidRoom() {
   };
 
   const handleStartAuction = (itemId: string) => {
-    startAuction(itemId, auctionDuration);
+    startAuction(itemId, auctionDuration, auctionMinBid);
   };
 
   const handleSendChat = () => {
@@ -389,6 +390,8 @@ export function RaidRoom() {
             <AuctionSettings
               duration={auctionDuration}
               onDurationChange={setAuctionDuration}
+              minBid={auctionMinBid}
+              onMinBidChange={setAuctionMinBid}
             />
           )}
 

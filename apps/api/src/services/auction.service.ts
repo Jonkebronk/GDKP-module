@@ -31,7 +31,8 @@ export class AuctionService {
   async startAuction(
     itemId: string,
     userId: string,
-    duration?: number
+    duration?: number,
+    minBid?: number
   ): Promise<StartAuctionResult> {
     try {
       // Validate duration
@@ -98,11 +99,15 @@ export class AuctionService {
         const now = new Date();
         const endsAt = new Date(now.getTime() + auctionDuration * 1000);
 
+        // Use provided minBid or item's default starting_bid
+        const startingBid = minBid !== undefined ? minBid : Number(item.starting_bid);
+
         const updatedItem = await tx.item.update({
           where: { id: itemId },
           data: {
             status: 'ACTIVE',
-            current_bid: item.starting_bid,
+            starting_bid: startingBid,
+            current_bid: startingBid,
             started_at: now,
             ends_at: endsAt,
             auction_duration: auctionDuration,

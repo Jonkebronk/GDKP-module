@@ -16,6 +16,7 @@ export interface ClientToServerEvents {
   'auction:start': (data: {
     item_id: string;
     duration?: number;
+    min_bid?: number;
   }) => void;
 
   'bid:place': (data: { item_id: string; amount: number }) => void;
