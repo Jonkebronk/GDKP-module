@@ -7,7 +7,7 @@ import { logger } from '../config/logger.js';
 const adjustBalanceSchema = z.object({
   user_id: z.string().uuid(),
   amount: z.number().int(),
-  reason: z.string().min(1).max(255),
+  reason: z.string().max(255).optional(),
 });
 
 const adminRoutes: FastifyPluginAsync = async (fastify) => {

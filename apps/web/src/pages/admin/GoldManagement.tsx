@@ -113,7 +113,7 @@ export function GoldManagement() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !amount || !reason) return;
+    if (!selectedUser || !amount) return;
 
     const adjustAmount = isAdding ? parseInt(amount) : -parseInt(amount);
     adjustMutation.mutate({
@@ -372,7 +372,7 @@ export function GoldManagement() {
 
                 {/* Reason Input */}
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Reason</label>
+                  <label className="block text-sm text-gray-400 mb-1">Reason <span className="text-gray-600">(optional)</span></label>
                   <input
                     type="text"
                     value={reason}
@@ -400,7 +400,7 @@ export function GoldManagement() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={!amount || !reason || adjustMutation.isPending}
+                  disabled={!amount || adjustMutation.isPending}
                   className={`w-full py-3 rounded-lg font-medium transition-colors ${
                     isAdding
                       ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-600'
