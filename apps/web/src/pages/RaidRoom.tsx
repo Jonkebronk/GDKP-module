@@ -126,21 +126,27 @@ export function RaidRoom() {
   // Auto-play: start next auction when current ends
   useEffect(() => {
     const handleAutoPlay = async () => {
+      console.log('Auto-play: auction ended, checking for next item...', autoPlayRef.current);
       if (!autoPlayRef.current) return;
 
       // Wait for data to refresh
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Refetch to get latest items
       const { data: freshRaid } = await refetchRaid();
-      if (!freshRaid) return;
+      if (!freshRaid) {
+        console.log('Auto-play: No raid data after refetch');
+        return;
+      }
 
       // Find next pending item
       const nextItem = freshRaid.items.find((i: any) => i.status === 'PENDING');
+      console.log('Auto-play: Next pending item:', nextItem?.name || 'none');
       if (nextItem) {
         startAuction(nextItem.id, auctionDuration, auctionMinBid, auctionIncrement);
       } else {
         // No more items, disable auto-play
+        console.log('Auto-play: No more items, stopping');
         setAutoPlayActive(false);
       }
     };
@@ -204,11 +210,19 @@ export function RaidRoom() {
     } else {
       // Turn on
       setAutoPlayActive(true);
+
+      // Check if there's an active auction in raid data
+      const hasActiveAuction = raid?.items?.some((i: any) => i.status === 'ACTIVE');
+
       // If no active auction, start the first pending item
-      if (!activeItem) {
+      if (!hasActiveAuction) {
         const firstPending = raid?.items?.find((i: any) => i.status === 'PENDING');
-        if (firstPending) {
+        if (firstPending && isConnected) {
+          console.log('Auto-play: Starting first auction', firstPending.id);
           startAuction(firstPending.id, auctionDuration, auctionMinBid, auctionIncrement);
+        } else if (!isConnected) {
+          console.error('Auto-play: Socket not connected');
+          setAutoPlayActive(false);
         }
       }
     }
