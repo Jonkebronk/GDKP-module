@@ -179,3 +179,9 @@ body {
   background: #4b5563;
   color: #fff;
 }
+
+/* WoWhead icon spacing - adds margin after auto-injected icons */
+.wowhead-icon-spacing img {
+  margin-right: 8px;
+  vertical-align: middle;
+}

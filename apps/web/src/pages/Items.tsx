@@ -408,7 +408,7 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
           data-wh-icon-size="medium"
           target="_blank"
           rel="noopener noreferrer"
-          className={`font-medium hover:underline ${getItemQualityClass(item.quality as ItemQuality)}`}
+          className={`font-medium hover:underline wowhead-icon-spacing ${getItemQualityClass(item.quality as ItemQuality)}`}
           style={{ color: qualityColor }}
         >
           {item.name}

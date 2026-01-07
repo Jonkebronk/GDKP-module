@@ -492,28 +492,22 @@ function ManualTab({
                       : 'bg-gray-700 border-gray-600 hover:border-gray-500'
                   }`}
                 >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <img
-                      src={`https://wow.zamimg.com/images/wow/icons/medium/${item.icon}.jpg`}
-                      alt={item.name}
-                      className="w-10 h-10 rounded border border-gray-600"
-                    />
-                    <div className="min-w-0">
-                      <a
-                        href={getWowheadItemUrl(item.wowhead_id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
-                        className="font-medium hover:underline truncate block"
-                        style={{ color: qualityColor }}
-                      >
-                        {item.name}
-                      </a>
-                      <p className="text-xs text-gray-400 truncate">
-                        {item.boss_name || item.raid_instance}
-                        {item.slot && ` • ${item.slot}`}
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <a
+                      href={getWowheadItemUrl(item.wowhead_id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+                      data-wh-icon-size="medium"
+                      className="font-medium hover:underline truncate block wowhead-icon-spacing"
+                      style={{ color: qualityColor }}
+                    >
+                      {item.name}
+                    </a>
+                    <p className="text-xs text-gray-400 truncate ml-9">
+                      {item.boss_name || item.raid_instance}
+                      {item.slot && ` • ${item.slot}`}
+                    </p>
                   </div>
 
                   <button
