@@ -405,6 +405,7 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
         <a
           href={getWowheadItemUrl(item.wowhead_id)}
           data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+          data-wh-icon-size="medium"
           target="_blank"
           rel="noopener noreferrer"
           className={`font-medium hover:underline ${getItemQualityClass(item.quality as ItemQuality)}`}
