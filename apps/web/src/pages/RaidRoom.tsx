@@ -306,6 +306,12 @@ export function RaidRoom() {
 
               {/* Quick bid buttons */}
               <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => handleBid(minBid)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors border border-amber-500 font-medium"
+                >
+                  Min {formatGold(minBid, { abbreviated: true })}
+                </button>
                 {QUICK_BID_INCREMENTS.map((increment) => (
                   <button
                     key={increment}

@@ -91,7 +91,7 @@ export function useSocket(raidId: string | null) {
       const increment = Number(data.item.min_increment) || 10;
       addAuctionEvent({
         type: 'auction_start',
-        message: `Bid on [${data.item.name}]. Minimum is ${minBid}g - increment is ${increment}g. Use raid chat!`,
+        message: `Bid on [${data.item.name}]. Minimum is ${minBid}g - increment is ${increment}g.`,
         itemName: data.item.name,
         amount: minBid,
       });
