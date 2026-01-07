@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { formatGold, getDisplayName } from '@gdkp/shared';
+import { getDisplayName } from '@gdkp/shared';
+import { GoldDisplay } from '../GoldDisplay';
 import {
   Home,
   Wallet,
@@ -104,10 +105,12 @@ export function MainLayout() {
             {/* User info */}
             <div className="flex items-center space-x-4">
               {/* Gold balance */}
-              <div className="hidden sm:flex items-center space-x-2 bg-gray-700 px-3 py-1.5 rounded-full">
-                <span className="text-amber-400 font-semibold">
-                  {walletData ? formatGold(walletData.balance) : '...'}
-                </span>
+              <div className="hidden sm:flex items-center bg-gray-700 px-3 py-1.5 rounded-full">
+                {walletData ? (
+                  <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
+                ) : (
+                  <span className="text-amber-400 font-semibold">...</span>
+                )}
               </div>
 
               {/* User avatar */}
@@ -193,7 +196,9 @@ export function MainLayout() {
 
               {/* Mobile gold balance */}
               <div className="sm:hidden px-3 py-2 text-amber-400 font-semibold">
-                Balance: {walletData ? formatGold(walletData.balance) : '...'}
+                Balance: {walletData ? (
+                  <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
+                ) : '...'}
               </div>
             </div>
           </div>

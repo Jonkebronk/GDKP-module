@@ -5,22 +5,23 @@
  */
 export function formatGold(
   amount: number,
-  options: { abbreviated?: boolean; showSign?: boolean } = {}
+  options: { abbreviated?: boolean; showSign?: boolean; noSuffix?: boolean } = {}
 ): string {
-  const { abbreviated = false, showSign = false } = options;
+  const { abbreviated = false, showSign = false, noSuffix = false } = options;
 
   const sign = showSign && amount > 0 ? '+' : '';
   const absAmount = Math.abs(amount);
+  const suffix = noSuffix ? '' : ' g';
 
   if (abbreviated && absAmount >= 1_000_000) {
-    return `${sign}${(amount / 1_000_000).toFixed(1)}M g`;
+    return `${sign}${(amount / 1_000_000).toFixed(1)}M${suffix}`;
   }
 
   if (abbreviated && absAmount >= 1_000) {
-    return `${sign}${(amount / 1_000).toFixed(1)}K g`;
+    return `${sign}${(amount / 1_000).toFixed(1)}K${suffix}`;
   }
 
-  return `${sign}${amount.toLocaleString()} g`;
+  return `${sign}${amount.toLocaleString()}${suffix}`;
 }
 
 /**
