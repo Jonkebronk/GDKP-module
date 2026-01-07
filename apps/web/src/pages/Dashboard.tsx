@@ -162,8 +162,8 @@ export function Dashboard() {
         </div>
 
         {/* Active Raids - Compact */}
-        {activeRaids && activeRaids.length > 0 && (
-          <div className="bg-gray-800 rounded-lg overflow-hidden flex-1">
+        <div className="bg-gray-800 rounded-lg overflow-hidden flex-1">
+          {activeRaids && activeRaids.length > 0 ? (
             <div className="divide-y divide-gray-700">
               {activeRaids.map((raid) => {
                 const inRaid = isInRaid(raid);
@@ -206,8 +206,13 @@ export function Dashboard() {
                 );
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center justify-center px-4 py-6 text-gray-500">
+              <Swords className="h-5 w-5 mr-2" />
+              <span>No active raids</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Two column layout for history sections */}
