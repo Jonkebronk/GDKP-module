@@ -491,7 +491,7 @@ export function RaidRoom() {
             <div className="wow-tooltip-header p-3 border-b border-gray-700">
               <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
                 <Users className="h-4 w-4" />
-                <span>Participants ({liveParticipants.length > 0 ? liveParticipants.length : raid.participants.length})</span>
+                <span>Players ({liveParticipants.length > 0 ? liveParticipants.length : raid.participants.length})</span>
               </h2>
             </div>
             <div className="p-3 space-y-2 max-h-48 overflow-y-auto">

@@ -177,7 +177,7 @@ export function PotDistribution({
         {/* Distribution breakdown */}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <p className="text-gray-400 text-xs">Participants</p>
+            <p className="text-gray-400 text-xs">Players</p>
             <p className="text-white font-medium flex items-center space-x-1">
               <Users className="h-3 w-3" />
               <span>{preview.participant_count}</span>
@@ -193,7 +193,7 @@ export function PotDistribution({
 
         {/* Participant shares */}
         <div className="border-t border-gray-700 pt-3">
-          <h4 className="text-xs font-medium text-gray-400 mb-2">Per Player Cut</h4>
+          <h4 className="text-xs font-medium text-gray-400 mb-2">Cut Per Player</h4>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {preview.shares.map((share) => (
               <div
