@@ -103,6 +103,26 @@ export function Items() {
     },
   });
 
+  // Delete single item mutation
+  const [itemToDelete, setItemToDelete] = useState<TbcRaidItem | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/items/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setItemToDelete(null);
+    },
+  });
+
+  const handleDeleteClick = (id: string) => {
+    const item = data?.items?.find((i: TbcRaidItem) => i.id === id);
+    if (item) {
+      setItemToDelete(item);
+    }
+  };
+
   // Refresh WoWhead tooltips when items change
   useEffect(() => {
     if (data?.items && window.$WowheadPower) {
@@ -308,7 +328,7 @@ export function Items() {
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {data.items.map((item: TbcRaidItem & { drop_count?: number }) => (
-                  <ItemRow key={item.id} item={item} onEdit={() => setEditingItem(item)} />
+                  <ItemRow key={item.id} item={item} onEdit={() => setEditingItem(item)} onDelete={handleDeleteClick} />
                 ))}
               </tbody>
             </table>
@@ -417,6 +437,59 @@ export function Items() {
           </div>
         </div>
       )}
+
+      {/* Delete Single Item Confirmation Modal */}
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-full">
+                <Trash2 className="h-6 w-6 text-red-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Delete Item</h2>
+                <p className="text-gray-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-gray-300 mb-2">
+              Are you sure you want to delete this item?
+            </p>
+            <p
+              className="font-medium mb-6"
+              style={{ color: ITEM_QUALITY_COLORS[itemToDelete.quality as ItemQuality] }}
+            >
+              {itemToDelete.name}
+            </p>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(itemToDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-5 w-5" />
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -432,7 +505,15 @@ function FilterTag({ label, onRemove }: { label: string; onRemove: () => void })
   );
 }
 
-function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }; onEdit: () => void }) {
+function ItemRow({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: TbcRaidItem & { drop_count?: number };
+  onEdit: () => void;
+  onDelete: (id: string) => void;
+}) {
   const qualityColor = ITEM_QUALITY_COLORS[item.quality as ItemQuality];
 
   return (
@@ -471,15 +552,24 @@ function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }
         {item.raid_instance || '-'}
       </td>
 
-      {/* Edit button */}
+      {/* Action buttons */}
       <td className="px-1 sm:px-2 py-2">
-        <button
-          onClick={onEdit}
-          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 sm:p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
-          title="Edit item"
-        >
-          <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-        </button>
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={onEdit}
+            className="sm:opacity-0 sm:group-hover:opacity-100 p-1 sm:p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
+            title="Edit item"
+          >
+            <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+          </button>
+          <button
+            onClick={() => onDelete(item.id)}
+            className="sm:opacity-0 sm:group-hover:opacity-100 p-1 sm:p-1.5 bg-gray-700 hover:bg-red-600 rounded text-gray-400 hover:text-white transition-all"
+            title="Delete item"
+          >
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+          </button>
+        </div>
       </td>
     </tr>
   );
