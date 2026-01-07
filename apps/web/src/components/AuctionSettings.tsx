@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Clock, Coins } from 'lucide-react';
+import { Settings, Clock } from 'lucide-react';
 import { AUCTION_DEFAULTS } from '@gdkp/shared';
 
 interface AuctionSettingsProps {

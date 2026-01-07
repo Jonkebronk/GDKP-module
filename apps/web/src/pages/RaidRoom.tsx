@@ -33,7 +33,7 @@ export function RaidRoom() {
   const [chatMessage, setChatMessage] = useState('');
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
-  const [auctionDuration, setAuctionDuration] = useState(AUCTION_DEFAULTS.DURATION);
+  const [auctionDuration, setAuctionDuration] = useState<number>(AUCTION_DEFAULTS.DURATION);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
 
   // Listen for bid rejection events
