@@ -36,6 +36,9 @@ export function RaidRoom() {
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const [bidError, setBidError] = useState<string | null>(null);
   const [auctionDuration, setAuctionDuration] = useState<number>(AUCTION_DEFAULTS.DURATION);
+  const [manualAwardItem, setManualAwardItem] = useState<any>(null);
+  const [manualAwardPrice, setManualAwardPrice] = useState('');
+  const [manualAwardWinner, setManualAwardWinner] = useState('');
   const auctionFeedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -98,6 +101,19 @@ export function RaidRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
+    },
+  });
+
+  // Manual award mutation
+  const manualAwardMutation = useMutation({
+    mutationFn: async ({ itemId, winnerId, price }: { itemId: string; winnerId: string; price: number }) => {
+      await api.post(`/raids/${id}/items/${itemId}/award`, { winnerId, price });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      setManualAwardItem(null);
+      setManualAwardPrice('');
+      setManualAwardWinner('');
     },
   });
 
@@ -313,10 +329,13 @@ export function RaidRoom() {
             />
           )}
 
-          {/* Items Queue - WoW Style */}
+          {/* Items Up For Auction */}
           <div className="wow-tooltip wow-border-epic">
             <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
-              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Items</h2>
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                <Package className="h-4 w-4" />
+                <span>Up For Auction ({raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length})</span>
+              </h2>
               {isLeader && (
                 <button
                   onClick={() => setItemPickerOpen(true)}
@@ -328,25 +347,67 @@ export function RaidRoom() {
               )}
             </div>
 
-            <div className="p-3 space-y-2 max-h-80 overflow-y-auto">
-              {raid.items.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No items added yet</p>
+            <div className="p-3 space-y-2 max-h-60 overflow-y-auto">
+              {raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No items pending auction</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {raid.items.map((item: any) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      isLeader={isLeader}
-                      onStart={() => handleStartAuction(item.id)}
-                      onDelete={() => deleteItemMutation.mutate(item.id)}
-                      isDeleting={deleteItemMutation.isPending}
-                    />
-                  ))}
+                  {raid.items
+                    .filter((item: any) => item.status === 'PENDING' || item.status === 'ACTIVE')
+                    .map((item: any) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        isLeader={isLeader}
+                        onStart={() => handleStartAuction(item.id)}
+                        onDelete={() => deleteItemMutation.mutate(item.id)}
+                        onManualAward={() => setManualAwardItem(item)}
+                        isDeleting={deleteItemMutation.isPending}
+                      />
+                    ))}
                 </div>
               )}
             </div>
+
+            {/* Manual award hint for leaders */}
+            {isLeader && raid.items.filter((i: any) => i.status === 'PENDING').length > 0 && (
+              <div className="px-3 pb-2">
+                <p className="text-xs text-gray-500 italic">
+                  💡 Click the gavel icon to manually award an item without bidding
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Items Won */}
+          {raid.items.filter((i: any) => i.status === 'COMPLETED').length > 0 && (
+            <div className="wow-tooltip wow-border-common">
+              <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                  <Trophy className="h-4 w-4" />
+                  <span>Items Won ({raid.items.filter((i: any) => i.status === 'COMPLETED').length})</span>
+                </h2>
+              </div>
+
+              <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {raid.items
+                    .filter((item: any) => item.status === 'COMPLETED')
+                    .map((item: any) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        isLeader={isLeader}
+                        onStart={() => {}}
+                        onDelete={() => {}}
+                        onManualAward={() => {}}
+                        isDeleting={false}
+                      />
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -449,6 +510,109 @@ export function RaidRoom() {
           queryClient.invalidateQueries({ queryKey: ['raid', id] });
         }}
       />
+
+      {/* Manual Award Modal */}
+      {manualAwardItem && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="wow-tooltip wow-border-epic max-w-md w-full">
+            <div className="wow-tooltip-header flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-lg font-semibold text-amber-400 flex items-center space-x-2">
+                <Gavel className="h-5 w-5" />
+                <span>Manual Award</span>
+              </h2>
+              <button
+                onClick={() => {
+                  setManualAwardItem(null);
+                  setManualAwardPrice('');
+                  setManualAwardWinner('');
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Item display */}
+              <div className="flex items-center space-x-3 bg-gray-800/50 p-3 rounded-lg">
+                {manualAwardItem.icon_url ? (
+                  <img src={manualAwardItem.icon_url} alt={manualAwardItem.name} className="w-12 h-12 rounded border border-purple-500" />
+                ) : (
+                  <div className="w-12 h-12 rounded bg-gray-700 flex items-center justify-center border border-purple-500">
+                    <span className="text-gray-500">?</span>
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-medium text-purple-400">{manualAwardItem.name}</h3>
+                  <p className="text-xs text-gray-400">Manually award this item to a participant</p>
+                </div>
+              </div>
+
+              {/* Winner selection */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Select Winner</label>
+                <select
+                  value={manualAwardWinner}
+                  onChange={(e) => setManualAwardWinner(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Choose a participant...</option>
+                  {(liveParticipants.length > 0 ? liveParticipants : raid.participants.map((p: any) => ({
+                    user_id: p.user_id,
+                    username: p.user?.discord_username || 'Unknown',
+                  }))).map((p: any) => (
+                    <option key={p.user_id} value={p.user_id}>
+                      {p.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price input */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Set Price (gold)</label>
+                <input
+                  type="number"
+                  value={manualAwardPrice}
+                  onChange={(e) => setManualAwardPrice(e.target.value)}
+                  placeholder="Enter price in gold..."
+                  min="0"
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex space-x-3 pt-2">
+                <button
+                  onClick={() => {
+                    setManualAwardItem(null);
+                    setManualAwardPrice('');
+                    setManualAwardWinner('');
+                  }}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (manualAwardWinner && manualAwardPrice) {
+                      manualAwardMutation.mutate({
+                        itemId: manualAwardItem.id,
+                        winnerId: manualAwardWinner,
+                        price: parseInt(manualAwardPrice),
+                      });
+                    }
+                  }}
+                  disabled={!manualAwardWinner || !manualAwardPrice || manualAwardMutation.isPending}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:text-gray-400 text-white py-2 rounded-lg transition-colors font-medium"
+                >
+                  {manualAwardMutation.isPending ? 'Awarding...' : 'Award Item'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -536,10 +700,11 @@ interface ItemCardProps {
   isLeader: boolean;
   onStart: () => void;
   onDelete: () => void;
+  onManualAward: () => void;
   isDeleting: boolean;
 }
 
-function ItemCard({ item, isLeader, onStart, onDelete, isDeleting }: ItemCardProps) {
+function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, isDeleting }: ItemCardProps) {
   const quality = item.quality || 4;
   const qualityColor = ITEM_QUALITY_COLORS[quality as keyof typeof ITEM_QUALITY_COLORS] || '#a335ee';
   const borderClass = qualityBorderClass[quality] || 'wow-border-epic';
@@ -597,6 +762,13 @@ function ItemCard({ item, isLeader, onStart, onDelete, isDeleting }: ItemCardPro
               title="Start auction"
             >
               <Play className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onManualAward}
+              className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 p-1.5 rounded transition-colors"
+              title="Manually award item"
+            >
+              <Gavel className="h-4 w-4" />
             </button>
             <button
               onClick={onDelete}

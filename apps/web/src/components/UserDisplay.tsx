@@ -20,11 +20,12 @@ interface UserDisplayProps {
 export function UserDisplay({
   displayName,
   discordUsername,
-  // avatar - no longer used, we always show anonymous avatar
+  avatar: _avatar, // no longer used, we always show anonymous avatar
   showAvatar = false,
   avatarSize = 24,
   className = '',
 }: UserDisplayProps) {
+  void _avatar; // Silence unused variable warning
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
   const [showTooltip, setShowTooltip] = useState(false);

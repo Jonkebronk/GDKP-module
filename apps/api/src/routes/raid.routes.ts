@@ -352,6 +352,99 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return { deleted: true };
   });
 
+  // Manually award item (without auction)
+  fastify.post('/:id/items/:itemId/award', { preHandler: [requireAuth] }, async (request) => {
+    const { id, itemId } = request.params as { id: string; itemId: string };
+    const { winnerId, price } = request.body as { winnerId: string; price: number };
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can award items', 403);
+    }
+
+    // Check item exists and is pending
+    const item = await prisma.item.findFirst({
+      where: { id: itemId, raid_id: id },
+    });
+
+    if (!item) {
+      throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Item not found', 404);
+    }
+
+    if (item.status !== 'PENDING') {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only award pending items', 400);
+    }
+
+    // Verify winner is a participant
+    const winnerParticipant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: winnerId },
+      },
+    });
+
+    if (!winnerParticipant) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Winner must be a raid participant', 400);
+    }
+
+    // Award the item
+    const updatedItem = await prisma.item.update({
+      where: { id: itemId },
+      data: {
+        winner_id: winnerId,
+        current_bid: price,
+        status: 'COMPLETED',
+        completed_at: new Date(),
+      },
+      include: {
+        winner: {
+          select: { id: true, discord_username: true, alias: true },
+        },
+      },
+    });
+
+    // Update pot total
+    await prisma.raid.update({
+      where: { id },
+      data: {
+        pot_total: { increment: price },
+      },
+    });
+
+    // Notify via socket
+    fastify.io.to(`raid:${id}`).emit('auction:completed', {
+      itemId,
+      itemName: item.name,
+      winnerId,
+      winnerName: updatedItem.winner?.alias || updatedItem.winner?.discord_username,
+      finalBid: price,
+      isManualAward: true,
+    });
+
+    // Get updated pot total
+    const raid = await prisma.raid.findUnique({ where: { id } });
+    if (raid) {
+      fastify.io.to(`raid:${id}`).emit('pot:updated', {
+        pot_total: Number(raid.pot_total),
+      });
+    }
+
+    return {
+      awarded: true,
+      item: {
+        id: updatedItem.id,
+        name: updatedItem.name,
+        winner: updatedItem.winner,
+        final_bid: Number(updatedItem.current_bid),
+      },
+    };
+  });
+
   // Get pot distribution preview
   fastify.get('/:id/distribution-preview', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
