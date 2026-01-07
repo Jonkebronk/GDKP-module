@@ -51,7 +51,7 @@ export function MainLayout() {
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
@@ -60,7 +60,7 @@ export function MainLayout() {
             </Link>
 
             {/* Desktop nav */}
-            <nav className="hidden md:flex items-center space-x-4">
+            <nav className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -68,7 +68,7 @@ export function MainLayout() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
+                    className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? 'bg-gray-700 text-gold-500'
                         : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -95,7 +95,7 @@ export function MainLayout() {
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${colorClasses}`}
+                        className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${colorClasses}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.label}</span>
@@ -107,9 +107,9 @@ export function MainLayout() {
             </nav>
 
             {/* User info */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               {/* Gold balance */}
-              <div className="hidden sm:flex items-center px-3 py-1.5">
+              <div className="hidden sm:flex items-center px-2 py-1">
                 {walletData ? (
                   <GoldDisplay amount={walletData.balance} className="text-amber-400 font-semibold" iconSize={14} />
                 ) : (
