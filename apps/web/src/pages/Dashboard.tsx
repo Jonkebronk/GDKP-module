@@ -161,58 +161,44 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Active Raids - Compact */}
-        <div className="bg-gray-800 rounded-lg overflow-hidden flex-1">
-          {activeRaids && activeRaids.length > 0 ? (
-            <div className="divide-y divide-gray-700">
-              {activeRaids.map((raid) => {
-                const inRaid = isInRaid(raid);
-                return (
-                  <div
-                    key={raid.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <Swords className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-white font-semibold truncate">{raid.name}</p>
-                        <p className="text-white text-sm font-medium flex items-center space-x-2">
-                          <span>{raid.instance}</span>
-                          <span className="text-gray-500">•</span>
-                          <Users className="h-3 w-3" />
-                          <span>{raid.participant_count}</span>
-                        </p>
-                      </div>
-                    </div>
-                    {inRaid ? (
-                      <Link
-                        to={`/raids/${raid.id}`}
-                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-                      >
-                        <Check className="h-4 w-4" />
-                        <span>Joined</span>
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={() => joinRaidMutation.mutate(raid.id)}
-                        disabled={joinRaidMutation.isPending}
-                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-                      >
-                        <LogIn className="h-4 w-4" />
-                        <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
-                      </button>
-                    )}
+        {/* Active Raids - Compact Card */}
+        {activeRaids && activeRaids.length > 0 && activeRaids.slice(0, 1).map((raid) => {
+          const inRaid = isInRaid(raid);
+          return (
+            <div key={raid.id} className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <Swords className="h-10 w-10 text-purple-400/50" />
+                  <div>
+                    <p className="text-gray-400 text-sm">{raid.instance}</p>
+                    <p className="text-white font-semibold flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-gray-400" />
+                      <span>{raid.participant_count}</span>
+                    </p>
                   </div>
-                );
-              })}
+                </div>
+                {inRaid ? (
+                  <Link
+                    to={`/raids/${raid.id}`}
+                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>Joined</span>
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => joinRaidMutation.mutate(raid.id)}
+                    disabled={joinRaidMutation.isPending}
+                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span>{joinRaidMutation.isPending ? '...' : 'Join'}</span>
+                  </button>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center px-4 py-6 text-gray-500">
-              <Swords className="h-5 w-5 mr-2" />
-              <span>No active raids</span>
-            </div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
       {/* Two column layout for history sections */}
