@@ -503,7 +503,7 @@ export function RaidRoom() {
               )}
             </div>
 
-            <div className="p-3 space-y-2 max-h-60 overflow-y-auto">
+            <div className="p-3 space-y-2">
               {raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">No items pending auction</p>
               ) : (
@@ -537,7 +537,7 @@ export function RaidRoom() {
                 </h2>
               </div>
 
-              <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
+              <div className="p-3 space-y-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {raid.items
                     .filter((item: any) => item.status === 'COMPLETED')
