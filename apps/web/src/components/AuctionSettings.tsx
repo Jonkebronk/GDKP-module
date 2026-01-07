@@ -141,7 +141,7 @@ export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidCh
 
           {/* Info text */}
           <p className="text-xs text-gray-500">
-            Settings apply to the next auction you start. Anti-snipe extends time if bids come in the last 10 seconds.
+            Settings apply to the next auction you start. Anti-snipe resets to 15s if bids come in the last 15 seconds.
           </p>
         </div>
       )}
