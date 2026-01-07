@@ -439,8 +439,10 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Item not found', 404);
     }
 
-    if (item.status !== 'PENDING') {
-      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only award pending items', 400);
+    // Allow awarding PENDING items or COMPLETED items with no winner (unsold)
+    const canAward = item.status === 'PENDING' || (item.status === 'COMPLETED' && !item.winner_id);
+    if (!canAward) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only award pending or unsold items', 400);
     }
 
     // Verify winner is a participant

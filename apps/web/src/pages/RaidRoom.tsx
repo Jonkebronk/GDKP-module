@@ -581,19 +581,19 @@ export function RaidRoom() {
           </div>
 
           {/* Items Won */}
-          {raid.items.filter((i: any) => i.status === 'COMPLETED').length > 0 && (
+          {raid.items.filter((i: any) => i.status === 'COMPLETED' && i.winner_id).length > 0 && (
             <div className="wow-tooltip wow-border-common">
               <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
                 <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
                   <Trophy className="h-4 w-4" />
-                  <span>Items Won ({raid.items.filter((i: any) => i.status === 'COMPLETED').length})</span>
+                  <span>Items Won ({raid.items.filter((i: any) => i.status === 'COMPLETED' && i.winner_id).length})</span>
                 </h2>
               </div>
 
               <div className="p-3 space-y-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {raid.items
-                    .filter((item: any) => item.status === 'COMPLETED')
+                    .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
                     .map((item: any) => (
                       <ItemCard
                         key={item.id}
