@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Settings, Clock, Coins, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Clock, Coins, TrendingUp, Save, Check } from 'lucide-react';
 import { AUCTION_DEFAULTS } from '@gdkp/shared';
+
+const STORAGE_KEY = 'gdkp-auction-settings';
 
 interface AuctionSettingsProps {
   duration: number;
@@ -37,6 +39,28 @@ const INCREMENT_PRESETS = [
 
 export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidChange, increment, onIncrementChange }: AuctionSettingsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem(STORAGE_KEY);
+    if (savedSettings) {
+      try {
+        const { duration: savedDuration, minBid: savedMinBid, increment: savedIncrement } = JSON.parse(savedSettings);
+        if (savedDuration !== undefined) onDurationChange(savedDuration);
+        if (savedMinBid !== undefined) onMinBidChange(savedMinBid);
+        if (savedIncrement !== undefined) onIncrementChange(savedIncrement);
+      } catch (e) {
+        console.error('Failed to load auction settings:', e);
+      }
+    }
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ duration, minBid, increment }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div className="wow-tooltip wow-border-common">
@@ -196,6 +220,28 @@ export function AuctionSettings({ duration, onDurationChange, minBid, onMinBidCh
           <p className="text-xs text-gray-500">
             Settings apply to the next auction you start. Anti-snipe resets to 15s if bids come in the last 15 seconds.
           </p>
+
+          {/* Save button */}
+          <button
+            onClick={handleSave}
+            className={`w-full flex items-center justify-center space-x-2 py-2 rounded font-medium transition-colors ${
+              saved
+                ? 'bg-green-600 text-white'
+                : 'bg-amber-500 hover:bg-amber-600 text-black'
+            }`}
+          >
+            {saved ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span>Saved!</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>Save Settings</span>
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>
