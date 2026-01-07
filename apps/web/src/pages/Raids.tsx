@@ -20,6 +20,7 @@ function GoldDisplay({ amount, className = '' }: { amount: number; className?: s
 export function Raids() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filter, setFilter] = useState<'active' | 'history'>('active');
 
@@ -61,13 +62,15 @@ export function Raids() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Raids</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Create Raid</span>
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Create Raid</span>
+          </button>
+        )}
       </div>
 
       {/* Filters */}

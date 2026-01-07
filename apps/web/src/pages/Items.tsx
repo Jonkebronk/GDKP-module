@@ -104,28 +104,30 @@ export function Items() {
         </div>
         <div className="flex items-center space-x-2">
           {isAdmin && (
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-            >
-              <Trash2 className="h-5 w-5" />
-              <span>Clear All</span>
-            </button>
+            <>
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Trash2 className="h-5 w-5" />
+                <span>Clear All</span>
+              </button>
+              <button
+                onClick={() => setShowAddItemModal(true)}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Add Item</span>
+              </button>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Upload className="h-5 w-5" />
+                <span>Import Loot</span>
+              </button>
+            </>
           )}
-          <button
-            onClick={() => setShowAddItemModal(true)}
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Item</span>
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center space-x-2 bg-gold-600 hover:bg-gold-700 text-white font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            <Upload className="h-5 w-5" />
-            <span>Import Loot</span>
-          </button>
         </div>
       </div>
 
