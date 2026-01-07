@@ -269,6 +269,8 @@ export function RaidRoom() {
 
   // Calculate total spending per player from completed items
   const playerSpending = useMemo(() => {
+    if (!raid?.items) return [];
+
     const spending: Record<string, { user: any; total: number; items: number }> = {};
 
     raid.items
@@ -283,7 +285,7 @@ export function RaidRoom() {
       });
 
     return Object.values(spending).sort((a, b) => b.total - a.total);
-  }, [raid.items]);
+  }, [raid?.items]);
 
   return (
     <div className="space-y-6">

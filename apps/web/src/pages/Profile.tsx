@@ -1,18 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { getDisplayName } from '@gdkp/shared';
-import { User, Wallet, Check, X, AlertCircle, Edit2 } from 'lucide-react';
+import { User, Check, X, AlertCircle, Edit2 } from 'lucide-react';
 
 const ALIAS_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 export function Profile() {
-  const queryClient = useQueryClient();
   const { user, updateAlias } = useAuthStore();
-  const [walletAddress, setWalletAddress] = useState('');
-  const [isEditingWallet, setIsEditingWallet] = useState(false);
-  const [walletError, setWalletError] = useState('');
   const [newAlias, setNewAlias] = useState('');
   const [isEditingAlias, setIsEditingAlias] = useState(false);
   const [aliasError, setAliasError] = useState('');
@@ -25,36 +21,6 @@ export function Profile() {
       return res.data;
     },
   });
-
-  const updateWalletMutation = useMutation({
-    mutationFn: async (address: string | null) => {
-      const res = await api.patch('/users/me', { crypto_wallet_address: address });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
-      setIsEditingWallet(false);
-      setWalletError('');
-    },
-    onError: () => {
-      setWalletError('Failed to update wallet address. Please try again.');
-    },
-  });
-
-  const startEditingWallet = () => {
-    setWalletAddress(profile?.crypto_wallet_address || '');
-    setIsEditingWallet(true);
-    setWalletError('');
-  };
-
-  const saveWallet = () => {
-    const trimmed = walletAddress.trim();
-    if (trimmed && trimmed.length < 26) {
-      setWalletError('Invalid wallet address format');
-      return;
-    }
-    updateWalletMutation.mutate(trimmed || null);
-  };
 
   const startEditingAlias = () => {
     setNewAlias(user?.alias || '');
@@ -200,78 +166,6 @@ export function Profile() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Crypto Wallet settings */}
-      <div className="bg-gray-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-          <Wallet className="h-5 w-5" />
-          <span>Crypto Wallet</span>
-        </h3>
-
-        <p className="text-gray-400 text-sm mb-4">
-          Add your crypto wallet address to receive withdrawals. We support BTC, ETH, USDC, and other major cryptocurrencies.
-        </p>
-
-        {walletError && (
-          <div className="flex items-center space-x-2 text-red-400 text-sm mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <span>{walletError}</span>
-          </div>
-        )}
-
-        {isEditingWallet ? (
-          <div className="space-y-4">
-            <input
-              type="text"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              placeholder="Enter your wallet address (BTC, ETH, USDC, etc.)"
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
-            />
-            <p className="text-gray-500 text-xs">
-              Make sure to double-check your wallet address. Incorrect addresses cannot be recovered.
-            </p>
-            <div className="flex space-x-2">
-              <button
-                onClick={saveWallet}
-                disabled={updateWalletMutation.isPending}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <Check className="h-4 w-4" />
-                <span>{updateWalletMutation.isPending ? 'Saving...' : 'Save'}</span>
-              </button>
-              <button
-                onClick={() => setIsEditingWallet(false)}
-                className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <X className="h-4 w-4" />
-                <span>Cancel</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="overflow-hidden">
-              {profile?.crypto_wallet_address ? (
-                <div className="flex items-center space-x-2">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <span className="text-white font-mono text-sm truncate" title={profile.crypto_wallet_address}>
-                    {profile.crypto_wallet_address}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-gray-500">No wallet address configured</span>
-              )}
-            </div>
-            <button
-              onClick={startEditingWallet}
-              className="text-gold-500 hover:text-gold-400 text-sm flex-shrink-0 ml-4"
-            >
-              {profile?.crypto_wallet_address ? 'Edit' : 'Add Wallet'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Danger zone */}
