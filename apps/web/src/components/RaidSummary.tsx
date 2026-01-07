@@ -31,6 +31,7 @@ interface ItemWon {
   id: string;
   name: string;
   icon_url: string | null;
+  wowhead_id?: number | null;
   winner_name: string;
   final_bid: number;
   quality?: number;
@@ -148,12 +149,24 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                         <div className={`w-8 h-8 rounded bg-gray-700 border ${qualityBorderClass[item.quality ?? 4]}`} />
                       )}
                       <div>
-                        <p
-                          className="font-medium text-sm"
-                          style={{ color: ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality] }}
-                        >
-                          {item.name}
-                        </p>
+                        {item.wowhead_id ? (
+                          <a
+                            href={`https://www.wowhead.com/tbc/item=${item.wowhead_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
+                            className="font-medium text-sm hover:underline"
+                          >
+                            {item.name}
+                          </a>
+                        ) : (
+                          <p
+                            className="font-medium text-sm"
+                            style={{ color: ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality] }}
+                          >
+                            {item.name}
+                          </p>
+                        )}
                         <p className="text-gray-500 text-xs">→ {item.winner_name}</p>
                       </div>
                     </div>

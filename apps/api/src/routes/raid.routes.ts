@@ -659,6 +659,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       id: item.id,
       name: item.name,
       icon_url: item.icon_url,
+      wowhead_id: item.wowhead_id,
       winner_name: item.winner ? getDisplayName(item.winner) : 'No winner',
       final_bid: item.winner ? Number(item.current_bid) : 0,
       quality: item.quality,
