@@ -286,6 +286,57 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return { left: true };
   });
 
+  // Kick participant (leader only)
+  fastify.delete('/:id/participants/:userId', { preHandler: [requireAuth] }, async (request) => {
+    const { id, userId } = request.params as { id: string; userId: string };
+
+    const raid = await prisma.raid.findUnique({ where: { id } });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    // Only leader can kick
+    if (raid.leader_id !== request.user.id) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only the raid leader can remove participants', 403);
+    }
+
+    // Cannot kick self (the leader)
+    if (userId === request.user.id) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot remove yourself from the raid', 400);
+    }
+
+    // Check if user has winning bids in active auctions
+    const activeWinningBids = await prisma.bid.findFirst({
+      where: {
+        user_id: userId,
+        is_winning: true,
+        item: {
+          raid_id: id,
+          status: 'ACTIVE',
+        },
+      },
+    });
+
+    if (activeWinningBids) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot remove participant with active winning bids', 400);
+    }
+
+    // Remove participant
+    await prisma.raidParticipant.delete({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: userId },
+      },
+    }).catch(() => null);
+
+    // Notify via socket
+    fastify.io.to(`raid:${id}`).emit('participant:left', {
+      user_id: userId,
+    });
+
+    return { removed: true };
+  });
+
   // Add item to raid
   fastify.post('/:id/items', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };

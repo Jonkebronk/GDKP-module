@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
-import { Coins, Users, Crown, AlertTriangle, Check, X, FileText } from 'lucide-react';
+import { Coins, Users, Crown, AlertTriangle, Check, X, FileText, UserMinus } from 'lucide-react';
 import { SimpleUserDisplay } from './UserDisplay';
 import { RaidSummary } from './RaidSummary';
 
@@ -93,6 +93,17 @@ export function PotDistribution({
     },
   });
 
+  const kickMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await api.delete(`/raids/${raidId}/participants/${userId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', raidId] });
+      queryClient.invalidateQueries({ queryKey: ['raid', raidId, 'distribution-preview'] });
+    },
+  });
+
   if (raidStatus === 'COMPLETED') {
     return (
       <>
@@ -176,12 +187,6 @@ export function PotDistribution({
               {preview.leader_cut}% ({formatGold(preview.leader_cut_amount)})
             </p>
           </div>
-          <div className="col-span-2">
-            <p className="text-gray-400 text-xs">Equal Share per Member</p>
-            <p className="text-gold-500 font-medium">
-              {formatGold(preview.member_share)}
-            </p>
-          </div>
         </div>
 
         {/* Participant shares */}
@@ -191,7 +196,7 @@ export function PotDistribution({
             {preview.shares.map((share) => (
               <div
                 key={share.user_id}
-                className="flex items-center justify-between py-1.5 px-2 bg-gray-700/50 rounded text-sm"
+                className="flex items-center justify-between py-1.5 px-2 bg-gray-700/50 rounded text-sm group"
               >
                 <div className="flex items-center space-x-2">
                   {share.role === 'LEADER' && (
@@ -205,9 +210,25 @@ export function PotDistribution({
                     ({share.share_percentage.toFixed(1)}%)
                   </span>
                 </div>
-                <span className="text-gold-500 font-medium">
-                  {formatGold(share.share_amount)}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gold-500 font-medium">
+                    {formatGold(share.share_amount)}
+                  </span>
+                  {isLeader && share.role !== 'LEADER' && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove ${share.alias || share.discord_username} from the raid?`)) {
+                          kickMutation.mutate(share.user_id);
+                        }
+                      }}
+                      disabled={kickMutation.isPending}
+                      className="opacity-0 group-hover:opacity-100 p-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded transition-all"
+                      title="Remove from raid"
+                    >
+                      <UserMinus className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
