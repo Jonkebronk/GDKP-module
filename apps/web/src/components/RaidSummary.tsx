@@ -69,8 +69,8 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
   const raidBg = getRaidBackground(data.instance);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-gray-900 border border-amber-500/50 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-gray-900 border border-amber-500/50 rounded-lg max-w-4xl w-full my-8">
         {/* Header with raid background */}
         <div
           className="relative overflow-hidden border-b border-amber-500/30"
@@ -139,7 +139,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
               <div className="bg-gray-900 px-4 py-2 border-b border-gray-700">
                 <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Items Sold ({data.items.length})</h3>
               </div>
-              <div className="divide-y divide-gray-700 max-h-60 overflow-y-auto">
+              <div className="divide-y divide-gray-700">
                 {data.items.map((item) => (
                   <div key={item.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/50">
                     <div className="flex items-center space-x-3">
