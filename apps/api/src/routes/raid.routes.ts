@@ -485,17 +485,12 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return result;
   });
 
-  // Delete raid (only for leader, only if PENDING or CANCELLED with no bids)
+  // Delete raid (leader only)
   fastify.delete('/:id', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
 
     const raid = await prisma.raid.findUnique({
       where: { id },
-      include: {
-        items: {
-          where: { status: { not: 'PENDING' } },
-        },
-      },
     });
 
     if (!raid) {
@@ -504,11 +499,6 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (raid.leader_id !== request.user.id) {
       throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only the raid leader can delete the raid', 403);
-    }
-
-    // Only allow deletion if no auctions have been completed
-    if (raid.items.length > 0) {
-      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot delete raid with completed auctions', 400);
     }
 
     // Delete in order: chat messages, bids, items, participants, raid

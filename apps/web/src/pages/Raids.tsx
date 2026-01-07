@@ -99,8 +99,8 @@ export function Raids() {
               key={raid.id}
               className="bg-gray-800 rounded-lg p-6 hover:bg-gray-700 transition-colors relative group"
             >
-              {/* Delete button - only for leader on raids without completed auctions */}
-              {raid.leader_id === user?.id && (raid.status === 'PENDING' || raid.status === 'CANCELLED') && (
+              {/* Delete button - for raid leader */}
+              {raid.leader_id === user?.id && (
                 <button
                   onClick={(e) => {
                     e.preventDefault();
