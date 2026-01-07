@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { formatGold, ITEM_QUALITY_COLORS } from '@gdkp/shared';
+import { formatGold, ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
 import { Download, Copy, Check, Crown, Trophy, Coins } from 'lucide-react';
 
 // Quality border classes
@@ -234,7 +234,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                         <div className={`w-8 h-8 rounded bg-gray-700 border ${qualityBorderClass[item.quality ?? 4]}`} />
                       )}
                       <div>
-                        <p className={`font-medium text-sm ${ITEM_QUALITY_COLORS[item.quality ?? 4]}`}>{item.name}</p>
+                        <p className={`font-medium text-sm ${ITEM_QUALITY_COLORS[(item.quality ?? 4) as ItemQuality]}`}>{item.name}</p>
                         <p className="text-gray-500 text-xs">→ {item.winner_name}</p>
                       </div>
                     </div>
