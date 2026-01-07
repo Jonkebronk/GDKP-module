@@ -467,18 +467,16 @@ export function RaidRoom() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Pot Distribution (Leader only) */}
-          {isLeader && (
-            <PotDistribution
-              raidId={id!}
-              isLeader={isLeader}
-              raidStatus={raid.status}
-              onDistributed={() => {
-                queryClient.invalidateQueries({ queryKey: ['raid', id] });
-                navigate('/raids');
-              }}
-            />
-          )}
+          {/* Pot Distribution */}
+          <PotDistribution
+            raidId={id!}
+            isLeader={isLeader}
+            raidStatus={raid.status}
+            onDistributed={() => {
+              queryClient.invalidateQueries({ queryKey: ['raid', id] });
+              navigate('/raids');
+            }}
+          />
 
           {/* Participants */}
           <div className="wow-tooltip wow-border-common">

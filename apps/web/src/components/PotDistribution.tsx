@@ -52,7 +52,7 @@ export function PotDistribution({
       const res = await api.get(`/raids/${raidId}/distribution-preview`);
       return res.data;
     },
-    enabled: !!raidId && isLeader && raidStatus !== 'COMPLETED' && raidStatus !== 'CANCELLED',
+    enabled: !!raidId && raidStatus !== 'COMPLETED' && raidStatus !== 'CANCELLED',
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
@@ -92,10 +92,6 @@ export function PotDistribution({
       setShowConfirmCancel(false);
     },
   });
-
-  if (!isLeader) {
-    return null;
-  }
 
   if (raidStatus === 'COMPLETED') {
     return (
@@ -190,7 +186,7 @@ export function PotDistribution({
 
         {/* Participant shares */}
         <div className="border-t border-gray-700 pt-3">
-          <h4 className="text-xs font-medium text-gray-400 mb-2">Share Breakdown</h4>
+          <h4 className="text-xs font-medium text-gray-400 mb-2">Cut Breakdown</h4>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {preview.shares.map((share) => (
               <div
@@ -217,28 +213,32 @@ export function PotDistribution({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex space-x-2 pt-2 border-t border-gray-700">
-          <button
-            onClick={() => setShowConfirmDistribute(true)}
-            disabled={hasActiveAuctions || preview.pot_total === 0}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded transition-colors text-sm"
-          >
-            Distribute Pot
-          </button>
-          <button
-            onClick={() => setShowConfirmCancel(true)}
-            className="bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium px-3 py-2 rounded transition-colors text-sm"
-          >
-            Cancel Raid
-          </button>
-        </div>
+        {/* Action buttons - leader only */}
+        {isLeader && (
+          <>
+            <div className="flex space-x-2 pt-2 border-t border-gray-700">
+              <button
+                onClick={() => setShowConfirmDistribute(true)}
+                disabled={hasActiveAuctions || preview.pot_total === 0}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium py-2 rounded transition-colors text-sm"
+              >
+                Distribute Pot
+              </button>
+              <button
+                onClick={() => setShowConfirmCancel(true)}
+                className="bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium px-3 py-2 rounded transition-colors text-sm"
+              >
+                Cancel Raid
+              </button>
+            </div>
 
-        {hasActiveAuctions && (
-          <p className="text-yellow-500 text-xs flex items-center space-x-1">
-            <AlertTriangle className="h-3 w-3" />
-            <span>Complete all auctions before distributing</span>
-          </p>
+            {hasActiveAuctions && (
+              <p className="text-yellow-500 text-xs flex items-center space-x-1">
+                <AlertTriangle className="h-3 w-3" />
+                <span>Complete all auctions before distributing</span>
+              </p>
+            )}
+          </>
         )}
       </div>
 
