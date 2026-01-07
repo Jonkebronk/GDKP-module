@@ -586,31 +586,60 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 
       const html = await response.text();
 
-      // Extract item IDs from the page
+      // Extract item IDs specifically from the "drops" listview section
       const itemIds: number[] = [];
 
-      // Match item links in the page: /tbc/item=12345
-      const itemLinkMatches = html.matchAll(/\/tbc\/item[=:](\d+)/g);
-      for (const m of itemLinkMatches) {
-        const id = parseInt(m[1]);
-        if (id > 0 && !itemIds.includes(id)) {
-          itemIds.push(id);
+      // Find the drops listview data block: new Listview({...id: 'drops'...data: [...]})
+      // The pattern looks for the drops section specifically
+      const dropsMatch = html.match(/new Listview\(\{[^}]*id:\s*['"]drops['"][^}]*data:\s*(\[[^\]]+\])/s);
+
+      if (dropsMatch) {
+        // Extract item IDs from the drops data array
+        const dropsData = dropsMatch[1];
+        const idMatches = dropsData.matchAll(/"id"\s*:\s*(\d+)/g);
+        for (const m of idMatches) {
+          const id = parseInt(m[1]);
+          if (id > 0 && !itemIds.includes(id)) {
+            itemIds.push(id);
+          }
         }
       }
 
-      // Also match from listview data: "id":12345
-      const idMatches = html.matchAll(/"id"\s*:\s*(\d+)/g);
-      for (const m of idMatches) {
-        const id = parseInt(m[1]);
-        if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
-          itemIds.push(id);
+      // Fallback: Try to find WH.Gatherer data for drops tab specifically
+      if (itemIds.length === 0) {
+        // Look for the drops tab data in WH.Gatherer format
+        const gathererMatch = html.match(/WH\.Gatherer\.addData\(\s*3\s*,\s*10\s*,\s*\{([^}]+)\}/);
+        if (gathererMatch) {
+          const dataStr = gathererMatch[1];
+          const idMatches = dataStr.matchAll(/"(\d+)":/g);
+          for (const m of idMatches) {
+            const id = parseInt(m[1]);
+            if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
+              itemIds.push(id);
+            }
+          }
+        }
+      }
+
+      // Second fallback: look for loot-table-drops section
+      if (itemIds.length === 0) {
+        const lootTableMatch = html.match(/id="loot-table-drops"[^>]*>[\s\S]*?<\/table>/);
+        if (lootTableMatch) {
+          const tableHtml = lootTableMatch[0];
+          const itemMatches = tableHtml.matchAll(/\/tbc\/item[=:](\d+)/g);
+          for (const m of itemMatches) {
+            const id = parseInt(m[1]);
+            if (id > 0 && !itemIds.includes(id)) {
+              itemIds.push(id);
+            }
+          }
         }
       }
 
       if (itemIds.length === 0) {
         return reply.status(400).send({
           success: false,
-          error: 'No items found on zone page. Try importing items manually.',
+          error: 'No drops found on zone page. The page format may have changed.',
         });
       }
 
