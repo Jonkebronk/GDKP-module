@@ -197,6 +197,27 @@ export function RaidRoom() {
     },
   });
 
+  // Calculate total spending per player from completed items
+  // IMPORTANT: This must be before any early returns to follow React hook rules
+  const playerSpending = useMemo(() => {
+    if (!raid?.items) return [];
+
+    const spending: Record<string, { user: any; total: number; items: number }> = {};
+
+    raid.items
+      .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
+      .forEach((item: any) => {
+        const id = item.winner_id;
+        if (!spending[id]) {
+          spending[id] = { user: item.winner, total: 0, items: 0 };
+        }
+        spending[id].total += Number(item.current_bid);
+        spending[id].items += 1;
+      });
+
+    return Object.values(spending).sort((a, b) => b.total - a.total);
+  }, [raid?.items]);
+
   const handleBid = (amount?: number) => {
     const bidValue = amount || parseInt(bidAmount);
     if (bidValue && activeItem) {
@@ -266,26 +287,6 @@ export function RaidRoom() {
   const getItemQuality = (item: any) => item.quality || 4; // Default to epic
 
   const isPending = raid.status === 'PENDING';
-
-  // Calculate total spending per player from completed items
-  const playerSpending = useMemo(() => {
-    if (!raid?.items) return [];
-
-    const spending: Record<string, { user: any; total: number; items: number }> = {};
-
-    raid.items
-      .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
-      .forEach((item: any) => {
-        const id = item.winner_id;
-        if (!spending[id]) {
-          spending[id] = { user: item.winner, total: 0, items: 0 };
-        }
-        spending[id].total += Number(item.current_bid);
-        spending[id].items += 1;
-      });
-
-    return Object.values(spending).sort((a, b) => b.total - a.total);
-  }, [raid?.items]);
 
   return (
     <div className="space-y-6">

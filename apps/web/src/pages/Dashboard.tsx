@@ -196,12 +196,12 @@ export function Dashboard() {
 
         {/* Gold Report Card */}
         <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
-          <p className="text-gray-400 text-sm mb-2">Rapportera Guld</p>
+          <p className="text-gray-400 text-sm mb-2">Report Gold</p>
           {goldReportData?.report ? (
             <div className="flex items-center space-x-3">
               <Clock className="h-5 w-5 text-amber-400 animate-pulse" />
               <div>
-                <p className="text-amber-400 text-sm">Väntar på godkännande</p>
+                <p className="text-amber-400 text-sm">Pending approval</p>
                 <GoldDisplay amount={goldReportData.report.reported_amount} iconSize={16} className="text-white font-semibold" />
               </div>
             </div>
@@ -211,7 +211,7 @@ export function Dashboard() {
                 type="number"
                 value={goldReportAmount}
                 onChange={(e) => setGoldReportAmount(e.target.value)}
-                placeholder="Guld summa..."
+                placeholder="Gold amount..."
                 className="w-32 bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-gold-500"
                 min="1"
               />
@@ -221,7 +221,7 @@ export function Dashboard() {
                 className="flex items-center space-x-1 bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
               >
                 <Send className="h-4 w-4" />
-                <span>{submitGoldReportMutation.isPending ? '...' : 'Skicka'}</span>
+                <span>{submitGoldReportMutation.isPending ? '...' : 'Submit'}</span>
               </button>
             </div>
           )}

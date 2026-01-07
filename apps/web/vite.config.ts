@@ -11,7 +11,11 @@ export default defineConfig({
       includeAssets: ['favicon-32.png', 'apple-touch-icon.png', 'gnome-logo.png'],
       manifest: false, // We use our own manifest.json
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Never cache API calls
+        navigateFallbackDenylist: [/^\/api/, /^\/socket\.io/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

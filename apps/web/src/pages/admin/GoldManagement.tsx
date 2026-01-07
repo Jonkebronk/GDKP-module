@@ -93,7 +93,7 @@ export function GoldManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      setSuccessMessage('Rapporten godkänd och balansen uppdaterad');
+      setSuccessMessage('Report approved and balance updated');
       setTimeout(() => setSuccessMessage(''), 5000);
     },
   });
@@ -106,7 +106,7 @@ export function GoldManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
-      setSuccessMessage('Rapporten avvisad');
+      setSuccessMessage('Report rejected');
       setTimeout(() => setSuccessMessage(''), 5000);
     },
   });
@@ -193,7 +193,7 @@ export function GoldManagement() {
             <div className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-amber-400" />
               <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide">
-                Inrapporterat Guld ({goldReportsData.reports.length})
+                Pending Gold Reports ({goldReportsData.reports.length})
               </h2>
             </div>
           </div>
@@ -224,7 +224,7 @@ export function GoldManagement() {
                       onClick={() => approveReportMutation.mutate(report.id)}
                       disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
                       className="p-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded-lg transition-colors"
-                      title="Godkänn"
+                      title="Approve"
                     >
                       <CheckCircle className="h-4 w-4 text-white" />
                     </button>
@@ -232,7 +232,7 @@ export function GoldManagement() {
                       onClick={() => rejectReportMutation.mutate(report.id)}
                       disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
                       className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded-lg transition-colors"
-                      title="Avvisa"
+                      title="Reject"
                     >
                       <X className="h-4 w-4 text-white" />
                     </button>
