@@ -31,6 +31,7 @@ interface PotDistributionProps {
   raidId: string;
   isLeader: boolean;
   raidStatus: string;
+  hasActiveAuction: boolean;
   onDistributed?: () => void;
 }
 
@@ -38,6 +39,7 @@ export function PotDistribution({
   raidId,
   isLeader,
   raidStatus,
+  hasActiveAuction,
   onDistributed,
 }: PotDistributionProps) {
   const queryClient = useQueryClient();
@@ -156,7 +158,7 @@ export function PotDistribution({
     return null;
   }
 
-  const hasActiveAuctions = raidStatus === 'ACTIVE';
+  const hasActiveAuctions = hasActiveAuction;
 
   return (
     <div className="wow-tooltip wow-border-common">

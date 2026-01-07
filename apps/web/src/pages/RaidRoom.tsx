@@ -479,6 +479,7 @@ export function RaidRoom() {
             raidId={id!}
             isLeader={isLeader}
             raidStatus={raid.status}
+            hasActiveAuction={raid.items.some((i: any) => i.status === 'ACTIVE')}
             onDistributed={() => {
               queryClient.invalidateQueries({ queryKey: ['raid', id] });
               navigate('/raids');
