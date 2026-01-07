@@ -16,6 +16,7 @@ import { logger } from '../config/logger.js';
 
 const itemFiltersSchema = z.object({
   raid_instance: z.string().optional(),
+  boss_name: z.string().optional(),
   slot: z.string().optional(),
   quality: z.coerce.number().min(0).max(5).optional(),
   phase: z.coerce.number().min(1).max(5).optional(),
@@ -193,6 +194,33 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
    */
   fastify.get('/slots', { preHandler: [requireAuth] }, async () => {
     return { slots: ITEM_SLOTS };
+  });
+
+  /**
+   * GET /items/bosses - Get unique boss names (optionally filtered by instance)
+   */
+  fastify.get('/bosses', { preHandler: [requireAuth] }, async (request) => {
+    const query = request.query as Record<string, string>;
+    const { raid_instance } = z.object({
+      raid_instance: z.string().optional(),
+    }).parse(query);
+
+    const where = raid_instance ? { raid_instance } : {};
+
+    const bosses = await prisma.tbcRaidItem.findMany({
+      where,
+      select: { boss_name: true },
+      distinct: ['boss_name'],
+      orderBy: { boss_name: 'asc' },
+    });
+
+    // Filter out null/empty boss names and return sorted list
+    const bossNames = bosses
+      .map(b => b.boss_name)
+      .filter((name): name is string => !!name && name !== 'Unknown')
+      .sort();
+
+    return { bosses: bossNames };
   });
 
   /**

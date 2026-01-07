@@ -29,6 +29,7 @@ import {
 
 export function Items() {
   const [selectedInstance, setSelectedInstance] = useState<string>('');
+  const [selectedBoss, setSelectedBoss] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [selectedQuality, setSelectedQuality] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,13 +56,30 @@ export function Items() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedInstance, selectedSlot, selectedQuality]);
+  }, [selectedInstance, selectedBoss, selectedSlot, selectedQuality]);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['items', selectedInstance, selectedSlot, selectedQuality, debouncedSearch, page],
+  // Reset boss when instance changes
+  useEffect(() => {
+    setSelectedBoss('');
+  }, [selectedInstance]);
+
+  // Fetch unique boss names for filter
+  const { data: bossesData } = useQuery({
+    queryKey: ['item-bosses', selectedInstance],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedInstance) params.set('raid_instance', selectedInstance);
+      const res = await api.get(`/items/bosses?${params}`);
+      return res.data;
+    },
+  });
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['items', selectedInstance, selectedBoss, selectedSlot, selectedQuality, debouncedSearch, page],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedInstance) params.set('raid_instance', selectedInstance);
+      if (selectedBoss) params.set('boss_name', selectedBoss);
       if (selectedSlot) params.set('slot', selectedSlot);
       if (selectedQuality) params.set('quality', selectedQuality);
       if (debouncedSearch) params.set('search', debouncedSearch);
@@ -139,7 +157,7 @@ export function Items() {
           <span className="text-gray-400 font-medium text-sm sm:text-base">Filters</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
           {/* Search */}
           <div className="relative col-span-2 md:col-span-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
@@ -163,6 +181,23 @@ export function Items() {
               {TBC_RAID_INSTANCES.map((inst) => (
                 <option key={inst.id} value={inst.name}>
                   {inst.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Boss filter */}
+          <div className="relative">
+            <select
+              value={selectedBoss}
+              onChange={(e) => setSelectedBoss(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-gold-500 appearance-none"
+            >
+              <option value="">All Bosses</option>
+              {bossesData?.bosses?.map((boss: string) => (
+                <option key={boss} value={boss}>
+                  {boss}
                 </option>
               ))}
             </select>
@@ -203,11 +238,14 @@ export function Items() {
         </div>
 
         {/* Active filters */}
-        {(selectedInstance || selectedSlot || selectedQuality || debouncedSearch) && (
+        {(selectedInstance || selectedBoss || selectedSlot || selectedQuality || debouncedSearch) && (
           <div className="flex items-center flex-wrap gap-2 mt-4">
             <span className="text-gray-500 text-sm">Active:</span>
             {selectedInstance && (
               <FilterTag label={selectedInstance} onRemove={() => setSelectedInstance('')} />
+            )}
+            {selectedBoss && (
+              <FilterTag label={selectedBoss} onRemove={() => setSelectedBoss('')} />
             )}
             {selectedSlot && (
               <FilterTag label={selectedSlot} onRemove={() => setSelectedSlot('')} />
@@ -224,6 +262,7 @@ export function Items() {
             <button
               onClick={() => {
                 setSelectedInstance('');
+                setSelectedBoss('');
                 setSelectedSlot('');
                 setSelectedQuality('');
                 setSearchQuery('');

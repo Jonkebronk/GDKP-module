@@ -244,6 +244,7 @@ export async function importLootHistory(
  */
 export async function getTbcItems(filters: {
   raid_instance?: string;
+  boss_name?: string;
   slot?: string;
   quality?: number;
   phase?: number;
@@ -251,12 +252,16 @@ export async function getTbcItems(filters: {
   page?: number;
   limit?: number;
 }) {
-  const { raid_instance, slot, quality, phase, search, page = 1, limit = 50 } = filters;
+  const { raid_instance, boss_name, slot, quality, phase, search, page = 1, limit = 50 } = filters;
 
   const where: any = {};
 
   if (raid_instance) {
     where.raid_instance = raid_instance;
+  }
+
+  if (boss_name) {
+    where.boss_name = boss_name;
   }
 
   if (slot) {
