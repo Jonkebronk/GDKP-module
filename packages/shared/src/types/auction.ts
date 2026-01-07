@@ -69,10 +69,12 @@ export interface AuctionStartedPayload {
 
 export interface AuctionEndedPayload {
   item_id: string;
+  item_name?: string;
   winner_id: string | null;
   winner_name: string | null;
   final_amount: number;
   pot_total: number;
+  is_manual_award?: boolean;
 }
 
 export interface BidAcceptedPayload {

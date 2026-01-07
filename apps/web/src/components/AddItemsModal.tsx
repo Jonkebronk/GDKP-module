@@ -135,6 +135,7 @@ export function AddItemsModal({ raidId, raidInstance, isOpen, onClose, onItemAdd
         name: item.name,
         wowhead_id: item.wowhead_id,
         icon_url: `https://wow.zamimg.com/images/wow/icons/large/${item.icon}.jpg`,
+        quality: item.quality,
         starting_bid: 0,
         min_increment: 10,
         auction_duration: 60,

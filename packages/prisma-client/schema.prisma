@@ -112,6 +112,7 @@ model Item {
   name             String     @db.VarChar(255)
   wowhead_id       Int?
   icon_url         String?    @db.VarChar(500)
+  quality          Int        @default(4) // 0=poor, 1=common, 2=uncommon, 3=rare, 4=epic, 5=legendary
   status           ItemStatus @default(PENDING)
   starting_bid     Decimal    @default(0) @db.Decimal(15, 2)
   current_bid      Decimal    @default(0) @db.Decimal(15, 2)

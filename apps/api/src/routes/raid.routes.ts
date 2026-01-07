@@ -30,6 +30,7 @@ const addItemSchema = z.object({
   name: z.string().min(1).max(255),
   wowhead_id: z.number().optional(),
   icon_url: z.string().url().optional(),
+  quality: z.number().int().min(0).max(5).default(4),
   starting_bid: z.number().int().min(0).default(0),
   min_increment: z.number().int().min(1).default(10),
   auction_duration: z.number().int().min(30).max(300).default(60),
@@ -359,6 +360,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
         name: data.name,
         wowhead_id: data.wowhead_id,
         icon_url: data.icon_url,
+        quality: data.quality,
         starting_bid: data.starting_bid,
         min_increment: data.min_increment,
         auction_duration: data.auction_duration,
@@ -656,7 +658,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       icon_url: item.icon_url,
       winner_name: item.winner ? getDisplayName(item.winner) : 'No winner',
       final_bid: Number(item.current_bid),
-      quality: 4, // Default to epic, could be stored in DB
+      quality: item.quality,
     }));
 
     return {
