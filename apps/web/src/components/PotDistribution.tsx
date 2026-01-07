@@ -182,7 +182,7 @@ export function PotDistribution({
             </p>
           </div>
           <div>
-            <p className="text-gray-400 text-xs">Leader Cut</p>
+            <p className="text-gray-400 text-xs">Management Cut</p>
             <p className="text-white font-medium text-sm">
               {preview.leader_cut}% ({formatGold(preview.leader_cut_amount)})
             </p>
@@ -191,7 +191,7 @@ export function PotDistribution({
 
         {/* Participant shares */}
         <div className="border-t border-gray-700 pt-3">
-          <h4 className="text-xs font-medium text-gray-400 mb-2">Cut Breakdown</h4>
+          <h4 className="text-xs font-medium text-gray-400 mb-2">Per Player Cut</h4>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {preview.shares.map((share) => (
               <div
