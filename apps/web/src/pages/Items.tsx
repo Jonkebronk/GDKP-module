@@ -251,17 +251,30 @@ export function Items() {
         </div>
       )}
 
-      {/* Item grid */}
+      {/* Item list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="h-8 w-8 text-gold-500 animate-spin" />
         </div>
       ) : data?.items?.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {data.items.map((item: TbcRaidItem & { drop_count?: number }) => (
-              <ItemCard key={item.id} item={item} onEdit={() => setEditingItem(item)} />
-            ))}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-900 border-b border-gray-700">
+                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm">Name</th>
+                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden sm:table-cell">Slot</th>
+                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden md:table-cell">Source</th>
+                  <th className="text-left px-4 py-3 text-gray-400 font-medium text-sm hidden lg:table-cell">Instance</th>
+                  <th className="w-10 px-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {data.items.map((item: TbcRaidItem & { drop_count?: number }) => (
+                  <ItemRow key={item.id} item={item} onEdit={() => setEditingItem(item)} />
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Pagination */}
@@ -382,50 +395,63 @@ function FilterTag({ label, onRemove }: { label: string; onRemove: () => void })
   );
 }
 
-function ItemCard({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }; onEdit: () => void }) {
+function ItemRow({ item, onEdit }: { item: TbcRaidItem & { drop_count?: number }; onEdit: () => void }) {
   const qualityColor = ITEM_QUALITY_COLORS[item.quality as ItemQuality];
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors group relative">
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          {/* Item name with WoWhead tooltip and icon */}
+    <tr className="hover:bg-gray-700/50 transition-colors group">
+      {/* Name with icon */}
+      <td className="px-4 py-2">
+        <div className="flex items-center space-x-3">
+          <img
+            src={`https://wow.zamimg.com/images/wow/icons/small/${item.icon || 'inv_misc_questionmark'}.jpg`}
+            alt=""
+            className="w-6 h-6 rounded flex-shrink-0"
+            style={{
+              borderWidth: 1,
+              borderStyle: 'solid',
+              borderColor: qualityColor,
+            }}
+          />
           <a
             href={getWowheadItemUrl(item.wowhead_id)}
             data-wowhead={`item=${item.wowhead_id}&domain=tbc`}
             target="_blank"
             rel="noopener noreferrer"
-            className={`font-medium hover:underline block truncate ${getItemQualityClass(item.quality as ItemQuality)}`}
+            className={`font-medium hover:underline truncate ${getItemQualityClass(item.quality as ItemQuality)}`}
             style={{ color: qualityColor }}
           >
             {item.name}
           </a>
-
-          {/* Meta info */}
-          <div className="text-gray-500 text-xs mt-1 space-y-0.5">
-            <p>{item.slot || 'Misc'}</p>
-            <p className="truncate">{item.boss_name}</p>
-          </div>
         </div>
+      </td>
 
-        {/* Edit button */}
+      {/* Slot */}
+      <td className="px-4 py-2 text-gray-400 text-sm hidden sm:table-cell">
+        {item.slot || '-'}
+      </td>
+
+      {/* Source (boss) */}
+      <td className="px-4 py-2 text-gray-400 text-sm hidden md:table-cell truncate max-w-[200px]">
+        {item.boss_name || '-'}
+      </td>
+
+      {/* Instance */}
+      <td className="px-4 py-2 text-gray-500 text-sm hidden lg:table-cell">
+        {item.raid_instance || '-'}
+      </td>
+
+      {/* Edit button */}
+      <td className="px-2 py-2">
         <button
           onClick={onEdit}
-          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all ml-2"
+          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded text-gray-400 hover:text-white transition-all"
           title="Edit item"
         >
           <Pencil className="h-4 w-4" />
         </button>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-3 pt-3 border-t border-gray-700 flex items-center justify-between text-xs">
-        <span className="text-gray-500">{item.raid_instance}</span>
-        {item.drop_count !== undefined && item.drop_count > 0 && (
-          <span className="text-green-500">Dropped {item.drop_count}x</span>
-        )}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
