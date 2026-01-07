@@ -712,9 +712,10 @@ export function RaidRoom() {
                   {(liveParticipants.length > 0 ? liveParticipants : raid.participants.map((p: any) => ({
                     user_id: p.user_id,
                     username: p.user?.discord_username || 'Unknown',
+                    alias: p.user?.alias || null,
                   }))).map((p: any) => (
                     <option key={p.user_id} value={p.user_id}>
-                      {p.username}
+                      {p.alias || p.username}
                     </option>
                   ))}
                 </select>

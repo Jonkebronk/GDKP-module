@@ -75,6 +75,7 @@ export function useSocket(raidId: string | null) {
             user_id: p.user_id,
             username: p.user?.discord_username || 'Unknown',
             avatar: p.user?.discord_avatar || null,
+            alias: p.user?.alias || null,
             role: p.role,
           }))
         );
