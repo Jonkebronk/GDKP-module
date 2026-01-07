@@ -70,12 +70,13 @@ export function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-black px-4">
       <div className="max-w-md w-full space-y-8 text-center">
         {/* Logo */}
-        <div>
+        <div className="space-y-4">
           <img
             src="/gnome-logo.png"
-            alt="GDKP"
+            alt="The Pint Crusade"
             className="mx-auto h-48 w-48 rounded-full object-cover"
           />
+          <h1 className="text-3xl font-bold text-pink-400">The Pint Crusade</h1>
         </div>
 
         {/* Gate Section */}
