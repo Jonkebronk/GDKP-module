@@ -185,7 +185,7 @@ export function Dashboard() {
         <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-gray-400 text-sm">Balance</p>
+              <p className="text-gray-400 text-sm font-semibold">Balance</p>
               <div className="text-2xl font-bold text-gold-500">
                 <GoldDisplay amount={user?.gold_balance || 0} iconSize={20} />
               </div>
@@ -196,7 +196,7 @@ export function Dashboard() {
 
         {/* Gold Report Card */}
         <div className="bg-gray-800 rounded-lg p-6 flex-shrink-0">
-          <p className="text-gray-400 text-sm mb-2">Report Gold</p>
+          <p className="text-gray-400 text-sm font-semibold mb-2">Report Gold</p>
           {goldReportData?.report ? (
             <div className="flex items-center space-x-3">
               <Clock className="h-5 w-5 text-amber-400 animate-pulse" />
