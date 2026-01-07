@@ -181,7 +181,8 @@ body {
 }
 
 /* WoWhead icon spacing - adds margin after auto-injected icons */
-.wowhead-icon-spacing img {
-  margin-right: 8px;
+a[data-wowhead] img,
+a[data-wh-icon-size] img {
+  margin-right: 12px !important;
   vertical-align: middle;
 }
