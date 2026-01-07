@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { formatGold } from '@gdkp/shared';
 import { useAuthStore } from '../stores/authStore';
 import { Wallet as WalletIcon, ArrowDownLeft, ArrowUpRight, RefreshCw, Bitcoin, AlertCircle, CheckCircle, TrendingUp, ExternalLink, Settings, Save, X } from 'lucide-react';
+import { GoldDisplay } from '../components/GoldDisplay';
 
 export function Wallet() {
   const queryClient = useQueryClient();
@@ -225,9 +226,9 @@ export function Wallet() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-gray-400 text-sm">Available</p>
-            <p className="text-3xl font-bold text-gold-500">
-              {formatGold(walletData?.available_balance || 0)}
-            </p>
+            <div className="text-3xl font-bold text-gold-500">
+              <GoldDisplay amount={walletData?.available_balance || 0} iconSize={28} />
+            </div>
           </div>
           <WalletIcon className="h-12 w-12 text-gold-500/30" />
         </div>
