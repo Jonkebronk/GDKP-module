@@ -1,10 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
-import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins } from 'lucide-react';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn } from 'lucide-react';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { useState } from 'react';
+import { useAuthStore } from '../stores/authStore';
 
 // Quality border classes
 const qualityBorderClass: Record<number, string> = {
@@ -58,8 +59,8 @@ interface PayoutsData {
 }
 
 export function Dashboard() {
-  const [expandedSpentRaids, setExpandedSpentRaids] = useState<Set<string>>(new Set());
-  const [expandedPayoutRaids, setExpandedPayoutRaids] = useState<Set<string>>(new Set());
+  const [expandedSpentRaids, setExpandedSpentRaids] = useState<Record<string, boolean>>({});
+  const [expandedPayoutRaids, setExpandedPayoutRaids] = useState<Record<string, boolean>>({});
 
   const { data: walletData } = useQuery({
     queryKey: ['wallet', 'balance'],
@@ -86,27 +87,17 @@ export function Dashboard() {
   });
 
   const toggleSpentRaid = (raidId: string) => {
-    setExpandedSpentRaids((prev) => {
-      const next = new Set(prev);
-      if (next.has(raidId)) {
-        next.delete(raidId);
-      } else {
-        next.add(raidId);
-      }
-      return next;
-    });
+    setExpandedSpentRaids((prev) => ({
+      ...prev,
+      [raidId]: !prev[raidId],
+    }));
   };
 
   const togglePayoutRaid = (raidId: string) => {
-    setExpandedPayoutRaids((prev) => {
-      const next = new Set(prev);
-      if (next.has(raidId)) {
-        next.delete(raidId);
-      } else {
-        next.add(raidId);
-      }
-      return next;
-    });
+    setExpandedPayoutRaids((prev) => ({
+      ...prev,
+      [raidId]: !prev[raidId],
+    }));
   };
 
   return (
@@ -158,7 +149,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedSpentRaids.has(raid.raid_id) ? (
+                      {expandedSpentRaids[raid.raid_id] ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -177,7 +168,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedSpentRaids.has(raid.raid_id) && (
+                  {expandedSpentRaids[raid.raid_id] && (
                     <div className="bg-gray-900/50 px-4 py-2 space-y-2">
                       {raid.items.map((item) => (
                         <div
@@ -247,7 +238,7 @@ export function Dashboard() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/50 transition-colors"
                   >
                     <div className="flex items-center space-x-3">
-                      {expandedPayoutRaids.has(raid.raid_id) ? (
+                      {expandedPayoutRaids[raid.raid_id] ? (
                         <ChevronUp className="h-4 w-4 text-gray-400" />
                       ) : (
                         <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -266,7 +257,7 @@ export function Dashboard() {
                     />
                   </button>
 
-                  {expandedPayoutRaids.has(raid.raid_id) && (
+                  {expandedPayoutRaids[raid.raid_id] && (
                     <div className="bg-gray-900/50 px-4 py-2">
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
