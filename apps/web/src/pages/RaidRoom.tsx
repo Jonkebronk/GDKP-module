@@ -701,6 +701,40 @@ export function RaidRoom() {
             }}
           />
 
+          {/* Total Spend */}
+          <div className="wow-tooltip wow-border-common">
+            <div className="wow-tooltip-header p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                <Coins className="h-4 w-4" />
+                <span>Total Spend</span>
+              </h2>
+            </div>
+            <div className="h-48 overflow-y-auto p-3 space-y-2">
+              {playerSpending.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Player spending will appear here</p>
+              ) : (
+                playerSpending.map(({ user, total, items }) => (
+                  <div key={user?.id || 'unknown'} className="flex items-center justify-between py-1">
+                    <div className="flex items-center space-x-2">
+                      <SimpleUserDisplay
+                        user={{
+                          discord_username: user?.discord_username || 'Unknown',
+                          discord_avatar: user?.discord_avatar,
+                          alias: user?.alias,
+                        }}
+                        showAvatar
+                        avatarSize={20}
+                        className="text-gray-300 text-sm"
+                      />
+                      <span className="text-gray-500 text-xs">({items} item{items !== 1 ? 's' : ''})</span>
+                    </div>
+                    <span className="text-amber-400 font-medium">{formatGold(total)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Participants */}
           <div className="wow-tooltip wow-border-common">
             <div className="wow-tooltip-header p-3 border-b border-gray-700">
@@ -733,40 +767,6 @@ export function RaidRoom() {
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Total Spend */}
-          <div className="wow-tooltip wow-border-common">
-            <div className="wow-tooltip-header p-3 border-b border-gray-700">
-              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
-                <Coins className="h-4 w-4" />
-                <span>Total Spend</span>
-              </h2>
-            </div>
-            <div className="h-48 overflow-y-auto p-3 space-y-2">
-              {playerSpending.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-4">Player spending will appear here</p>
-              ) : (
-                playerSpending.map(({ user, total, items }) => (
-                  <div key={user?.id || 'unknown'} className="flex items-center justify-between py-1">
-                    <div className="flex items-center space-x-2">
-                      <SimpleUserDisplay
-                        user={{
-                          discord_username: user?.discord_username || 'Unknown',
-                          discord_avatar: user?.discord_avatar,
-                          alias: user?.alias,
-                        }}
-                        showAvatar
-                        avatarSize={20}
-                        className="text-gray-300 text-sm"
-                      />
-                      <span className="text-gray-500 text-xs">({items} item{items !== 1 ? 's' : ''})</span>
-                    </div>
-                    <span className="text-amber-400 font-medium">{formatGold(total)}</span>
-                  </div>
-                ))
-              )}
             </div>
           </div>
         </div>

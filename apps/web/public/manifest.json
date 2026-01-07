@@ -1,11 +1,11 @@
 {
-  "name": "GDKP",
-  "short_name": "GDKP",
-  "description": "GDKP auction platform for WoW raids",
+  "name": "The Pink Crusade",
+  "short_name": "Pink Crusade",
+  "description": "The Pink Crusade - Auction platform for WoW raids",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#f59e0b",
+  "theme_color": "#ec4899",
   "orientation": "portrait-primary",
   "icons": [
     {
