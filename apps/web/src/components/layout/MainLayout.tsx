@@ -13,6 +13,7 @@ import {
   Package,
   Shield,
   Coins,
+  History,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
   { path: '/wallet', label: 'Wallet', icon: Wallet },
   { path: '/items', label: 'Items', icon: Package },
+  { path: '/raid-history', label: 'Raid History', icon: History },
   { path: '/profile', label: 'Profile', icon: User },
 ];
 
