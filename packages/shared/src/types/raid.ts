@@ -67,7 +67,7 @@ export const WOW_INSTANCES = [
   'Magtheridon\'s Lair',
   'Serpentshrine Cavern',
   'Tempest Keep',
-  'Hyjal Summit',
+  'Mount Hyjal',
   'Black Temple',
   'Sunwell Plateau',
   'Custom',

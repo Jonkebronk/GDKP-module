@@ -33,7 +33,7 @@ export const TBC_RAID_INSTANCES: TbcRaidInstance[] = [
   { id: 'magtheridons-lair', name: "Magtheridon's Lair", phase: 1, size: '25-man' },
   { id: 'ssc', name: 'Serpentshrine Cavern', phase: 2, size: '25-man' },
   { id: 'tk', name: 'Tempest Keep', phase: 2, size: '25-man' },
-  { id: 'hyjal', name: 'Hyjal Summit', phase: 3, size: '25-man' },
+  { id: 'hyjal', name: 'Mount Hyjal', phase: 3, size: '25-man' },
   { id: 'bt', name: 'Black Temple', phase: 3, size: '25-man' },
   { id: 'za', name: "Zul'Aman", phase: 4, size: '10-man' },
   { id: 'swp', name: 'Sunwell Plateau', phase: 5, size: '25-man' },
