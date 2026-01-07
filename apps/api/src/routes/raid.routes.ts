@@ -42,7 +42,13 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
 
     const where: Record<string, unknown> = {};
     if (status) {
-      where.status = status;
+      // Handle comma-separated status values (e.g., "ACTIVE,PENDING")
+      const statuses = status.split(',');
+      if (statuses.length > 1) {
+        where.status = { in: statuses };
+      } else {
+        where.status = status;
+      }
     }
     if (mine === 'true') {
       where.leader_id = request.user.id;
