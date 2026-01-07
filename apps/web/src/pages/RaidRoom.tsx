@@ -569,7 +569,7 @@ export function RaidRoom() {
             hasActiveAuction={raid.items.some((i: any) => i.status === 'ACTIVE')}
             onDistributed={() => {
               queryClient.invalidateQueries({ queryKey: ['raid', id] });
-              navigate('/raids');
+              // Stay on page - summary will show automatically
             }}
           />
 

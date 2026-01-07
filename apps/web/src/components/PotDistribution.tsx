@@ -77,6 +77,7 @@ export function PotDistribution({
       queryClient.invalidateQueries({ queryKey: ['raid', raidId] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       setShowConfirmDistribute(false);
+      setShowSummary(true); // Show summary automatically
       onDistributed?.();
     },
   });
