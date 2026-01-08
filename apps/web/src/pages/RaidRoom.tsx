@@ -340,6 +340,11 @@ export function RaidRoom() {
     ? activeItem.current_bid + activeItem.min_increment
     : 0;
 
+  // Check if anyone has bid (current_bid > starting_bid means someone bid)
+  const hasBids = activeItem
+    ? activeItem.current_bid > activeItem.starting_bid
+    : false;
+
   // Get item quality for styling
   const getItemQuality = (item: any) => item.quality || 4; // Default to epic
 
@@ -471,10 +476,13 @@ export function RaidRoom() {
                     </div>
                   )}
                   <p className="text-3xl font-bold text-amber-400 mt-2">
-                    {formatGold(activeItem.current_bid)}
+                    {formatGold(hasBids ? activeItem.current_bid : minBid)}
                   </p>
                   <p className="text-gray-400 text-sm">
-                    Min bid: {formatGold(minBid)}
+                    {hasBids
+                      ? `Current bid: ${formatGold(activeItem.current_bid)} • Min: ${formatGold(minBid)}`
+                      : `Min bid: ${formatGold(minBid)}`
+                    }
                   </p>
                 </div>
               </div>
