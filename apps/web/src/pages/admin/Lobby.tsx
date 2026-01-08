@@ -4,7 +4,8 @@ import { io, Socket } from 'socket.io-client';
 import type { ServerToClientEvents, ClientToServerEvents } from '@gdkp/shared';
 import { api } from '../../api/client';
 import { useAuthStore } from '../../stores/authStore';
-import { Users, Check, X, Clock, UserCircle } from 'lucide-react';
+import { formatGold } from '@gdkp/shared';
+import { Users, Check, X, Clock, UserCircle, Coins, CheckCircle } from 'lucide-react';
 
 interface WaitingUser {
   id: string;
@@ -13,6 +14,20 @@ interface WaitingUser {
   discord_avatar: string | null;
   alias: string | null;
   updated_at: string;
+}
+
+interface GoldReport {
+  id: string;
+  user_id: string;
+  reported_amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+  user: {
+    id: string;
+    discord_username: string;
+    discord_avatar: string | null;
+    alias: string | null;
+  };
 }
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -95,7 +110,43 @@ export function Lobby() {
     },
   });
 
+  // Fetch pending gold reports
+  const { data: goldReportsData } = useQuery<{ reports: GoldReport[] }>({
+    queryKey: ['admin', 'gold-reports'],
+    queryFn: async () => {
+      const res = await api.get('/admin/gold-reports');
+      return res.data;
+    },
+  });
+
+  // Approve gold report mutation
+  const approveReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      const res = await api.post(`/admin/gold-reports/${reportId}/approve`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+
+  // Reject gold report mutation
+  const rejectReportMutation = useMutation({
+    mutationFn: async (reportId: string) => {
+      const res = await api.post(`/admin/gold-reports/${reportId}/reject`);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'gold-reports'] });
+    },
+  });
+
   const waitingUsers = data?.users || [];
+  const goldReports = goldReportsData?.reports || [];
+
+  // Create a map of user_id -> gold report for quick lookup
+  const goldReportByUserId = new Map(goldReports.map(r => [r.user_id, r]));
 
   return (
     <div className="space-y-6">
@@ -132,70 +183,104 @@ export function Lobby() {
       ) : (
         <div className="bg-gray-800 rounded-lg overflow-hidden">
           <div className="divide-y divide-gray-700">
-            {waitingUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between px-6 py-4 hover:bg-gray-700/50 transition-colors"
-              >
-                {/* User info */}
-                <div className="flex items-center space-x-4">
-                  {/* Avatar */}
-                  {user.discord_avatar ? (
-                    <img
-                      src={user.discord_avatar}
-                      alt=""
-                      className="h-12 w-12 rounded-full"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-gray-700 flex items-center justify-center">
-                      <UserCircle className="h-8 w-8 text-gray-500" />
-                    </div>
-                  )}
+            {waitingUsers.map((user) => {
+              const goldReport = goldReportByUserId.get(user.id);
+              return (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between px-6 py-4 hover:bg-gray-700/50 transition-colors"
+                >
+                  {/* User info */}
+                  <div className="flex items-center space-x-4">
+                    {/* Avatar */}
+                    {user.discord_avatar ? (
+                      <img
+                        src={user.discord_avatar}
+                        alt=""
+                        className="h-12 w-12 rounded-full"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-gray-700 flex items-center justify-center">
+                        <UserCircle className="h-8 w-8 text-gray-500" />
+                      </div>
+                    )}
 
-                  {/* Names */}
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-white font-medium">
-                        {user.discord_username}
-                      </span>
-                      {user.alias && (
-                        <span className="text-gold-400 text-sm">
-                          as "{user.alias}"
+                    {/* Names */}
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-white font-medium">
+                          {user.discord_username}
                         </span>
-                      )}
+                        {user.alias && (
+                          <span className="text-gold-400 text-sm">
+                            as "{user.alias}"
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 text-gray-500 text-sm">
+                        <Clock className="h-3 w-3" />
+                        <span>Waiting {formatWaitTime(user.updated_at)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 text-gray-500 text-sm">
-                      <Clock className="h-3 w-3" />
-                      <span>Waiting {formatWaitTime(user.updated_at)}</span>
+                  </div>
+
+                  {/* Gold Report + Actions */}
+                  <div className="flex items-center space-x-4">
+                    {/* Gold Report Badge */}
+                    {goldReport && (
+                      <div className="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
+                        <Coins className="h-4 w-4 text-amber-400" />
+                        <span className="text-amber-400 font-bold">
+                          {formatGold(goldReport.reported_amount)}
+                        </span>
+                        <div className="flex space-x-1 ml-2">
+                          <button
+                            onClick={() => approveReportMutation.mutate(goldReport.id)}
+                            disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
+                            className="p-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 rounded transition-colors"
+                            title="Approve gold"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 text-white" />
+                          </button>
+                          <button
+                            onClick={() => rejectReportMutation.mutate(goldReport.id)}
+                            disabled={approveReportMutation.isPending || rejectReportMutation.isPending}
+                            className="p-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded transition-colors"
+                            title="Reject gold"
+                          >
+                            <X className="h-3.5 w-3.5 text-white" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Player Actions */}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => approveMutation.mutate(user.id)}
+                        disabled={approveMutation.isPending}
+                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span>Approve</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Kick ${user.discord_username}?`)) {
+                            kickMutation.mutate(user.id);
+                          }
+                        }}
+                        disabled={kickMutation.isPending}
+                        className="flex items-center space-x-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>Kick</span>
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => approveMutation.mutate(user.id)}
-                    disabled={approveMutation.isPending}
-                    className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    <Check className="h-4 w-4" />
-                    <span>Approve</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Kick ${user.discord_username}?`)) {
-                        kickMutation.mutate(user.id);
-                      }
-                    }}
-                    disabled={kickMutation.isPending}
-                    className="flex items-center space-x-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-4 py-2 rounded-lg transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                    <span>Kick</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
