@@ -1,7 +1,7 @@
 {
-  "name": "The Pint Crusade",
-  "short_name": "Pint Crusade",
-  "description": "The Pint Crusade",
+  "name": "Project X",
+  "short_name": "Project X",
+  "description": "Project X",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
