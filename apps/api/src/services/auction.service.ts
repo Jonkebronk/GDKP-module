@@ -167,6 +167,8 @@ export class AuctionService {
             started_at: updatedItem.started_at,
             ends_at: updatedItem.ends_at,
             completed_at: updatedItem.completed_at,
+            is_bundle: updatedItem.is_bundle,
+            bundle_item_names: updatedItem.bundle_item_names,
           },
         };
       });
