@@ -10,6 +10,7 @@ export interface AuctionEvent {
   itemName?: string;
   playerName?: string;
   amount?: number;
+  bundleItemNames?: string[];
 }
 
 interface AuctionState {

@@ -95,6 +95,7 @@ export function useSocket(raidId: string | null) {
         message: `Bid on [${data.item.name}]. Minimum is ${minBid}g - increment is ${increment}g.`,
         itemName: data.item.name,
         amount: minBid,
+        bundleItemNames: data.item.is_bundle ? data.item.bundle_item_names : undefined,
       });
 
       // Trigger refetch of raid data to update item status to ACTIVE

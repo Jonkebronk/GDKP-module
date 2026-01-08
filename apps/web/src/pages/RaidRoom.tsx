@@ -961,6 +961,13 @@ function GargulMessage({ event }: { event: AuctionEvent }) {
             <span>Bid on </span>
             <span className="gargul-item">[{event.itemName}]</span>
             <span>. {event.message.split('].')[1]}</span>
+            {event.bundleItemNames && event.bundleItemNames.length > 0 && (
+              <div className="mt-1 ml-4 text-xs text-gray-400">
+                {event.bundleItemNames.map((name, i) => (
+                  <div key={i} className="text-purple-400">- {name}</div>
+                ))}
+              </div>
+            )}
           </>
         );
       case 'bid_placed':
