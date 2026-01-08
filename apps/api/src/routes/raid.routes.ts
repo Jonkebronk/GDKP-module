@@ -689,6 +689,85 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // Break up a goodie bag back into individual items
+  fastify.delete('/:id/goodie-bag/:itemId', { preHandler: [requireAuth] }, async (request) => {
+    const { id, itemId } = request.params as { id: string; itemId: string };
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can break up goodie bags', 403);
+    }
+
+    // Find the bundle item
+    const bundle = await prisma.item.findUnique({
+      where: { id: itemId },
+    });
+
+    if (!bundle || bundle.raid_id !== id) {
+      throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Item not found', 404);
+    }
+
+    if (!bundle.is_bundle) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Item is not a goodie bag', 400);
+    }
+
+    if (bundle.status !== 'PENDING') {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only break up pending goodie bags', 400);
+    }
+
+    // Recreate individual items from bundle_item_names
+    const itemNames = bundle.bundle_item_names || [];
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Create individual items
+      const createdItems = await Promise.all(
+        itemNames.map((name) =>
+          tx.item.create({
+            data: {
+              raid_id: id,
+              name,
+              icon_url: bundle.icon_url,
+              quality: bundle.quality,
+              status: 'PENDING',
+              starting_bid: 0,
+              current_bid: 0,
+              min_increment: 10,
+              auction_duration: 60,
+              is_bundle: false,
+              bundle_item_names: [],
+            },
+          })
+        )
+      );
+
+      // Delete the bundle
+      await tx.item.delete({
+        where: { id: itemId },
+      });
+
+      return createdItems;
+    });
+
+    // Notify clients about the change
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { items_changed: true });
+
+    return {
+      broken_up: true,
+      items: result.map((item) => ({
+        ...item,
+        starting_bid: Number(item.starting_bid),
+        current_bid: Number(item.current_bid),
+        min_increment: Number(item.min_increment),
+      })),
+    };
+  });
+
   // Get raid summary (for completed raids - export/history)
   fastify.get('/:id/summary', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };

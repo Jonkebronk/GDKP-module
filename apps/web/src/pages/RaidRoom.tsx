@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -229,6 +229,21 @@ export function RaidRoom() {
       addAuctionEvent({
         type: 'system',
         message: `🎁 Goodie Bag created with ${selectedUnsoldItems.length} items`,
+      });
+    },
+  });
+
+  // Break up goodie bag mutation
+  const breakUpGoodieBagMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await api.delete(`/raids/${id}/goodie-bag/${itemId}`);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      addAuctionEvent({
+        type: 'system',
+        message: `📦 Goodie Bag broken up into ${data.items?.length || 0} items`,
       });
     },
   });
@@ -612,7 +627,9 @@ export function RaidRoom() {
                         onStart={() => handleStartAuction(item.id)}
                         onDelete={() => deleteItemMutation.mutate(item.id)}
                         onManualAward={() => setManualAwardItem(item)}
+                        onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
                         isDeleting={deleteItemMutation.isPending}
+                        isBreakingUp={breakUpGoodieBagMutation.isPending}
                       />
                     ))}
                 </div>
@@ -714,7 +731,7 @@ export function RaidRoom() {
                             </a>
                             <p className="text-xs text-gray-500">No bids</p>
                           </div>
-                          {/* Re-auction and Manual Award buttons */}
+                          {/* Re-auction, Break Up, and Manual Award buttons */}
                           {isLeader && (
                             <div className="flex items-center space-x-1">
                               <button
@@ -725,6 +742,16 @@ export function RaidRoom() {
                               >
                                 <RotateCcw className="h-4 w-4" />
                               </button>
+                              {item.is_bundle && (
+                                <button
+                                  onClick={() => breakUpGoodieBagMutation.mutate(item.id)}
+                                  disabled={breakUpGoodieBagMutation.isPending}
+                                  className="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-1.5 rounded transition-colors disabled:opacity-50"
+                                  title="Break up Goodie Bag"
+                                >
+                                  <Scissors className="h-4 w-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setManualAwardItem(item);
@@ -1042,11 +1069,13 @@ interface ItemCardProps {
   onDelete: () => void;
   onManualAward: () => void;
   onReauction?: () => void;
+  onBreakUp?: () => void;
   isDeleting: boolean;
   isReauctioning?: boolean;
+  isBreakingUp?: boolean;
 }
 
-function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauction, isDeleting, isReauctioning }: ItemCardProps) {
+function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauction, onBreakUp, isDeleting, isReauctioning, isBreakingUp }: ItemCardProps) {
   const quality = item.quality || 4;
   const qualityColor = ITEM_QUALITY_COLORS[quality as keyof typeof ITEM_QUALITY_COLORS] || '#a335ee';
   const borderClass = qualityBorderClass[quality] || 'wow-border-epic';
@@ -1111,6 +1140,16 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
             >
               <Play className="h-4 w-4" />
             </button>
+            {item.is_bundle && onBreakUp && (
+              <button
+                onClick={onBreakUp}
+                disabled={isBreakingUp}
+                className="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-1.5 rounded transition-colors disabled:opacity-50"
+                title="Break up Goodie Bag"
+              >
+                <Scissors className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={onManualAward}
               className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 p-1.5 rounded transition-colors"
