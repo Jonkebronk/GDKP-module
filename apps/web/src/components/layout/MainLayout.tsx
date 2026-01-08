@@ -41,9 +41,8 @@ export function MainLayout() {
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2 mr-6">
-              <img src="/gnome-logo.png" alt="The Pint Crusade" className="h-8 w-8 rounded-full object-cover" />
-              <span className="text-lg font-bold text-pink-400 whitespace-nowrap">The Pint Crusade</span>
+            <Link to="/" className="flex items-center mr-6">
+              <img src="/gnome-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             </Link>
 
             {/* Desktop nav */}

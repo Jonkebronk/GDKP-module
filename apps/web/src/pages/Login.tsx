@@ -73,10 +73,9 @@ export function LoginPage() {
         <div className="space-y-4">
           <img
             src="/gnome-logo.png"
-            alt="The Pint Crusade"
+            alt="Logo"
             className="mx-auto h-48 w-48 rounded-full object-cover"
           />
-          <h1 className="text-3xl font-bold text-pink-400">The Pint Crusade</h1>
         </div>
 
         {/* Gate Section */}
