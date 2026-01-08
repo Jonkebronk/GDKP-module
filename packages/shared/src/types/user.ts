@@ -1,4 +1,5 @@
 export type UserRole = 'USER' | 'ADMIN';
+export type SessionStatus = 'OFFLINE' | 'WAITING' | 'APPROVED';
 
 export interface User {
   id: string;
@@ -8,6 +9,7 @@ export interface User {
   alias: string | null;
   gold_balance: number;
   role: UserRole;
+  session_status: SessionStatus;
   created_at: Date;
   updated_at: Date;
 }
@@ -28,6 +30,7 @@ export interface AuthUser {
   alias: string | null;
   gold_balance: number;
   role: UserRole;
+  session_status: SessionStatus;
 }
 
 // Helper function to get display name (alias or discord_username)

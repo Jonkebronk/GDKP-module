@@ -322,6 +322,95 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
 
     return { success: true };
   });
+
+  // ============================================
+  // WAITING ROOM / LOBBY
+  // ============================================
+
+  // Get all users waiting for approval
+  fastify.get('/waiting-room', { preHandler: [requireAdmin] }, async () => {
+    const waitingUsers = await prisma.user.findMany({
+      where: { session_status: 'WAITING' },
+      orderBy: { updated_at: 'asc' }, // Oldest first (first come first serve)
+      select: {
+        id: true,
+        discord_id: true,
+        discord_username: true,
+        discord_avatar: true,
+        alias: true,
+        updated_at: true, // When they entered the waiting room
+      },
+    });
+
+    return { users: waitingUsers };
+  });
+
+  // Approve a waiting user
+  fastify.post('/approve/:userId', { preHandler: [requireAdmin] }, async (request) => {
+    const { userId } = request.params as { userId: string };
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.session_status !== 'WAITING') {
+      throw new Error('User is not in waiting room');
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { session_status: 'APPROVED' },
+    });
+
+    logger.info({ adminId: request.user.id, userId }, 'User approved from waiting room');
+
+    // Notify the user they've been approved
+    fastify.io.to(`user:${userId}`).emit('session:approved', {
+      message: 'You have been approved to enter',
+    });
+
+    // Notify admins of waiting room update
+    fastify.io.to('admin:waiting-room').emit('waiting-room:updated', {});
+
+    return { success: true, user_id: userId };
+  });
+
+  // Kick a waiting user
+  fastify.post('/kick/:userId', { preHandler: [requireAdmin] }, async (request) => {
+    const { userId } = request.params as { userId: string };
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        session_status: 'OFFLINE',
+        alias: null, // Clear alias too
+      },
+    });
+
+    logger.info({ adminId: request.user.id, userId }, 'User kicked from waiting room');
+
+    // Notify the user they've been kicked
+    fastify.io.to(`user:${userId}`).emit('session:kicked', {
+      message: 'You have been removed by an admin',
+    });
+
+    // Notify admins of waiting room update
+    fastify.io.to('admin:waiting-room').emit('waiting-room:updated', {});
+
+    return { success: true, user_id: userId };
+  });
 };
 
 export default adminRoutes;

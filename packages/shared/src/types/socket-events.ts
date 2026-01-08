@@ -82,6 +82,14 @@ export interface ServerToClientEvents {
     reason: string;
     refunded_amount: number;
   }) => void;
+
+  // Session / Waiting room
+  'session:approved': (data: { message: string }) => void;
+  'session:kicked': (data: { message: string }) => void;
+  'waiting-room:updated': (data: Record<string, never>) => void;
+
+  // Participant events
+  'participant:left': (data: { user_id: string; username: string }) => void;
 }
 
 // Inter-Server Events (for Redis adapter scaling)

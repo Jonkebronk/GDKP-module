@@ -80,11 +80,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
               : null,
             role: shouldBeAdmin ? 'ADMIN' : 'USER',
+            // New users start in waiting room with no alias
+            session_status: shouldBeAdmin ? 'APPROVED' : 'WAITING',
+            alias: null,
           },
         });
         logger.info({ userId: user.id, discordId: discordUser.id, isAdmin: shouldBeAdmin }, 'New user created');
       } else {
-        // Update user info (and promote to admin if configured)
+        // Update user info and reset session (clear alias, set to waiting)
         user = await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -94,6 +97,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               : null,
             // Promote to admin if configured (but don't demote existing admins)
             ...(shouldBeAdmin && user.role !== 'ADMIN' ? { role: 'ADMIN' } : {}),
+            // Reset session: admins auto-approved, others go to waiting room
+            session_status: shouldBeAdmin || user.role === 'ADMIN' ? 'APPROVED' : 'WAITING',
+            // Clear alias on each login (session-based)
+            alias: null,
           },
         });
         if (shouldBeAdmin && user.role !== 'ADMIN') {
@@ -109,12 +116,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         discord_avatar: user.discord_avatar,
         alias: user.alias,
         role: user.role,
+        session_status: user.session_status,
       }, { expiresIn: env.JWT_EXPIRES_IN });
 
       // Redirect to frontend with token
-      // If user has no alias, include setup flag for alias setup page
-      const setupParam = !user.alias ? '&setup=alias' : '';
-      return reply.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}${setupParam}`);
+      return reply.redirect(`${env.FRONTEND_URL}/auth/callback?token=${token}`);
     } catch (error) {
       logger.error({ error }, 'Discord OAuth callback error');
       return reply.redirect(`${env.FRONTEND_URL}/login?error=auth_failed`);
@@ -133,6 +139,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         alias: true,
         gold_balance: true,
         role: true,
+        session_status: true,
         created_at: true,
       },
     });
@@ -147,8 +154,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Logout (client-side - just return success)
-  fastify.post('/logout', async () => {
+  // Logout - clear session status and alias
+  fastify.post('/logout', { preHandler: [requireAuth] }, async (request) => {
+    await prisma.user.update({
+      where: { id: request.user.id },
+      data: {
+        session_status: 'OFFLINE',
+        alias: null,
+      },
+    });
     return { success: true };
   });
 
@@ -161,7 +175,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Refresh token
   fastify.post('/refresh', { preHandler: [requireAuth] }, async (request) => {
-    // Fetch fresh user data to get current alias
+    // Fetch fresh user data to get current alias and session status
     const user = await prisma.user.findUnique({
       where: { id: request.user.id },
       select: {
@@ -171,6 +185,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         discord_avatar: true,
         alias: true,
         role: true,
+        session_status: true,
       },
     });
 
@@ -185,6 +200,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       discord_avatar: user.discord_avatar,
       alias: user.alias,
       role: user.role,
+      session_status: user.session_status,
     }, { expiresIn: env.JWT_EXPIRES_IN });
 
     return { token };

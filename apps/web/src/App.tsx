@@ -5,7 +5,7 @@ import { useAuthStore } from './stores/authStore';
 // Pages
 import { LoginPage } from './pages/Login';
 import { AuthCallback } from './pages/AuthCallback';
-import { AliasSetupPage } from './pages/AliasSetup';
+import { WaitingRoomPage } from './pages/WaitingRoom';
 import { Dashboard } from './pages/Dashboard';
 import { Raids } from './pages/Raids';
 import { RaidRoom } from './pages/RaidRoom';
@@ -14,6 +14,7 @@ import { Profile } from './pages/Profile';
 import { Items } from './pages/Items';
 import { AliasMappings } from './pages/admin/AliasMappings';
 import { GoldManagement } from './pages/admin/GoldManagement';
+import { Lobby } from './pages/admin/Lobby';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -21,25 +22,51 @@ import { MainLayout } from './components/layout/MainLayout';
 // Note: Using react-router-dom for simplicity instead of TanStack Router
 // Can be migrated later if needed
 
-function ProtectedRoute({ children, requireAlias = true }: { children: React.ReactNode; requireAlias?: boolean }) {
-  const { isAuthenticated, isLoading, needsAliasSetup } = useAuthStore();
-  const location = useLocation();
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold-500"></div>
+    </div>
+  );
+}
+
+// Route for waiting room - must be WAITING status
+function WaitingRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, sessionStatus } = useAuthStore();
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold-500"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect to alias setup if user hasn't set an alias (except on setup page itself)
-  if (requireAlias && needsAliasSetup && location.pathname !== '/setup-alias') {
-    return <Navigate to="/setup-alias" replace />;
+  // If already approved, go to dashboard
+  if (sessionStatus === 'APPROVED') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Main protected route - must be APPROVED status
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, sessionStatus } = useAuthStore();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If waiting for approval, redirect to waiting room
+  if (sessionStatus === 'WAITING' && location.pathname !== '/waiting-room') {
+    return <Navigate to="/waiting-room" replace />;
   }
 
   return <>{children}</>;
@@ -49,11 +76,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gold-500"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!isAuthenticated) {
@@ -81,17 +104,20 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* Alias setup - no alias required */}
+        {/* Waiting room - for users waiting for approval */}
         <Route
-          path="/setup-alias"
+          path="/waiting-room"
           element={
-            <ProtectedRoute requireAlias={false}>
-              <AliasSetupPage />
-            </ProtectedRoute>
+            <WaitingRoute>
+              <WaitingRoomPage />
+            </WaitingRoute>
           }
         />
 
-        {/* Protected routes */}
+        {/* Legacy alias setup - redirect to waiting room */}
+        <Route path="/setup-alias" element={<Navigate to="/waiting-room" replace />} />
+
+        {/* Protected routes - require APPROVED session status */}
         <Route
           path="/"
           element={
@@ -108,6 +134,14 @@ export default function App() {
           <Route path="profile" element={<Profile />} />
 
           {/* Admin routes */}
+          <Route
+            path="admin/lobby"
+            element={
+              <AdminRoute>
+                <Lobby />
+              </AdminRoute>
+            }
+          />
           <Route
             path="admin/aliases"
             element={

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AuthUser } from '@gdkp/shared';
+import type { AuthUser, SessionStatus } from '@gdkp/shared';
 import { api } from '../api/client';
 
 interface AuthState {
@@ -9,12 +9,14 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsAliasSetup: boolean;
+  sessionStatus: SessionStatus;
   lockedAmount: number;
-  setAuth: (user: AuthUser, token: string, needsAliasSetup?: boolean) => void;
+  setAuth: (user: AuthUser, token: string) => void;
   updateWallet: (balance: number, lockedAmount: number) => void;
   updateAlias: (alias: string) => Promise<void>;
+  updateSessionStatus: (status: SessionStatus) => void;
   refreshToken: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
@@ -26,10 +28,18 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       needsAliasSetup: false,
+      sessionStatus: 'OFFLINE' as SessionStatus,
       lockedAmount: 0,
 
-      setAuth: (user, token, needsAliasSetup = false) => {
-        set({ user, token, isAuthenticated: true, isLoading: false, needsAliasSetup });
+      setAuth: (user, token) => {
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          isLoading: false,
+          needsAliasSetup: !user.alias,
+          sessionStatus: user.session_status,
+        });
       },
 
       updateWallet: (balance, lockedAmount) => {
@@ -47,6 +57,13 @@ export const useAuthStore = create<AuthState>()(
         await get().refreshToken();
       },
 
+      updateSessionStatus: (status: SessionStatus) => {
+        set((state) => ({
+          sessionStatus: status,
+          user: state.user ? { ...state.user, session_status: status } : null,
+        }));
+      },
+
       refreshToken: async () => {
         try {
           const response = await api.post('/auth/refresh');
@@ -57,15 +74,27 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        set({ user: null, token: null, isAuthenticated: false, needsAliasSetup: false, lockedAmount: 0 });
-        api.post('/auth/logout').catch(() => {});
+      logout: async () => {
+        // Call backend to clear session status
+        try {
+          await api.post('/auth/logout');
+        } catch {
+          // Continue with logout even if API fails
+        }
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          needsAliasSetup: false,
+          sessionStatus: 'OFFLINE',
+          lockedAmount: 0,
+        });
       },
 
       checkAuth: async () => {
         const { token } = get();
         if (!token) {
-          set({ isLoading: false });
+          set({ isLoading: false, sessionStatus: 'OFFLINE' });
           return;
         }
 
@@ -77,6 +106,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             needsAliasSetup: !user.alias,
+            sessionStatus: user.session_status,
           });
         } catch {
           set({
@@ -85,6 +115,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
             needsAliasSetup: false,
+            sessionStatus: 'OFFLINE',
           });
         }
       },

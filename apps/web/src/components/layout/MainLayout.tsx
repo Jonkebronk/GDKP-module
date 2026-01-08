@@ -13,6 +13,7 @@ import {
   Shield,
   Coins,
   History,
+  Users,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,6 +25,7 @@ const navItems = [
 ];
 
 const adminNavItems = [
+  { path: '/admin/lobby', label: 'Lobby', icon: Users, color: 'blue' },
   { path: '/raids', label: 'Raids', icon: Swords, color: 'purple' },
   { path: '/admin/gold', label: 'Gold', icon: Coins, color: 'gold' },
   { path: '/admin/aliases', label: 'Aliases', icon: Shield, color: 'green' },
@@ -76,6 +78,8 @@ export function MainLayout() {
                       ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
                       : item.color === 'purple'
                       ? isActive ? 'bg-purple-500/20 text-purple-400' : 'text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400'
+                      : item.color === 'blue'
+                      ? isActive ? 'bg-blue-500/20 text-blue-400' : 'text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400'
                       : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link
@@ -166,6 +170,8 @@ export function MainLayout() {
                       ? isActive ? 'bg-amber-500/20 text-amber-400' : 'text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400'
                       : item.color === 'purple'
                       ? isActive ? 'bg-purple-500/20 text-purple-400' : 'text-purple-400/70 hover:bg-purple-500/10 hover:text-purple-400'
+                      : item.color === 'blue'
+                      ? isActive ? 'bg-blue-500/20 text-blue-400' : 'text-blue-400/70 hover:bg-blue-500/10 hover:text-blue-400'
                       : isActive ? 'bg-green-500/20 text-green-400' : 'text-green-400/70 hover:bg-green-500/10 hover:text-green-400';
                     return (
                       <Link

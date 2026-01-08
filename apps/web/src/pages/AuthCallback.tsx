@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../api/client';
+import type { AuthUser } from '@gdkp/shared';
 
 export function AuthCallback() {
   const navigate = useNavigate();
@@ -26,24 +27,21 @@ export function AuthCallback() {
     // Set token first so API calls work
     useAuthStore.setState({ token });
 
-    const setup = searchParams.get('setup');
-    const needsAliasSetup = setup === 'alias';
-
     // Fetch user data
     api
       .get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        // Check if user needs alias setup (either from URL param or from user data)
-        const userNeedsAlias = needsAliasSetup || !response.data.alias;
-        setAuth(response.data, token, userNeedsAlias);
+        const user = response.data as AuthUser;
+        setAuth(user, token);
 
-        // Redirect to alias setup if needed, otherwise home
-        if (userNeedsAlias) {
-          navigate('/setup-alias');
-        } else {
+        // Redirect based on session status
+        if (user.session_status === 'APPROVED') {
           navigate('/');
+        } else {
+          // WAITING status - go to waiting room
+          navigate('/waiting-room');
         }
       })
       .catch((err) => {

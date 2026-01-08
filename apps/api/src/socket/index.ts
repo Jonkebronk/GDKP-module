@@ -44,11 +44,16 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
 
   // Connection handler
   io.on('connection', (socket) => {
-    const { user_id, username } = socket.data;
+    const { user_id, username, role } = socket.data;
     logger.info({ user_id, socket_id: socket.id }, 'Client connected');
 
-    // Join user's private room for wallet updates
+    // Join user's private room for wallet updates and session events
     socket.join(`user:${user_id}`);
+
+    // Admins join the waiting room management channel
+    if (role === 'ADMIN') {
+      socket.join('admin:waiting-room');
+    }
 
     // Send connection confirmation
     socket.emit('connected', {
