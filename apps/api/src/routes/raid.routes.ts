@@ -591,6 +591,104 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return result;
   });
 
+  // Create goodie bag from unsold items
+  fastify.post('/:id/goodie-bag', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { item_ids } = request.body as { item_ids: string[] };
+
+    // Validate at least 2 items
+    if (!item_ids || item_ids.length < 2) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'At least 2 items required for goodie bag', 400);
+    }
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can create goodie bags', 403);
+    }
+
+    // Verify raid is active
+    const raid = await prisma.raid.findUnique({ where: { id } });
+    if (!raid || raid.status !== 'ACTIVE') {
+      throw new AppError(ERROR_CODES.RAID_NOT_ACTIVE, 'Raid must be active', 400);
+    }
+
+    // Fetch all selected items and verify they're unsold
+    const items = await prisma.item.findMany({
+      where: {
+        id: { in: item_ids },
+        raid_id: id,
+      },
+    });
+
+    if (items.length !== item_ids.length) {
+      throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Some items not found', 404);
+    }
+
+    // Verify all items are unsold (COMPLETED without winner or CANCELLED)
+    const invalidItems = items.filter(
+      (item) => !((item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
+    );
+
+    if (invalidItems.length > 0) {
+      throw new AppError(
+        ERROR_CODES.INVALID_REQUEST,
+        `Items must be unsold: ${invalidItems.map((i) => i.name).join(', ')}`,
+        400
+      );
+    }
+
+    // Get item names and highest quality
+    const itemNames = items.map((i) => i.name);
+    const highestQuality = Math.max(...items.map((i) => i.quality));
+    const firstIcon = items[0].icon_url;
+
+    // Create the bundle and delete original items in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete original items
+      await tx.item.deleteMany({
+        where: { id: { in: item_ids } },
+      });
+
+      // Create bundle item
+      const bundle = await tx.item.create({
+        data: {
+          raid_id: id,
+          name: 'Goodie Bag',
+          icon_url: firstIcon,
+          quality: highestQuality,
+          status: 'PENDING',
+          starting_bid: 0,
+          current_bid: 0,
+          min_increment: 10,
+          auction_duration: 60,
+          is_bundle: true,
+          bundle_item_names: itemNames,
+        },
+      });
+
+      return bundle;
+    });
+
+    // Notify clients about the change
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { items_changed: true });
+
+    return {
+      created: true,
+      bundle: {
+        ...result,
+        starting_bid: Number(result.starting_bid),
+        current_bid: Number(result.current_bid),
+        min_increment: Number(result.min_increment),
+      },
+    };
+  });
+
   // Get raid summary (for completed raids - export/history)
   fastify.get('/:id/summary', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };

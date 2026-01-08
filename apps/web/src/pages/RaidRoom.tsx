@@ -55,6 +55,7 @@ export function RaidRoom() {
   const [manualAwardPrice, setManualAwardPrice] = useState('');
   const [manualAwardWinner, setManualAwardWinner] = useState('');
   const [autoPlayActive, setAutoPlayActive] = useState(false);
+  const [selectedUnsoldItems, setSelectedUnsoldItems] = useState<string[]>([]);
   const auctionFeedRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef(autoPlayActive);
 
@@ -215,6 +216,28 @@ export function RaidRoom() {
       });
     },
   });
+
+  // Create goodie bag mutation
+  const goodieBagMutation = useMutation({
+    mutationFn: async (itemIds: string[]) => {
+      const res = await api.post(`/raids/${id}/goodie-bag`, { item_ids: itemIds });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      setSelectedUnsoldItems([]);
+      addAuctionEvent({
+        type: 'system',
+        message: `🎁 Goodie Bag created with ${selectedUnsoldItems.length} items`,
+      });
+    },
+  });
+
+  const toggleUnsoldItemSelection = (itemId: string) => {
+    setSelectedUnsoldItems((prev) =>
+      prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
+    );
+  };
 
   // Calculate total spending per player from completed items
   // IMPORTANT: This must be before any early returns to follow React hook rules
@@ -421,6 +444,17 @@ export function RaidRoom() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-xl font-bold item-epic">{activeItem.name}</h3>
+                  {/* Bundle contents display */}
+                  {activeItem.is_bundle && activeItem.bundle_item_names && activeItem.bundle_item_names.length > 0 && (
+                    <div className="mt-1 text-sm">
+                      <p className="text-gray-500 text-xs mb-1">Contains:</p>
+                      <ul className="list-disc list-inside text-purple-400 text-xs space-y-0.5">
+                        {activeItem.bundle_item_names.map((name: string, i: number) => (
+                          <li key={i}>{name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   <p className="text-3xl font-bold text-amber-400 mt-2">
                     {formatGold(activeItem.current_bid)}
                   </p>
@@ -626,6 +660,16 @@ export function RaidRoom() {
                   <Package className="h-4 w-4" />
                   <span>Unsold ({raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length})</span>
                 </h2>
+                {isLeader && selectedUnsoldItems.length >= 2 && (
+                  <button
+                    onClick={() => goodieBagMutation.mutate(selectedUnsoldItems)}
+                    disabled={goodieBagMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 flex items-center space-x-1"
+                  >
+                    <Package className="h-4 w-4" />
+                    <span>Create Goodie Bag ({selectedUnsoldItems.length})</span>
+                  </button>
+                )}
               </div>
 
               <div className="p-3 space-y-2">
@@ -635,9 +679,18 @@ export function RaidRoom() {
                     .map((item: any) => (
                       <div
                         key={item.id}
-                        className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2`}
+                        className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2 ${selectedUnsoldItems.includes(item.id) ? 'ring-2 ring-amber-500' : ''}`}
                       >
                         <div className="flex items-center space-x-2">
+                          {/* Checkbox for goodie bag selection (leader only) */}
+                          {isLeader && (
+                            <input
+                              type="checkbox"
+                              checked={selectedUnsoldItems.includes(item.id)}
+                              onChange={() => toggleUnsoldItemSelection(item.id)}
+                              className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+                            />
+                          )}
                           <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
                             {item.icon_url ? (
                               <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
@@ -1024,6 +1077,12 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
           >
             {item.name}
           </a>
+          {/* Bundle contents tooltip */}
+          {item.is_bundle && item.bundle_item_names && item.bundle_item_names.length > 0 && (
+            <p className="text-xs text-purple-400 truncate" title={item.bundle_item_names.join(', ')}>
+              {item.bundle_item_names.length} items
+            </p>
+          )}
           {isCompleted && item.winner && (
             <p className="text-xs text-gray-400 truncate">
               {getDisplayName(item.winner)} - {formatGold(item.current_bid)}

@@ -125,6 +125,8 @@ model Item {
   completed_at     DateTime?
   version          Int        @default(0) // Optimistic locking
   created_at       DateTime   @default(now())
+  is_bundle        Boolean    @default(false)
+  bundle_item_names String[]  @default([])
 
   // Relations
   raid   Raid   @relation(fields: [raid_id], references: [id], onDelete: Cascade)

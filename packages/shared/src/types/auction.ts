@@ -6,6 +6,7 @@ export interface Item {
   name: string;
   wowhead_id: number | null;
   icon_url: string | null;
+  quality?: number;
   status: ItemStatus;
   starting_bid: number;
   current_bid: number;
@@ -15,6 +16,8 @@ export interface Item {
   started_at: Date | null;
   ends_at: Date | null;
   completed_at: Date | null;
+  is_bundle?: boolean;
+  bundle_item_names?: string[];
 }
 
 export interface ItemWithWinner extends Item {
