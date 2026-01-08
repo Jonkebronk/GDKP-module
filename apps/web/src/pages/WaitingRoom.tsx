@@ -76,9 +76,16 @@ export function WaitingRoomPage() {
     socketRef.current = socket;
 
     // Listen for approval
-    socket.on('session:approved', () => {
+    socket.on('session:approved', async () => {
       updateSessionStatus('APPROVED');
+      // Refresh auth data to get latest gold balance
+      await useAuthStore.getState().checkAuth();
       navigate('/');
+    });
+
+    // Listen for wallet updates (when gold report is approved while waiting)
+    socket.on('wallet:updated', (data) => {
+      useAuthStore.getState().updateWallet(data.balance, data.locked_amount);
     });
 
     // Listen for kick

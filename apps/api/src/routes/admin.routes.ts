@@ -285,6 +285,12 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
         'Gold report approved'
       );
 
+      // Emit wallet update to the user for real-time balance update
+      fastify.io.to(`user:${report.user_id}`).emit('wallet:updated', {
+        balance: Number(user.gold_balance),
+        locked_amount: Number(user.locked_gold || 0),
+      });
+
       return {
         success: true,
         user_id: user.id,
