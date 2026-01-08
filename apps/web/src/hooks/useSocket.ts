@@ -10,7 +10,7 @@ type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export function useSocket(raidId: string | null) {
   const socketRef = useRef<TypedSocket | null>(null);
   const lastCountdownRef = useRef<number | null>(null);
-  const { token, user } = useAuthStore();
+  const { token } = useAuthStore();
   const {
     setActiveItem,
     addBid,
@@ -103,7 +103,10 @@ export function useSocket(raidId: string | null) {
     });
 
     socket.on('bid:new', (data) => {
-      if (user) {
+      // Get current user from store to avoid stale closure
+      const currentUser = useAuthStore.getState().user;
+
+      if (currentUser) {
         addBid(
           {
             id: data.bid_id,
@@ -118,17 +121,17 @@ export function useSocket(raidId: string | null) {
               discord_avatar: null,
             },
           },
-          user.id
+          currentUser.id
         );
-
-        // Gargul-style bid announcement
-        addAuctionEvent({
-          type: 'bid_placed',
-          message: `${data.username} is the highest bidder - ${data.amount}g`,
-          playerName: data.username,
-          amount: data.amount,
-        });
       }
+
+      // Gargul-style bid announcement (always show, regardless of user state)
+      addAuctionEvent({
+        type: 'bid_placed',
+        message: `${data.username} is the highest bidder - ${data.amount}g`,
+        playerName: data.username,
+        amount: data.amount,
+      });
     });
 
     socket.on('auction:tick', (data) => {
@@ -290,7 +293,7 @@ export function useSocket(raidId: string | null) {
       socketRef.current = null;
       resetChat();
     };
-  }, [token, raidId, user]);
+  }, [token, raidId]);
 
   const placeBid = useCallback((itemId: string, amount: number) => {
     if (socketRef.current?.connected) {
