@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -478,9 +478,10 @@ export function RaidRoom() {
               )}
 
               {/* Available gold display */}
-              <div className="flex items-center justify-between text-sm mb-3 px-1">
-                <span className="text-gray-400">Available Gold:</span>
-                <span className="text-amber-400 font-medium">{formatGold((user?.gold_balance || 0) - lockedAmount)}</span>
+              <div className="flex items-center text-sm mb-3">
+                <Wallet className="h-4 w-4 text-amber-500 mr-2" />
+                <span className="text-white font-bold mr-1">Available Gold:</span>
+                <span className="text-amber-400 font-semibold">{formatGold((user?.gold_balance || 0) - lockedAmount)}</span>
               </div>
 
               {/* Quick bid buttons */}
