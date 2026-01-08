@@ -44,7 +44,7 @@ export function Lobby() {
       const res = await api.get('/admin/waiting-room');
       return res.data as { users: WaitingUser[] };
     },
-    refetchInterval: 10000, // Backup polling every 10s
+    // Socket handles real-time updates via useQuerySocket hook
   });
 
   // Connect to socket for real-time updates

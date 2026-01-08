@@ -7,12 +7,20 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30 seconds
+      staleTime: 0, // Data is immediately stale - enables instant refetch on invalidation
+      gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes (was cacheTime)
       refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
       retry: 1,
+    },
+    mutations: {
+      retry: 0, // Don't retry failed mutations
     },
   },
 });
+
+// Export for use in socket hooks
+export { queryClient };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

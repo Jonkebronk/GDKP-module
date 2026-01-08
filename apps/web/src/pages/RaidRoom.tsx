@@ -176,12 +176,38 @@ export function RaidRoom() {
     },
   });
 
-  // Delete item mutation
+  // Delete item mutation with optimistic update
   const deleteItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
       await api.delete(`/raids/${id}/items/${itemId}`);
     },
-    onSuccess: () => {
+    // Optimistic update - remove item from cache immediately
+    onMutate: async (itemId: string) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['raid', id] });
+
+      // Snapshot previous value
+      const previousRaid = queryClient.getQueryData(['raid', id]);
+
+      // Optimistically update cache
+      queryClient.setQueryData(['raid', id], (old: any) => {
+        if (!old?.items) return old;
+        return {
+          ...old,
+          items: old.items.filter((item: any) => item.id !== itemId),
+        };
+      });
+
+      return { previousRaid };
+    },
+    // Rollback on error
+    onError: (_err, _itemId, context) => {
+      if (context?.previousRaid) {
+        queryClient.setQueryData(['raid', id], context.previousRaid);
+      }
+    },
+    // Always refetch after mutation settles
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
     },
   });

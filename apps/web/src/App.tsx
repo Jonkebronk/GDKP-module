@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
+import { useQuerySocket } from './hooks/useQuerySocket';
 
 // Pages
 import { LoginPage } from './pages/Login';
@@ -92,6 +93,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  // Global socket-to-query cache sync for instant updates
+  useQuerySocket();
 
   useEffect(() => {
     checkAuth();

@@ -57,7 +57,7 @@ export function PotDistribution({
       return res.data;
     },
     enabled: !!raidId && raidStatus !== 'COMPLETED' && raidStatus !== 'CANCELLED',
-    refetchInterval: 10000, // Refresh every 10 seconds
+    // Socket handles real-time updates - no polling needed
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
