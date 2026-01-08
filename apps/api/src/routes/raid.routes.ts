@@ -717,24 +717,36 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Item is not a goodie bag', 400);
     }
 
-    if (bundle.status !== 'PENDING') {
-      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only break up pending goodie bags', 400);
+    // Allow breaking up PENDING or unsold (COMPLETED without winner) goodie bags
+    const isUnsold = bundle.status === 'COMPLETED' && !bundle.winner_id;
+    if (bundle.status !== 'PENDING' && !isUnsold) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Can only break up pending or unsold goodie bags', 400);
     }
 
     // Recreate individual items from bundle_item_names
     const itemNames = bundle.bundle_item_names || [];
 
+    // Try to look up icons from TBC item database
+    const tbcItems = await prisma.tbcRaidItem.findMany({
+      where: {
+        name: { in: itemNames },
+      },
+    });
+    const iconMap = new Map(tbcItems.map((item) => [item.name, `https://wow.zamimg.com/images/wow/icons/large/${item.icon}.jpg`]));
+    const qualityMap = new Map(tbcItems.map((item) => [item.name, item.quality]));
+
     const result = await prisma.$transaction(async (tx) => {
-      // Create individual items
+      // Create individual items as COMPLETED without winner (unsold)
       const createdItems = await Promise.all(
         itemNames.map((name) =>
           tx.item.create({
             data: {
               raid_id: id,
               name,
-              icon_url: bundle.icon_url,
-              quality: bundle.quality,
-              status: 'PENDING',
+              icon_url: iconMap.get(name) || null, // Use TBC database icon if found
+              quality: qualityMap.get(name) || bundle.quality,
+              status: 'COMPLETED', // Return to unsold state
+              winner_id: null, // No winner = unsold
               starting_bid: 0,
               current_bid: 0,
               min_increment: 10,
