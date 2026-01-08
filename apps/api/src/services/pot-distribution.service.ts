@@ -11,6 +11,8 @@ interface ParticipantShare {
   role: string;
   share_amount: number;
   share_percentage: number;
+  total_spent: number;
+  net_amount: number;
 }
 
 interface DistributionPreview {
@@ -63,6 +65,28 @@ export class PotDistributionService {
     const splitConfig = raid.split_config as SplitConfig;
     const participants = raid.participants;
 
+    // Fetch items won to calculate spending per user
+    const itemsWon = await prisma.item.findMany({
+      where: {
+        raid_id: raidId,
+        status: 'COMPLETED',
+        winner_id: { not: null },
+      },
+      select: {
+        winner_id: true,
+        current_bid: true,
+      },
+    });
+
+    // Build spending map per user
+    const spendingByUser = new Map<string, number>();
+    for (const item of itemsWon) {
+      if (item.winner_id) {
+        const current = spendingByUser.get(item.winner_id) || 0;
+        spendingByUser.set(item.winner_id, current + Number(item.current_bid));
+      }
+    }
+
     if (participants.length === 0) {
       return {
         raid_id: raid.id,
@@ -87,7 +111,8 @@ export class PotDistributionService {
       remainingPot,
       leaderCutAmount,
       raid.leader_id,
-      splitConfig
+      splitConfig,
+      spendingByUser
     );
 
     return {
@@ -114,7 +139,8 @@ export class PotDistributionService {
     remainingPot: number,
     leaderCutAmount: number,
     leaderId: string,
-    splitConfig: SplitConfig
+    splitConfig: SplitConfig,
+    spendingByUser: Map<string, number>
   ): ParticipantShare[] {
     const totalPot = remainingPot + leaderCutAmount;
 
@@ -123,6 +149,7 @@ export class PotDistributionService {
       return participants.map((p) => {
         const customShare = splitConfig.custom_shares![p.user_id] || 0;
         const shareAmount = Math.floor(totalPot * (customShare / 100));
+        const totalSpent = spendingByUser.get(p.user_id) || 0;
         return {
           user_id: p.user_id,
           discord_username: p.user.discord_username,
@@ -130,6 +157,8 @@ export class PotDistributionService {
           role: p.role,
           share_amount: shareAmount,
           share_percentage: customShare,
+          total_spent: totalSpent,
+          net_amount: shareAmount - totalSpent,
         };
       });
     }
@@ -142,6 +171,7 @@ export class PotDistributionService {
       const isLeader = p.user_id === leaderId;
       const shareAmount = isLeader ? equalShare + leaderCutAmount : equalShare;
       const sharePercentage = totalPot > 0 ? (shareAmount / totalPot) * 100 : 0;
+      const totalSpent = spendingByUser.get(p.user_id) || 0;
 
       return {
         user_id: p.user_id,
@@ -150,6 +180,8 @@ export class PotDistributionService {
         role: p.role,
         share_amount: shareAmount,
         share_percentage: Math.round(sharePercentage * 100) / 100,
+        total_spent: totalSpent,
+        net_amount: shareAmount - totalSpent,
       };
     });
   }

@@ -14,6 +14,8 @@ interface ParticipantShare {
   role: string;
   share_amount: number;
   share_percentage: number;
+  total_spent: number;
+  net_amount: number;
 }
 
 interface DistributionPreview {
@@ -195,11 +197,11 @@ export function PotDistribution({
         {/* Participant shares */}
         <div className="border-t border-gray-700 pt-3">
           <h4 className="text-xs font-medium text-gray-400 mb-2">Cut Per Player</h4>
-          <div className="max-h-32 overflow-y-auto space-y-1">
+          <div className="max-h-48 overflow-y-auto space-y-1">
             {preview.shares.map((share) => (
               <div
                 key={share.user_id}
-                className="flex items-center justify-between py-1.5 px-2 bg-gray-700/50 rounded text-sm group"
+                className="flex items-center justify-between py-2 px-2 bg-gray-700/50 rounded text-sm group"
               >
                 <div className="flex items-center space-x-2">
                   {share.role === 'LEADER' && (
@@ -209,14 +211,21 @@ export function PotDistribution({
                     user={share}
                     className="text-white text-sm font-semibold"
                   />
-                  <span className="text-gray-500 text-xs">
-                    ({share.share_percentage.toFixed(1)}%)
-                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-gold-500 font-medium tabular-nums min-w-[70px] text-right">
-                    {formatGold(share.share_amount)}
-                  </span>
+                  <div className="text-right space-y-0.5">
+                    <div className="text-gray-400 text-xs">
+                      Payout: {formatGold(share.share_amount)}
+                    </div>
+                    {share.total_spent > 0 && (
+                      <div className="text-red-400 text-xs">
+                        Spent: -{formatGold(share.total_spent)}
+                      </div>
+                    )}
+                    <div className={`font-medium text-sm ${share.net_amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      Net: {share.net_amount >= 0 ? '+' : ''}{formatGold(share.net_amount)}
+                    </div>
+                  </div>
                   {isLeader && share.role !== 'LEADER' ? (
                     <button
                       onClick={() => {

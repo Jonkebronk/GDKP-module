@@ -828,6 +828,15 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     const getDisplayName = (user: { alias: string | null; discord_username: string }) =>
       user.alias || user.discord_username;
 
+    // Build spending map per user from items won
+    const spendingByUser = new Map<string, number>();
+    for (const item of raid.items) {
+      if (item.winner_id) {
+        const current = spendingByUser.get(item.winner_id) || 0;
+        spendingByUser.set(item.winner_id, current + Number(item.current_bid));
+      }
+    }
+
     // Build participants with payouts
     const participants = raid.participants.map((p) => {
       const isLeader = p.role === 'LEADER';
@@ -835,13 +844,17 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       const leaderBonus = isLeader ? leaderCutAmount : 0;
       const totalPayout = basePayout + leaderBonus;
       const sharePercentage = potTotal > 0 ? (totalPayout / potTotal) * 100 : 0;
+      const payoutAmount = p.payout_amount ? Number(p.payout_amount) : totalPayout;
+      const totalSpent = spendingByUser.get(p.user.id) || 0;
 
       return {
         user_id: p.user.id,
         display_name: getDisplayName(p.user),
         role: p.role,
-        payout_amount: p.payout_amount ? Number(p.payout_amount) : totalPayout,
+        payout_amount: payoutAmount,
         share_percentage: sharePercentage,
+        total_spent: totalSpent,
+        net_amount: payoutAmount - totalSpent,
       };
     });
 

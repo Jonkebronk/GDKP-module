@@ -43,6 +43,8 @@ interface ParticipantPayout {
   role: string;
   payout_amount: number;
   share_percentage: number;
+  total_spent: number;
+  net_amount: number;
 }
 
 interface RaidSummaryData {
@@ -127,7 +129,19 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
                     <span className="text-white">{p.display_name}</span>
                     <span className="text-gray-500 text-xs">({p.share_percentage.toFixed(1)}%)</span>
                   </div>
-                  <span className="text-amber-400 font-medium">{formatGold(p.payout_amount)}</span>
+                  <div className="text-right space-y-0.5">
+                    <div className="text-gray-400 text-xs">
+                      Payout: {formatGold(p.payout_amount)}
+                    </div>
+                    {p.total_spent > 0 && (
+                      <div className="text-red-400 text-xs">
+                        Spent: -{formatGold(p.total_spent)}
+                      </div>
+                    )}
+                    <div className={`font-medium text-sm ${p.net_amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      Net: {p.net_amount >= 0 ? '+' : ''}{formatGold(p.net_amount)}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
