@@ -231,6 +231,7 @@ export function useSocket(raidId: string | null) {
     // Wallet updates (private channel)
     socket.on('wallet:updated', (data) => {
       console.log('Wallet updated:', data);
+      useAuthStore.getState().updateWallet(data.balance, data.locked_amount);
       window.dispatchEvent(new CustomEvent('wallet:updated', { detail: data }));
     });
 

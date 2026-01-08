@@ -41,7 +41,7 @@ const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, lockedAmount } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents, addAuctionEvent } = useAuctionStore();
   const { participants: liveParticipants } = useChatStore();
 
@@ -442,6 +442,12 @@ export function RaidRoom() {
                   {bidError}
                 </div>
               )}
+
+              {/* Available gold display */}
+              <div className="flex items-center justify-between text-sm mb-3 px-1">
+                <span className="text-gray-400">Available Gold:</span>
+                <span className="text-amber-400 font-medium">{formatGold((user?.gold_balance || 0) - lockedAmount)}</span>
+              </div>
 
               {/* Quick bid buttons */}
               <div className="flex flex-wrap gap-2 mb-4">

@@ -4,6 +4,7 @@ import type { SocketData, ClientToServerEvents, ServerToClientEvents } from '@gd
 import { BidService } from '../../services/bid.service.js';
 import { AuctionService } from '../../services/auction.service.js';
 import { logger } from '../../config/logger.js';
+import { prisma } from '../../config/database.js';
 
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents, unknown, SocketData>;
 
@@ -71,6 +72,30 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
         amount: Number(result.bid!.amount),
         timestamp: result.bid!.created_at.toISOString(),
       });
+
+      // Send wallet update to bidder
+      const lockedAmount = await bidService.getLockedAmount(user_id);
+      const userBalance = await prisma.user.findUnique({
+        where: { id: user_id },
+        select: { gold_balance: true },
+      });
+      socket.emit('wallet:updated', {
+        balance: Number(userBalance?.gold_balance || 0),
+        locked_amount: lockedAmount,
+      });
+
+      // If someone was outbid, send them a wallet update too (their locked amount decreases)
+      if (result.previous_winner_id && result.previous_winner_id !== user_id) {
+        const prevLockedAmount = await bidService.getLockedAmount(result.previous_winner_id);
+        const prevUserBalance = await prisma.user.findUnique({
+          where: { id: result.previous_winner_id },
+          select: { gold_balance: true },
+        });
+        io.to(`user:${result.previous_winner_id}`).emit('wallet:updated', {
+          balance: Number(prevUserBalance?.gold_balance || 0),
+          locked_amount: prevLockedAmount,
+        });
+      }
 
       // Broadcast new bid to all raid participants
       io.to(`raid:${raid_id}`).emit('bid:new', {

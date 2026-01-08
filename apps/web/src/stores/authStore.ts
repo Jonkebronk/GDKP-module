@@ -9,7 +9,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsAliasSetup: boolean;
+  lockedAmount: number;
   setAuth: (user: AuthUser, token: string, needsAliasSetup?: boolean) => void;
+  updateWallet: (balance: number, lockedAmount: number) => void;
   updateAlias: (alias: string) => Promise<void>;
   refreshToken: () => Promise<void>;
   logout: () => void;
@@ -24,9 +26,17 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       needsAliasSetup: false,
+      lockedAmount: 0,
 
       setAuth: (user, token, needsAliasSetup = false) => {
         set({ user, token, isAuthenticated: true, isLoading: false, needsAliasSetup });
+      },
+
+      updateWallet: (balance, lockedAmount) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, gold_balance: balance } : null,
+          lockedAmount,
+        }));
       },
 
       updateAlias: async (alias: string) => {
@@ -48,7 +58,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false, needsAliasSetup: false });
+        set({ user: null, token: null, isAuthenticated: false, needsAliasSetup: false, lockedAmount: 0 });
         api.post('/auth/logout').catch(() => {});
       },
 

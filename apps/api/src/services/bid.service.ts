@@ -16,6 +16,7 @@ interface PlaceBidResult {
   error?: string;
   min_required?: number;
   new_end_time?: Date;
+  previous_winner_id?: string | null;
 }
 
 export class BidService {
@@ -163,6 +164,7 @@ export class BidService {
             success: true,
             bid,
             new_end_time: newEndTime,
+            previous_winner_id: item.winner_id,
           };
         },
         {
