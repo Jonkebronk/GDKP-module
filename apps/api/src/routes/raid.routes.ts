@@ -150,6 +150,9 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Notify all users about new raid
+    fastify.io.emit('raids:updated');
+
     return {
       ...raid,
       pot_total: Number(raid.pot_total),
@@ -369,6 +372,9 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
         auction_duration: data.auction_duration,
       },
     });
+
+    // Notify clients in the raid about the new item
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
 
     return {
       ...item,

@@ -89,6 +89,9 @@ export interface ServerToClientEvents {
   'waiting-room:updated': (data: Record<string, never>) => void;
   'gold-report:updated': () => void;
 
+  // Dashboard updates
+  'raids:updated': () => void;
+
   // Participant events
   'participant:left': (data: { user_id: string; username: string }) => void;
 }

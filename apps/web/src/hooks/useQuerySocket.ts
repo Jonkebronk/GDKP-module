@@ -102,6 +102,14 @@ export function useQuerySocket() {
       });
     });
 
+    // Raids list updates (new raid created, etc.)
+    socket.on('raids:updated', () => {
+      queryClient.invalidateQueries({
+        queryKey: ['raids'],
+        refetchType: 'active',
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
