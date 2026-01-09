@@ -758,7 +758,9 @@ export function RaidRoom() {
               {/* Item Display */}
               <div className="flex items-start space-x-4 mb-6">
                 <div className={`p-1 rounded border-2 ${qualityBorderClass[getItemQuality(activeItem)]}`}>
-                  {activeItem.icon_url ? (
+                  {activeItem.is_bundle ? (
+                    <img src="/goodie-bag.png" alt="Goodie Bag" className="w-16 h-16 rounded" />
+                  ) : activeItem.icon_url ? (
                     <img src={activeItem.icon_url} alt={activeItem.name} className="w-16 h-16 rounded" />
                   ) : (
                     <div className="w-16 h-16 rounded bg-gray-700 flex items-center justify-center">
