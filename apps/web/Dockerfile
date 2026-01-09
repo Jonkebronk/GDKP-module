@@ -20,6 +20,9 @@ RUN pnpm install
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
+# Cache bust - forces rebuild when code changes
+ARG CACHEBUST=1
+
 # Build packages
 RUN pnpm --filter @gdkp/shared build
 
