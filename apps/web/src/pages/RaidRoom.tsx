@@ -822,7 +822,7 @@ export function RaidRoom() {
             </div>
             <div
               ref={auctionFeedRef}
-              className="h-64 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
+              className="h-96 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
             >
               {auctionEvents.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">Auction events will appear here</p>
