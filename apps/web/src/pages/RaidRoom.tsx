@@ -137,7 +137,7 @@ function RaidRoomContent() {
 
   // Debug: log raid data on mount to help identify render issues
   console.log('[RaidRoom] Component rendering, id:', id);
-  const { user, lockedAmount } = useAuthStore();
+  const { user, lockedAmount, logout } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents, addAuctionEvent } = useAuctionStore();
   const { participants: liveParticipants } = useChatStore();
 
@@ -549,7 +549,6 @@ function RaidRoomContent() {
   const isPending = raid.status === 'PENDING';
 
   const backUrl = user?.role === 'ADMIN' ? '/' : '/raids-select';
-  const { logout } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-gray-900">
