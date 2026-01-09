@@ -1,12 +1,49 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { api } from '../api/client';
 import { useSocket } from '../hooks/useSocket';
 import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
+
+// Error Boundary to catch React render errors
+class RaidRoomErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[RaidRoom Error Boundary] Caught error:', error);
+    console.error('[RaidRoom Error Boundary] Component stack:', errorInfo.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <h1 className="text-2xl text-red-500 mb-4">Something went wrong</h1>
+          <pre className="text-left bg-gray-800 p-4 rounded overflow-auto text-sm text-red-400">
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-amber-500 text-black rounded"
+          >
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors, GripVertical, StopCircle, SkipForward, LogOut, ArrowLeft } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
@@ -85,7 +122,16 @@ const formatInstances = (instances: any): string => {
   }
 };
 
+// Wrapper with error boundary
 export function RaidRoom() {
+  return (
+    <RaidRoomErrorBoundary>
+      <RaidRoomContent />
+    </RaidRoomErrorBoundary>
+  );
+}
+
+function RaidRoomContent() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 
@@ -164,6 +210,12 @@ export function RaidRoom() {
         instances: res.data?.instances,
         instancesType: typeof res.data?.instances,
         instancesIsArray: Array.isArray(res.data?.instances),
+        // Log first item details if it exists
+        firstItem: res.data?.items?.[0] ? {
+          name: res.data.items[0].name,
+          bundle_item_names: res.data.items[0].bundle_item_names,
+          winner: res.data.items[0].winner,
+        } : null,
       });
       return res.data;
     },
