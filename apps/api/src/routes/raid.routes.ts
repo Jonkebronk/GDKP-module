@@ -417,6 +417,9 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       where: { id: itemId },
     });
 
+    // Notify clients about the item deletion
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
+
     return { deleted: true };
   });
 

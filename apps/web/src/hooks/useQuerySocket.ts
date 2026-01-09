@@ -110,6 +110,14 @@ export function useQuerySocket() {
       });
     });
 
+    // Participant removed - affects distribution preview
+    socket.on('participant:left', () => {
+      queryClient.invalidateQueries({
+        queryKey: ['raid'],
+        refetchType: 'active',
+      });
+    });
+
     return () => {
       socket.disconnect();
     };

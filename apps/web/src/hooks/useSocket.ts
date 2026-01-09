@@ -287,6 +287,11 @@ export function useSocket(raidId: string | null) {
       removeParticipant(data.user_id);
     });
 
+    // Handle participant kicked by leader
+    socket.on('participant:left', (data) => {
+      removeParticipant(data.user_id);
+    });
+
     return () => {
       socket.emit('leave:raid', { raid_id: raidId });
       socket.disconnect();
