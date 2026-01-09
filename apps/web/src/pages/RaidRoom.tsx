@@ -626,13 +626,35 @@ export function RaidRoom() {
                   <Package className="h-4 w-4" />
                   <span>Unsold ({raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length})</span>
                 </h2>
+                {isLeader && selectedUnsoldItems.length >= 2 && (
+                  <button
+                    onClick={() => goodieBagMutation.mutate(selectedUnsoldItems)}
+                    disabled={goodieBagMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 flex items-center space-x-1"
+                  >
+                    <Package className="h-3 w-3" />
+                    <span>Goodie Bag ({selectedUnsoldItems.length})</span>
+                  </button>
+                )}
               </div>
               <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
                 {raid.items
                   .filter((item: any) => (item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
                   .map((item: any) => (
-                    <div key={item.id} className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2`}>
+                    <div
+                      key={item.id}
+                      className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2 ${selectedUnsoldItems.includes(item.id) ? 'ring-2 ring-amber-500' : ''}`}
+                    >
                       <div className="flex items-center space-x-2">
+                        {/* Checkbox for goodie bag selection (leader only) */}
+                        {isLeader && (
+                          <input
+                            type="checkbox"
+                            checked={selectedUnsoldItems.includes(item.id)}
+                            onChange={() => toggleUnsoldItemSelection(item.id)}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
+                          />
+                        )}
                         <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
                           {item.icon_url ? (
                             <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded" />
@@ -643,18 +665,50 @@ export function RaidRoom() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-xs truncate" style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}>
-                            {item.name}
-                          </p>
-                        </div>
-                        {isLeader && (
-                          <button
-                            onClick={() => reauctionMutation.mutate(item.id)}
-                            className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 p-1 rounded transition-colors"
-                            title="Re-auction"
+                          <a
+                            href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+                            className="font-medium text-xs hover:underline truncate block"
+                            style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
                           >
-                            <RotateCcw className="h-3 w-3" />
-                          </button>
+                            {item.name}
+                          </a>
+                        </div>
+                        {/* Re-auction, Break Up, and Manual Award buttons */}
+                        {isLeader && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => reauctionMutation.mutate(item.id)}
+                              disabled={reauctionMutation.isPending}
+                              className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 p-1 rounded transition-colors disabled:opacity-50"
+                              title="Re-auction item"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </button>
+                            {item.is_bundle && (
+                              <button
+                                onClick={() => breakUpGoodieBagMutation.mutate(item.id)}
+                                disabled={breakUpGoodieBagMutation.isPending}
+                                className="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-1 rounded transition-colors disabled:opacity-50"
+                                title="Break up Goodie Bag"
+                              >
+                                <Scissors className="h-3 w-3" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setManualAwardItem(item);
+                                setManualAwardPrice('');
+                                setManualAwardWinner('');
+                              }}
+                              className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 p-1 rounded transition-colors"
+                              title="Manually award item"
+                            >
+                              <Gavel className="h-3 w-3" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
