@@ -669,7 +669,7 @@ export function RaidRoom() {
                             href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+                            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
                             className="font-medium text-xs hover:underline truncate block"
                             style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
                           >
@@ -1081,7 +1081,7 @@ export function RaidRoom() {
                               href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
                               target="_blank"
                               rel="noopener noreferrer"
-                              data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+                              data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
                               className="font-medium text-sm hover:underline truncate block"
                               style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
                             >
@@ -1483,7 +1483,7 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
             href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc` : undefined}
+            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
             className="font-medium text-sm hover:underline truncate block"
             style={{ color: qualityColor }}
           >
@@ -1612,7 +1612,7 @@ function SortableItemCard(props: ItemCardProps) {
             href={props.item.wowhead_id ? `https://www.wowhead.com/tbc/item=${props.item.wowhead_id}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            data-wowhead={props.item.wowhead_id ? `item=${props.item.wowhead_id}&domain=tbc` : undefined}
+            data-wowhead={props.item.wowhead_id ? `item=${props.item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
             className="font-medium text-sm hover:underline truncate block"
             style={{ color: qualityColor }}
           >
