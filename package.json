@@ -1,6 +1,7 @@
 {
   "name": "gdkp-platform",
   "version": "1.0.1",
+  "description": "Real-time GDKP auction platform for World of Warcraft TBC private server communities",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
