@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
+// Build version - change this to verify deployment
+const BUILD_VERSION = '2026-01-09-v4';
+console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
+
 // Pages
 import { LoginPage } from './pages/Login';
 import { AuthCallback } from './pages/AuthCallback';
