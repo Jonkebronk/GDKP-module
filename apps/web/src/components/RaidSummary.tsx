@@ -25,10 +25,21 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
+// Helper to get instances array from data (handles both old 'instance' and new 'instances' field)
+const getInstances = (data: any): string[] => {
+  if (data?.instances && Array.isArray(data.instances) && data.instances.length > 0) {
+    return data.instances;
+  }
+  if (data?.instance) {
+    return [data.instance];
+  }
+  return [];
+};
+
 const getRaidBackground = (instances: string | string[] | undefined | null) => {
   if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return raidBackgrounds[instanceList[0]] || '';
+  return instanceList.length > 0 ? raidBackgrounds[instanceList[0]] || '' : '';
 };
 
 const formatInstances = (instances: string | string[] | undefined | null) => {
@@ -78,7 +89,7 @@ interface RaidSummaryProps {
 }
 
 export function RaidSummary({ data, onClose }: RaidSummaryProps) {
-  const raidBg = getRaidBackground(data.instances);
+  const raidBg = getRaidBackground(getInstances(data));
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 p-4 overflow-y-auto">
@@ -97,7 +108,7 @@ export function RaidSummary({ data, onClose }: RaidSummaryProps) {
           {/* Content */}
           <div className="relative p-4">
             <h2 className="text-xl font-bold text-amber-400 drop-shadow-lg">{data.raid_name}</h2>
-            <p className="text-gray-300 text-sm drop-shadow-md">{formatInstances(data.instances)} • {new Date(data.completed_at).toLocaleDateString('sv-SE')}</p>
+            <p className="text-gray-300 text-sm drop-shadow-md">{formatInstances(getInstances(data))} • {new Date(data.completed_at).toLocaleDateString('sv-SE')}</p>
           </div>
         </div>
 

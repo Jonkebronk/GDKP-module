@@ -271,7 +271,7 @@ export function Dashboard() {
                       <div className="text-left">
                         <p className="text-white font-medium">{raid.raid_name}</p>
                         <p className="text-gray-500 text-xs">
-                          {formatInstances(raid.instances)} • {raid.items.length} item{raid.items.length !== 1 ? 's' : ''}
+                          {formatInstances(getInstances(raid))} • {raid.items.length} item{raid.items.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
@@ -361,7 +361,7 @@ export function Dashboard() {
                       <div className="text-left">
                         <p className="text-white font-medium">{raid.raid_name}</p>
                         <p className="text-gray-500 text-xs">
-                          {formatInstances(raid.instances)} • {raid.role}
+                          {formatInstances(getInstances(raid))} • {raid.role}
                         </p>
                       </div>
                     </div>
