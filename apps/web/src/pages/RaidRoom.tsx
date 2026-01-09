@@ -135,8 +135,6 @@ function RaidRoomContent() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 
-  // Debug: log raid data on mount to help identify render issues
-  console.log('[RaidRoom] Component rendering, id:', id);
   const { user, lockedAmount, logout } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents, addAuctionEvent } = useAuctionStore();
   const { participants: liveParticipants } = useChatStore();
@@ -204,19 +202,6 @@ function RaidRoomContent() {
     queryKey: ['raid', id],
     queryFn: async () => {
       const res = await api.get(`/raids/${id}`);
-      console.log('[RaidRoom] Raid data received:', {
-        id: res.data?.id,
-        name: res.data?.name,
-        instances: res.data?.instances,
-        instancesType: typeof res.data?.instances,
-        instancesIsArray: Array.isArray(res.data?.instances),
-        // Log first item details if it exists
-        firstItem: res.data?.items?.[0] ? {
-          name: res.data.items[0].name,
-          bundle_item_names: res.data.items[0].bundle_item_names,
-          winner: res.data.items[0].winner,
-        } : null,
-      });
       return res.data;
     },
     enabled: !!id,
