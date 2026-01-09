@@ -258,8 +258,11 @@ export function RaidRoom() {
       queryClient.invalidateQueries({ queryKey: ['raid', id, 'distribution-preview'] });
       // Add event to auction feed
       addAuctionEvent({
-        type: 'system',
-        message: `🔄 Re-auction: ${data.item.name} (was ${formatGold(data.previous_amount)} to ${data.previous_winner})`,
+        type: 'reauction',
+        message: `Re-auctioned`,
+        itemName: data.item.name,
+        playerName: data.previous_winner,
+        amount: data.previous_amount,
       });
     },
   });
@@ -1422,6 +1425,17 @@ function GargulMessage({ event }: { event: AuctionEvent }) {
             <span>Auction skipped for </span>
             <span className="gargul-item">[{event.itemName}]</span>
             <span className="text-red-400"> - item marked as unsold</span>
+          </>
+        );
+      case 'reauction':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span className="gargul-item">[{event.itemName}]</span>
+            <span> re-auctioned! Previous: </span>
+            <span className="gargul-player">{event.playerName}</span>
+            <span> for </span>
+            <span className="gargul-gold">{event.amount}g</span>
           </>
         );
       default:

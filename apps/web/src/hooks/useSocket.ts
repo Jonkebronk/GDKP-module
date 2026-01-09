@@ -202,8 +202,11 @@ export function useSocket(raidId: string | null) {
     // Re-auction event
     socket.on('auction:restarted', (data) => {
       addAuctionEvent({
-        type: 'system',
-        message: `🔄 [${data.item_name}] re-auctioned! Previous: ${data.previous_winner} for ${data.previous_amount}g`,
+        type: 'reauction',
+        message: `Re-auctioned! Previous: ${data.previous_winner} for ${data.previous_amount}g`,
+        itemName: data.item_name,
+        playerName: data.previous_winner,
+        amount: data.previous_amount,
       });
       addAuctionEvent({
         type: 'pot_updated',
