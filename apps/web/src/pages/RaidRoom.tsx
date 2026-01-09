@@ -659,7 +659,9 @@ export function RaidRoom() {
                           />
                         )}
                         <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
-                          {item.icon_url ? (
+                          {item.is_bundle ? (
+                            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-8 h-8 rounded" />
+                          ) : item.icon_url ? (
                             <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded" />
                           ) : (
                             <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
@@ -669,10 +671,10 @@ export function RaidRoom() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <a
-                            href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+                            href={item.wowhead_id && !item.is_bundle ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
+                            data-wowhead={item.wowhead_id && !item.is_bundle ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
                             className="font-medium text-xs hover:underline truncate block"
                             style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
                           >
@@ -1071,7 +1073,9 @@ export function RaidRoom() {
                             />
                           )}
                           <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
-                            {item.icon_url ? (
+                            {item.is_bundle ? (
+                              <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+                            ) : item.icon_url ? (
                               <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
                             ) : (
                               <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
@@ -1081,10 +1085,10 @@ export function RaidRoom() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <a
-                              href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+                              href={item.wowhead_id && !item.is_bundle ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
                               target="_blank"
                               rel="noopener noreferrer"
-                              data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
+                              data-wowhead={item.wowhead_id && !item.is_bundle ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
                               className="font-medium text-sm hover:underline truncate block"
                               style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}
                             >
@@ -1482,7 +1486,9 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
       <div className="flex items-center space-x-2">
         {/* Icon */}
         <div className={`p-0.5 rounded border ${borderClass}`}>
-          {item.icon_url ? (
+          {item.is_bundle ? (
+            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+          ) : item.icon_url ? (
             <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
           ) : (
             <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
@@ -1494,10 +1500,10 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
         {/* Item info */}
         <div className="flex-1 min-w-0">
           <a
-            href={item.wowhead_id ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
+            href={item.wowhead_id && !item.is_bundle ? `https://www.wowhead.com/tbc/item=${item.wowhead_id}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            data-wowhead={item.wowhead_id ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
+            data-wowhead={item.wowhead_id && !item.is_bundle ? `item=${item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
             className="font-medium text-sm hover:underline truncate block"
             style={{ color: qualityColor }}
           >
@@ -1611,7 +1617,9 @@ function SortableItemCard(props: ItemCardProps) {
 
         {/* Icon */}
         <div className={`p-0.5 rounded border ${borderClass}`}>
-          {props.item.icon_url ? (
+          {props.item.is_bundle ? (
+            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+          ) : props.item.icon_url ? (
             <img src={props.item.icon_url} alt={props.item.name} className="w-10 h-10 rounded" />
           ) : (
             <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
@@ -1623,10 +1631,10 @@ function SortableItemCard(props: ItemCardProps) {
         {/* Item info */}
         <div className="flex-1 min-w-0">
           <a
-            href={props.item.wowhead_id ? `https://www.wowhead.com/tbc/item=${props.item.wowhead_id}` : '#'}
+            href={props.item.wowhead_id && !props.item.is_bundle ? `https://www.wowhead.com/tbc/item=${props.item.wowhead_id}` : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            data-wowhead={props.item.wowhead_id ? `item=${props.item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
+            data-wowhead={props.item.wowhead_id && !props.item.is_bundle ? `item=${props.item.wowhead_id}&domain=tbc&iconSize=0` : undefined}
             className="font-medium text-sm hover:underline truncate block"
             style={{ color: qualityColor }}
           >
