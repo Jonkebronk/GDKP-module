@@ -78,9 +78,11 @@ export function WaitingRoomPage() {
     // Listen for approval
     socket.on('session:approved', async () => {
       updateSessionStatus('APPROVED');
-      // Refresh auth data to get latest gold balance
+      // Refresh auth data to get latest gold balance and role
       await useAuthStore.getState().checkAuth();
-      navigate('/');
+      // Navigate based on role - admins to dashboard, users to raid selection
+      const user = useAuthStore.getState().user;
+      navigate(user?.role === 'ADMIN' ? '/' : '/raids-select');
     });
 
     // Listen for wallet updates (when gold report is approved while waiting)

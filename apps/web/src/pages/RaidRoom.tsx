@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api/client';
@@ -7,7 +7,7 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors, GripVertical, StopCircle, SkipForward } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors, GripVertical, StopCircle, SkipForward, LogOut, ArrowLeft } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
@@ -456,8 +456,56 @@ export function RaidRoom() {
 
   const isPending = raid.status === 'PENDING';
 
+  const backUrl = user?.role === 'ADMIN' ? '/' : '/raids-select';
+  const { logout } = useAuthStore();
+
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-900">
+      {/* Minimal Header Bar */}
+      <header className="sticky top-0 z-50 bg-black border-b border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14">
+            {/* Left: Back button + Logo */}
+            <div className="flex items-center space-x-3">
+              <Link
+                to={backUrl}
+                className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-sm hidden sm:inline">Back</span>
+              </Link>
+              <div className="w-px h-6 bg-gray-700" />
+              <Link to={backUrl} className="flex items-center">
+                <img src="/gnome-logo.png" alt="Logo" className="h-7 w-7 rounded-full object-cover" />
+              </Link>
+            </div>
+
+            {/* Right: User + Logout */}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <img
+                  src="/anonymous-avatar.png"
+                  alt={user ? getDisplayName(user) : ''}
+                  className="h-7 w-7 rounded-full object-cover"
+                />
+                <span className="hidden sm:inline text-sm text-white font-medium">
+                  {user ? getDisplayName(user) : ''}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="flex items-center space-x-1 px-2 py-1 text-gray-400 hover:text-red-400 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Join Raid Banner - Show when user is not a participant */}
       {!isParticipant && (raid.status === 'PENDING' || raid.status === 'ACTIVE') && (
         <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 flex items-center justify-between">
@@ -1342,6 +1390,7 @@ export function RaidRoom() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }
