@@ -108,6 +108,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      // Notify admins if user entered waiting room
+      if (user.session_status === 'WAITING') {
+        fastify.io.to('admin:waiting-room').emit('waiting-room:updated', {});
+      }
+
       // Generate JWT
       const token = fastify.jwt.sign({
         id: user.id,

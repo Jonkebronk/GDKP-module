@@ -49,16 +49,25 @@ export function useQuerySocket() {
     });
 
     // Raid updates - invalidate immediately (staleTime: 0 means instant refetch)
-    socket.on('raid:updated' as any, (data: { raid_id: string; items_changed?: boolean }) => {
-      // Invalidate specific raid - with staleTime: 0, this triggers immediate refetch
-      queryClient.invalidateQueries({
-        queryKey: ['raid', data.raid_id],
-        refetchType: 'active', // Only refetch if query is currently being used
-      });
-
-      if (data.items_changed) {
+    // Note: Some backend emits include raid_id, others don't (they emit to a room)
+    socket.on('raid:updated', (data) => {
+      if (data.raid_id) {
+        // If we have raid_id, invalidate that specific raid
         queryClient.invalidateQueries({
-          queryKey: ['raid', data.raid_id, 'distribution-preview'],
+          queryKey: ['raid', data.raid_id],
+          refetchType: 'active',
+        });
+
+        if (data.items_changed) {
+          queryClient.invalidateQueries({
+            queryKey: ['raid', data.raid_id, 'distribution-preview'],
+            refetchType: 'active',
+          });
+        }
+      } else {
+        // If no raid_id, invalidate all raid queries (user is in the room)
+        queryClient.invalidateQueries({
+          queryKey: ['raid'],
           refetchType: 'active',
         });
       }
@@ -82,7 +91,7 @@ export function useQuerySocket() {
     });
 
     // Gold report updates
-    socket.on('gold-report:updated' as any, () => {
+    socket.on('gold-report:updated', () => {
       queryClient.invalidateQueries({
         queryKey: ['user', 'gold-report'],
         refetchType: 'active',

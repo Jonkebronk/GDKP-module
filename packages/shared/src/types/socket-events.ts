@@ -33,7 +33,7 @@ export interface ServerToClientEvents {
 
   // Raid
   'raid:state': (data: RaidState) => void;
-  'raid:updated': (data: Partial<Raid>) => void;
+  'raid:updated': (data: Partial<Raid> & { items_changed?: boolean; raid_id?: string }) => void;
   'user:joined': (data: { user_id: string; username: string; avatar: string | null; alias?: string | null }) => void;
   'user:left': (data: { user_id: string; username: string }) => void;
 
@@ -87,6 +87,7 @@ export interface ServerToClientEvents {
   'session:approved': (data: { message: string }) => void;
   'session:kicked': (data: { message: string }) => void;
   'waiting-room:updated': (data: Record<string, never>) => void;
+  'gold-report:updated': () => void;
 
   // Participant events
   'participant:left': (data: { user_id: string; username: string }) => void;

@@ -273,6 +273,9 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
+    // Notify admins of new gold report
+    fastify.io.to('admin:waiting-room').emit('gold-report:updated');
+
     return {
       report: {
         ...report,

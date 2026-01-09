@@ -291,6 +291,9 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
         locked_amount: Number(user.locked_gold || 0),
       });
 
+      // Notify user their gold report was processed
+      fastify.io.to(`user:${report.user_id}`).emit('gold-report:updated');
+
       return {
         success: true,
         user_id: user.id,
@@ -325,6 +328,9 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     logger.info({ adminId: request.user.id, reportId: id }, 'Gold report rejected');
+
+    // Notify user their gold report was rejected
+    fastify.io.to(`user:${report.user_id}`).emit('gold-report:updated');
 
     return { success: true };
   });
