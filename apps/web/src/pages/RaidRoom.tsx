@@ -533,9 +533,139 @@ export function RaidRoom() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Left Sidebar - Items (hidden on mobile/tablet, shown on xl) */}
+        <div className="hidden xl:block space-y-4 order-1">
+          {/* Up For Auction */}
+          <div className="wow-tooltip wow-border-epic">
+            <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+              <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
+                <Package className="h-4 w-4" />
+                <span>Up For Auction ({raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length})</span>
+              </h2>
+              {isLeader && (
+                <div className="flex items-center space-x-1">
+                  {raid.items.filter((i: any) => i.status === 'PENDING').length > 0 && (
+                    <button
+                      onClick={handleToggleAutoPlay}
+                      className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all ${
+                        autoPlayActive
+                          ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                          : 'bg-green-500 hover:bg-green-600 text-white'
+                      }`}
+                      title={autoPlayActive ? 'Stop Auto-Play' : 'Start Auto-Play'}
+                    >
+                      {autoPlayActive ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setItemPickerOpen(true)}
+                    className="flex items-center justify-center w-8 h-8 bg-amber-500 hover:bg-amber-600 text-black rounded transition-colors"
+                    title="Add Items"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
+              {raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">No items pending</p>
+              ) : (
+                <>
+                  {raid.items.filter((i: any) => i.status === 'ACTIVE').map((item: any) => (
+                    <ItemCard key={item.id} item={item} isLeader={isLeader} onStart={() => {}} onDelete={() => {}} onManualAward={() => {}} isDeleting={false} />
+                  ))}
+                  {isLeader ? (
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={raid.items.filter((i: any) => i.status === 'PENDING').map((i: any) => i.id)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {raid.items.filter((item: any) => item.status === 'PENDING').map((item: any) => (
+                            <SortableItemCard
+                              key={item.id}
+                              item={item}
+                              isLeader={isLeader}
+                              onStart={() => handleStartAuction(item.id)}
+                              onDelete={() => deleteItemMutation.mutate(item.id)}
+                              onManualAward={() => setManualAwardItem(item)}
+                              onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
+                              isDeleting={deleteItemMutation.isPending}
+                              isBreakingUp={breakUpGoodieBagMutation.isPending}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    <div className="space-y-2">
+                      {raid.items.filter((item: any) => item.status === 'PENDING').map((item: any) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          isLeader={isLeader}
+                          onStart={() => handleStartAuction(item.id)}
+                          onDelete={() => deleteItemMutation.mutate(item.id)}
+                          onManualAward={() => setManualAwardItem(item)}
+                          onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
+                          isDeleting={deleteItemMutation.isPending}
+                          isBreakingUp={breakUpGoodieBagMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Unsold Items */}
+          {raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length > 0 && (
+            <div className="wow-tooltip wow-border-common">
+              <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center space-x-2">
+                  <Package className="h-4 w-4" />
+                  <span>Unsold ({raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length})</span>
+                </h2>
+              </div>
+              <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
+                {raid.items
+                  .filter((item: any) => (item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
+                  .map((item: any) => (
+                    <div key={item.id} className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2`}>
+                      <div className="flex items-center space-x-2">
+                        <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
+                          {item.icon_url ? (
+                            <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded" />
+                          ) : (
+                            <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
+                              <span className="text-gray-500 text-xs">?</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-xs truncate" style={{ color: ITEM_QUALITY_COLORS[(item.quality || 4) as keyof typeof ITEM_QUALITY_COLORS] }}>
+                            {item.name}
+                          </p>
+                        </div>
+                        {isLeader && (
+                          <button
+                            onClick={() => reauctionMutation.mutate(item.id)}
+                            className="bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 p-1 rounded transition-colors"
+                            title="Re-auction"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Main auction area */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 order-2">
           {/* Auction Settings - Only for leaders (at top) */}
           {isLeader && (
             <AuctionSettings
@@ -704,8 +834,8 @@ export function RaidRoom() {
             </div>
           </div>
 
-          {/* Items Up For Auction */}
-          <div className="wow-tooltip wow-border-epic">
+          {/* Items Up For Auction (hidden on xl where left sidebar shows) */}
+          <div className="wow-tooltip wow-border-epic xl:hidden">
             <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
               <h2 className="text-sm font-semibold text-amber-400 uppercase tracking-wide flex items-center space-x-2">
                 <Package className="h-4 w-4" />
@@ -845,9 +975,9 @@ export function RaidRoom() {
             </div>
           )}
 
-          {/* Unsold Items (completed with no winner or cancelled) */}
+          {/* Unsold Items (completed with no winner or cancelled) - hidden on xl where left sidebar shows */}
           {raid.items.filter((i: any) => (i.status === 'COMPLETED' && !i.winner_id) || i.status === 'CANCELLED').length > 0 && (
-            <div className="wow-tooltip wow-border-common">
+            <div className="wow-tooltip wow-border-common xl:hidden">
               <div className="wow-tooltip-header flex items-center justify-between p-3 border-b border-gray-700">
                 <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide flex items-center space-x-2">
                   <Package className="h-4 w-4" />
@@ -947,8 +1077,8 @@ export function RaidRoom() {
           )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
+        {/* Right Sidebar */}
+        <div className="space-y-4 order-3">
           {/* Pot Distribution */}
           <PotDistribution
             raidId={id!}
