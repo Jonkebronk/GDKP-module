@@ -21,10 +21,21 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
+// Helper to get instances array from raid data (handles both old 'instance' and new 'instances' field)
+const getInstances = (raid: any): string[] => {
+  if (raid?.instances && Array.isArray(raid.instances) && raid.instances.length > 0) {
+    return raid.instances;
+  }
+  if (raid?.instance) {
+    return [raid.instance];
+  }
+  return [];
+};
+
 const getRaidBackground = (instances: string | string[] | undefined | null) => {
   if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return raidBackgrounds[instanceList[0]] || '';
+  return instanceList.length > 0 ? raidBackgrounds[instanceList[0]] || '' : '';
 };
 
 const formatInstances = (instances: string | string[] | undefined | null) => {
@@ -128,7 +139,7 @@ export function Raids() {
               key={raid.id}
               className="rounded-lg overflow-hidden relative group"
               style={{
-                backgroundImage: getRaidBackground(raid.instances) ? `url(${getRaidBackground(raid.instances)})` : undefined,
+                backgroundImage: getRaidBackground(getInstances(raid)) ? `url(${getRaidBackground(getInstances(raid))})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -159,7 +170,7 @@ export function Raids() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white drop-shadow-lg">{raid.name}</h3>
-                      <p className="text-gray-300 text-sm drop-shadow-md">{formatInstances(raid.instances)}</p>
+                      <p className="text-gray-300 text-sm drop-shadow-md">{formatInstances(getInstances(raid))}</p>
                     </div>
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${

@@ -15,6 +15,17 @@ interface RaidHistoryItem {
   created_at: string;
 }
 
+// Helper to get instances array from raid data (handles both old 'instance' and new 'instances' field)
+const getInstances = (raid: any): string[] => {
+  if (raid?.instances && Array.isArray(raid.instances) && raid.instances.length > 0) {
+    return raid.instances;
+  }
+  if (raid?.instance) {
+    return [raid.instance];
+  }
+  return [];
+};
+
 const formatInstances = (instances: string | string[] | undefined | null) => {
   if (!instances) return 'Unknown';
   const instanceList = Array.isArray(instances) ? instances : [instances];
@@ -50,7 +61,7 @@ export function RaidHistory() {
                 <div>
                   <p className="text-white font-medium">{raid.name}</p>
                   <p className="text-gray-400 text-sm flex items-center space-x-3">
-                    <span>{formatInstances(raid.instances)}</span>
+                    <span>{formatInstances(getInstances(raid))}</span>
                     <span className="flex items-center">
                       <Users className="h-3 w-3 mr-1" />
                       {raid.participant_count}

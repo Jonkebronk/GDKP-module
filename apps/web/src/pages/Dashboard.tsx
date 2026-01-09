@@ -41,10 +41,21 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
+// Helper to get instances array from raid data (handles both old 'instance' and new 'instances' field)
+const getInstances = (raid: any): string[] => {
+  if (raid?.instances && Array.isArray(raid.instances) && raid.instances.length > 0) {
+    return raid.instances;
+  }
+  if (raid?.instance) {
+    return [raid.instance];
+  }
+  return [];
+};
+
 const getRaidBackground = (instances: string | string[] | undefined | null) => {
   if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return raidBackgrounds[instanceList[0]] || '';
+  return instanceList.length > 0 ? raidBackgrounds[instanceList[0]] || '' : '';
 };
 
 const formatInstances = (instances: string | string[] | undefined | null) => {
@@ -176,7 +187,7 @@ export function Dashboard() {
               key={raid.id}
               className="rounded-lg overflow-hidden flex-shrink-0 relative"
               style={{
-                backgroundImage: getRaidBackground(raid.instances) ? `url(${getRaidBackground(raid.instances)})` : undefined,
+                backgroundImage: getRaidBackground(getInstances(raid)) ? `url(${getRaidBackground(getInstances(raid))})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -192,7 +203,7 @@ export function Dashboard() {
                     <div>
                       <p className="text-white font-semibold drop-shadow-lg">{raid.name}</p>
                       <p className="text-gray-300 text-sm flex items-center space-x-2 drop-shadow-md">
-                        <span>{formatInstances(raid.instances)}</span>
+                        <span>{formatInstances(getInstances(raid))}</span>
                         <span>•</span>
                         <Users className="h-3 w-3" />
                         <span>{raid.participant_count}</span>

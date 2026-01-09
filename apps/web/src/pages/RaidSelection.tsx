@@ -28,6 +28,17 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
+// Helper to get instances array from raid data (handles both old 'instance' and new 'instances' field)
+const getInstances = (raid: any): string[] => {
+  if (raid?.instances && Array.isArray(raid.instances) && raid.instances.length > 0) {
+    return raid.instances;
+  }
+  if (raid?.instance) {
+    return [raid.instance];
+  }
+  return [];
+};
+
 const getRaidBackground = (instances: string | string[] | undefined | null) => {
   if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
@@ -102,7 +113,7 @@ export function RaidSelection() {
         <div className="space-y-4">
           {activeRaids.map((raid) => {
             const inRaid = isInRaid(raid);
-            const bgImage = getRaidBackground(raid.instances);
+            const bgImage = getRaidBackground(getInstances(raid));
 
             return (
               <div
@@ -126,7 +137,7 @@ export function RaidSelection() {
                       <div>
                         <h3 className="text-xl font-bold text-white drop-shadow-lg">{raid.name}</h3>
                         <p className="text-gray-300 flex items-center space-x-2 drop-shadow-md">
-                          <span>{formatInstances(raid.instances)}</span>
+                          <span>{formatInstances(getInstances(raid))}</span>
                           <span>•</span>
                           <Users className="h-4 w-4" />
                           <span>{raid.participant_count} players</span>
