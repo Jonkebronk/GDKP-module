@@ -1,3 +1,4 @@
+// Build version: 2026-01-09-v2 - PWA removed
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
