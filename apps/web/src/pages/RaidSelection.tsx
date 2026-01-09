@@ -28,12 +28,17 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instances: string[]) => {
-  // Use first instance for background
-  return raidBackgrounds[instances[0]] || '';
+const getRaidBackground = (instances: string | string[] | undefined | null) => {
+  if (!instances) return '';
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return raidBackgrounds[instanceList[0]] || '';
 };
 
-const formatInstances = (instances: string[]) => instances.join(' + ');
+const formatInstances = (instances: string | string[] | undefined | null) => {
+  if (!instances) return 'Unknown';
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return instanceList.length > 0 ? instanceList.join(' + ') : 'Unknown';
+};
 
 export function RaidSelection() {
   const queryClient = useQueryClient();

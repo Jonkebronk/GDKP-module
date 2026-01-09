@@ -15,9 +15,10 @@ interface RaidHistoryItem {
   created_at: string;
 }
 
-const formatInstances = (instances: string | string[]) => {
+const formatInstances = (instances: string | string[] | undefined | null) => {
+  if (!instances) return 'Unknown';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return instanceList.join(' + ');
+  return instanceList.length > 0 ? instanceList.join(' + ') : 'Unknown';
 };
 
 export function RaidHistory() {

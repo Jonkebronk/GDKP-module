@@ -53,14 +53,16 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instances: string | string[]) => {
+const getRaidBackground = (instances: string | string[] | undefined | null) => {
+  if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
   return raidBackgrounds[instanceList[0]] || '';
 };
 
-const formatInstances = (instances: string | string[]) => {
+const formatInstances = (instances: string | string[] | undefined | null) => {
+  if (!instances) return 'Unknown';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return instanceList.join(' + ');
+  return instanceList.length > 0 ? instanceList.join(' + ') : 'Unknown';
 };
 
 export function RaidRoom() {

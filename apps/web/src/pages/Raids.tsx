@@ -21,17 +21,16 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instances: string | string[]) => {
-  // Handle both old single instance and new array format
+const getRaidBackground = (instances: string | string[] | undefined | null) => {
+  if (!instances) return '';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  // Use first instance for background
   return raidBackgrounds[instanceList[0]] || '';
 };
 
-const formatInstances = (instances: string | string[]) => {
-  // Handle both old single instance and new array format
+const formatInstances = (instances: string | string[] | undefined | null) => {
+  if (!instances) return 'Unknown';
   const instanceList = Array.isArray(instances) ? instances : [instances];
-  return instanceList.join(' + ');
+  return instanceList.length > 0 ? instanceList.join(' + ') : 'Unknown';
 };
 
 // Gold display component with WoW-style coin icon
