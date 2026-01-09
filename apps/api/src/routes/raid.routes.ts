@@ -682,7 +682,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Notify clients about the change
-    fastify.io.to(`raid:${id}`).emit('raid:updated', { items_changed: true });
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
 
     return {
       created: true,
@@ -773,7 +773,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     // Notify clients about the change
-    fastify.io.to(`raid:${id}`).emit('raid:updated', { items_changed: true });
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
 
     return {
       broken_up: true,
