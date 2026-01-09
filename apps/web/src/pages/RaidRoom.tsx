@@ -275,10 +275,12 @@ export function RaidRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
+      const itemCount = selectedUnsoldItems.length;
       setSelectedUnsoldItems([]);
       addAuctionEvent({
-        type: 'system',
-        message: `🎁 Goodie Bag created with ${selectedUnsoldItems.length} items`,
+        type: 'goodie_bag_created',
+        message: `created with ${itemCount} items`,
+        amount: itemCount,
       });
     },
   });
@@ -292,8 +294,9 @@ export function RaidRoom() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
       addAuctionEvent({
-        type: 'system',
-        message: `📦 Goodie Bag broken up into ${data.items?.length || 0} items`,
+        type: 'goodie_bag_broken',
+        message: `broken up into ${data.items?.length || 0} items`,
+        amount: data.items?.length || 0,
       });
     },
   });
@@ -1440,6 +1443,26 @@ function GargulMessage({ event }: { event: AuctionEvent }) {
             <span className="gargul-player">{event.playerName}</span>
             <span> for </span>
             <span className="gargul-gold">{event.amount}g</span>
+          </>
+        );
+      case 'goodie_bag_created':
+        return (
+          <>
+            <span className="gargul-prefix">🎁 </span>
+            <span className="gargul-item">[Goodie Bag]</span>
+            <span> created with </span>
+            <span className="gargul-gold">{event.amount}</span>
+            <span> items</span>
+          </>
+        );
+      case 'goodie_bag_broken':
+        return (
+          <>
+            <span className="gargul-prefix">📦 </span>
+            <span className="gargul-item">[Goodie Bag]</span>
+            <span> broken up into </span>
+            <span className="gargul-gold">{event.amount}</span>
+            <span> items</span>
           </>
         );
       default:
