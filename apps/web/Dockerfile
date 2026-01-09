@@ -13,8 +13,12 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
+# Cache bust - change this value to force fresh pnpm install
+ARG CACHE_BUST=20260109-v3
+RUN echo "Cache bust: $CACHE_BUST"
+
 # Install dependencies
-RUN pnpm install
+RUN pnpm install --force
 
 # Copy source files
 COPY packages/shared ./packages/shared
