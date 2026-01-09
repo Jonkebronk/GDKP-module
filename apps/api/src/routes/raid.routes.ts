@@ -8,7 +8,7 @@ import { PotDistributionService } from '../services/pot-distribution.service.js'
 const potDistributionService = new PotDistributionService();
 
 const createRaidSchema = z.object({
-  instance: z.string(),
+  instances: z.array(z.string()).min(1),
   split_config: z.object({
     type: z.enum(['equal', 'custom', 'role_based']),
     leader_cut_percent: z.number().min(0).max(20).optional(),
@@ -139,7 +139,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     const raid = await prisma.raid.create({
       data: {
         name: raidName,
-        instance: data.instance,
+        instances: data.instances,
         leader_id: request.user.id,
         split_config: data.split_config,
       },
@@ -938,7 +938,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     return {
       raid_id: raid.id,
       raid_name: raid.name,
-      instance: raid.instance,
+      instances: raid.instances,
       status: raid.status,
       leader_name: getDisplayName(raid.leader),
       pot_total: potTotal,

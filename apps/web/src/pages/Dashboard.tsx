@@ -10,7 +10,7 @@ import { useAuthStore } from '../stores/authStore';
 interface ActiveRaid {
   id: string;
   name: string;
-  instance: string;
+  instances: string[];
   status: string;
   pot_total: number;
   participant_count: number;
@@ -41,7 +41,15 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+const getRaidBackground = (instances: string | string[]) => {
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return raidBackgrounds[instanceList[0]] || '';
+};
+
+const formatInstances = (instances: string | string[]) => {
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return instanceList.join(' + ');
+};
 
 interface ItemWon {
   id: string;
@@ -55,7 +63,7 @@ interface ItemWon {
 interface RaidWithItems {
   raid_id: string;
   raid_name: string;
-  instance: string;
+  instances: string[];
   ended_at: string | null;
   items: ItemWon[];
   total_spent: number;
@@ -70,7 +78,7 @@ interface ItemsWonData {
 interface RaidPayout {
   raid_id: string;
   raid_name: string;
-  instance: string;
+  instances: string[];
   ended_at: string | null;
   pot_total: number;
   payout_amount: number;
@@ -166,7 +174,7 @@ export function Dashboard() {
               key={raid.id}
               className="rounded-lg overflow-hidden flex-shrink-0 relative"
               style={{
-                backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
+                backgroundImage: getRaidBackground(raid.instances) ? `url(${getRaidBackground(raid.instances)})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -182,7 +190,7 @@ export function Dashboard() {
                     <div>
                       <p className="text-white font-semibold drop-shadow-lg">{raid.name}</p>
                       <p className="text-gray-300 text-sm flex items-center space-x-2 drop-shadow-md">
-                        <span>{raid.instance}</span>
+                        <span>{formatInstances(raid.instances)}</span>
                         <span>•</span>
                         <Users className="h-3 w-3" />
                         <span>{raid.participant_count}</span>
@@ -250,7 +258,7 @@ export function Dashboard() {
                       <div className="text-left">
                         <p className="text-white font-medium">{raid.raid_name}</p>
                         <p className="text-gray-500 text-xs">
-                          {raid.instance} • {raid.items.length} item{raid.items.length !== 1 ? 's' : ''}
+                          {formatInstances(raid.instances)} • {raid.items.length} item{raid.items.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
@@ -340,7 +348,7 @@ export function Dashboard() {
                       <div className="text-left">
                         <p className="text-white font-medium">{raid.raid_name}</p>
                         <p className="text-gray-500 text-xs">
-                          {raid.instance} • {raid.role}
+                          {formatInstances(raid.instances)} • {raid.role}
                         </p>
                       </div>
                     </div>

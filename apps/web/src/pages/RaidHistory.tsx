@@ -7,13 +7,18 @@ import { GoldDisplay } from '../components/GoldDisplay';
 interface RaidHistoryItem {
   id: string;
   name: string;
-  instance: string;
+  instances: string[];
   status: string;
   pot_total: number;
   participant_count: number;
   ended_at: string | null;
   created_at: string;
 }
+
+const formatInstances = (instances: string | string[]) => {
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return instanceList.join(' + ');
+};
 
 export function RaidHistory() {
   const { data: raids, isLoading } = useQuery<RaidHistoryItem[]>({
@@ -44,7 +49,7 @@ export function RaidHistory() {
                 <div>
                   <p className="text-white font-medium">{raid.name}</p>
                   <p className="text-gray-400 text-sm flex items-center space-x-3">
-                    <span>{raid.instance}</span>
+                    <span>{formatInstances(raid.instances)}</span>
                     <span className="flex items-center">
                       <Users className="h-3 w-3 mr-1" />
                       {raid.participant_count}

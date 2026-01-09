@@ -58,7 +58,7 @@ enum SessionStatus {
 model Raid {
   id           String     @id @default(uuid()) @db.Uuid
   name         String     @db.VarChar(100)
-  instance     String     @db.VarChar(100)
+  instances    String[]   @default([])
   leader_id    String     @db.Uuid
   status       RaidStatus @default(PENDING)
   pot_total    Decimal    @default(0) @db.Decimal(15, 2)

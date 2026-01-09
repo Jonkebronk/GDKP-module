@@ -21,7 +21,18 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+const getRaidBackground = (instances: string | string[]) => {
+  // Handle both old single instance and new array format
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  // Use first instance for background
+  return raidBackgrounds[instanceList[0]] || '';
+};
+
+const formatInstances = (instances: string | string[]) => {
+  // Handle both old single instance and new array format
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return instanceList.join(' + ');
+};
 
 // Gold display component with WoW-style coin icon
 function GoldDisplay({ amount, className = '' }: { amount: number; className?: string }) {
@@ -118,7 +129,7 @@ export function Raids() {
               key={raid.id}
               className="rounded-lg overflow-hidden relative group"
               style={{
-                backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
+                backgroundImage: getRaidBackground(raid.instances) ? `url(${getRaidBackground(raid.instances)})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -149,7 +160,7 @@ export function Raids() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-white drop-shadow-lg">{raid.name}</h3>
-                      <p className="text-gray-300 text-sm drop-shadow-md">{raid.instance}</p>
+                      <p className="text-gray-300 text-sm drop-shadow-md">{formatInstances(raid.instances)}</p>
                     </div>
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${
@@ -214,13 +225,19 @@ export function Raids() {
 
 function CreateRaidModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
-  const [instance, setInstance] = useState<string>(WOW_INSTANCES[0]);
+  const [selectedInstances, setSelectedInstances] = useState<string[]>([WOW_INSTANCES[0]]);
   const [leaderCut, setLeaderCut] = useState(15);
+
+  const toggleInstance = (inst: string) => {
+    setSelectedInstances((prev) =>
+      prev.includes(inst) ? prev.filter((i) => i !== inst) : [...prev, inst]
+    );
+  };
 
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post('/raids', {
-        instance,
+        instances: selectedInstances,
         split_config: {
           type: 'equal',
           leader_cut_percent: leaderCut,
@@ -246,18 +263,49 @@ function CreateRaidModal({ onClose }: { onClose: () => void }) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Instance</label>
-            <select
-              value={instance}
-              onChange={(e) => setInstance(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
-            >
-              {WOW_INSTANCES.map((inst) => (
-                <option key={inst} value={inst}>
-                  {inst}
-                </option>
+            <label className="block text-sm text-gray-400 mb-2">Instances (select one or more)</label>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {WOW_INSTANCES.filter((inst) => inst !== 'Custom').map((inst) => (
+                <label
+                  key={inst}
+                  className={`flex items-center space-x-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                    selectedInstances.includes(inst)
+                      ? 'bg-gold-600/30 border border-gold-500'
+                      : 'bg-gray-700 border border-gray-600 hover:bg-gray-600'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInstances.includes(inst)}
+                    onChange={() => toggleInstance(inst)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`w-4 h-4 rounded border flex items-center justify-center ${
+                      selectedInstances.includes(inst)
+                        ? 'bg-gold-500 border-gold-500'
+                        : 'border-gray-500'
+                    }`}
+                  >
+                    {selectedInstances.includes(inst) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="text-white text-sm">{inst}</span>
+                </label>
               ))}
-            </select>
+            </div>
+            {selectedInstances.length > 0 && (
+              <p className="text-gold-400 text-xs mt-2">
+                Selected: {selectedInstances.join(' + ')}
+              </p>
+            )}
           </div>
 
           <div>
@@ -279,7 +327,7 @@ function CreateRaidModal({ onClose }: { onClose: () => void }) {
 
           <button
             onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || selectedInstances.length === 0}
             className="w-full bg-gold-600 hover:bg-gold-700 disabled:bg-gray-600 text-white font-medium py-2 rounded-lg transition-colors"
           >
             {createMutation.isPending ? 'Creating...' : 'Create Raid'}

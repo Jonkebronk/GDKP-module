@@ -30,7 +30,7 @@ declare global {
 
 interface AddItemsModalProps {
   raidId: string;
-  raidInstance?: string;
+  raidInstances?: string[];
   isOpen: boolean;
   onClose: () => void;
   onItemAdded?: () => void;
@@ -39,7 +39,7 @@ interface AddItemsModalProps {
 type Tab = 'import' | 'manual';
 type ImportFormat = 'gargul' | 'rclootcouncil';
 
-export function AddItemsModal({ raidId, raidInstance, isOpen, onClose, onItemAdded }: AddItemsModalProps) {
+export function AddItemsModal({ raidId, raidInstances, isOpen, onClose, onItemAdded }: AddItemsModalProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('import');
 
@@ -54,7 +54,7 @@ export function AddItemsModal({ raidId, raidInstance, isOpen, onClose, onItemAdd
 
   // Manual tab state
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInstance, setSelectedInstance] = useState(raidInstance || '');
+  const [selectedInstance, setSelectedInstance] = useState(raidInstances?.[0] || '');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedQuality, setSelectedQuality] = useState('');
   const [addedItems, setAddedItems] = useState<Set<number>>(new Set());
@@ -62,12 +62,12 @@ export function AddItemsModal({ raidId, raidInstance, isOpen, onClose, onItemAdd
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedInstance(raidInstance || '');
+      setSelectedInstance(raidInstances?.[0] || '');
       setAddedItems(new Set());
       setExportString('');
       setImportResult(null);
     }
-  }, [isOpen, raidInstance]);
+  }, [isOpen, raidInstances]);
 
   // Fetch items for manual tab
   const { data: itemsData, isLoading } = useQuery({

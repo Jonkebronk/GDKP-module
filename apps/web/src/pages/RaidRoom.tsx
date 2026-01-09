@@ -53,7 +53,15 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+const getRaidBackground = (instances: string | string[]) => {
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return raidBackgrounds[instanceList[0]] || '';
+};
+
+const formatInstances = (instances: string | string[]) => {
+  const instanceList = Array.isArray(instances) ? instances : [instances];
+  return instanceList.join(' + ');
+};
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
@@ -564,7 +572,7 @@ export function RaidRoom() {
       <div
         className="relative rounded-lg overflow-hidden border border-gray-700/50"
         style={{
-          backgroundImage: getRaidBackground(raid.instance) ? `url(${getRaidBackground(raid.instance)})` : undefined,
+          backgroundImage: getRaidBackground(raid.instances) ? `url(${getRaidBackground(raid.instances)})` : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -576,7 +584,7 @@ export function RaidRoom() {
         <div className="relative flex items-center justify-between p-4">
           <div>
             <h1 className="text-2xl font-bold text-white drop-shadow-lg">{raid.name}</h1>
-            <p className="text-gray-300 drop-shadow-md">{raid.instance}</p>
+            <p className="text-gray-300 drop-shadow-md">{formatInstances(raid.instances)}</p>
           </div>
           <div className="flex items-center space-x-2">
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -1279,7 +1287,7 @@ export function RaidRoom() {
       {/* Add Items Modal */}
       <AddItemsModal
         raidId={id!}
-        raidInstance={raid.instance}
+        raidInstances={raid.instances}
         isOpen={itemPickerOpen}
         onClose={() => setItemPickerOpen(false)}
         onItemAdded={() => {

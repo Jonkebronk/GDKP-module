@@ -10,7 +10,7 @@ export interface SplitConfig {
 export interface Raid {
   id: string;
   name: string;
-  instance: string;
+  instances: string[];
   leader_id: string;
   status: RaidStatus;
   pot_total: number;
@@ -45,7 +45,7 @@ export interface RaidParticipant {
 
 export interface CreateRaidInput {
   name: string;
-  instance: string;
+  instances: string[];
   split_config: SplitConfig;
 }
 

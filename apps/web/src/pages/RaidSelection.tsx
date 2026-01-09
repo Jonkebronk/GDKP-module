@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 interface ActiveRaid {
   id: string;
   name: string;
-  instance: string;
+  instances: string[];
   status: string;
   pot_total: number;
   participant_count: number;
@@ -28,7 +28,12 @@ const raidBackgrounds: Record<string, string> = {
   "Zul'Aman": '/raids/zulaman.jpg',
 };
 
-const getRaidBackground = (instance: string) => raidBackgrounds[instance] || '';
+const getRaidBackground = (instances: string[]) => {
+  // Use first instance for background
+  return raidBackgrounds[instances[0]] || '';
+};
+
+const formatInstances = (instances: string[]) => instances.join(' + ');
 
 export function RaidSelection() {
   const queryClient = useQueryClient();
@@ -92,7 +97,7 @@ export function RaidSelection() {
         <div className="space-y-4">
           {activeRaids.map((raid) => {
             const inRaid = isInRaid(raid);
-            const bgImage = getRaidBackground(raid.instance);
+            const bgImage = getRaidBackground(raid.instances);
 
             return (
               <div
@@ -116,7 +121,7 @@ export function RaidSelection() {
                       <div>
                         <h3 className="text-xl font-bold text-white drop-shadow-lg">{raid.name}</h3>
                         <p className="text-gray-300 flex items-center space-x-2 drop-shadow-md">
-                          <span>{raid.instance}</span>
+                          <span>{formatInstances(raid.instances)}</span>
                           <span>•</span>
                           <Users className="h-4 w-4" />
                           <span>{raid.participant_count} players</span>

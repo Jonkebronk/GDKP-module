@@ -86,7 +86,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
           select: {
             id: true,
             name: true,
-            instance: true,
+            instances: true,
             ended_at: true,
           },
         },
@@ -98,7 +98,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
     const byRaid: Record<string, {
       raid_id: string;
       raid_name: string;
-      instance: string;
+      instances: string[];
       ended_at: string | null;
       items: Array<{
         id: string;
@@ -121,7 +121,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
         byRaid[item.raid_id] = {
           raid_id: item.raid_id,
           raid_name: item.raid.name,
-          instance: item.raid.instance,
+          instances: item.raid.instances,
           ended_at: item.raid.ended_at?.toISOString() || null,
           items: [],
           total_spent: 0,
@@ -159,7 +159,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
           select: {
             id: true,
             name: true,
-            instance: true,
+            instances: true,
             ended_at: true,
             pot_total: true,
           },
@@ -176,7 +176,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       return {
         raid_id: p.raid_id,
         raid_name: p.raid.name,
-        instance: p.raid.instance,
+        instances: p.raid.instances,
         ended_at: p.raid.ended_at?.toISOString() || null,
         pot_total: Number(p.raid.pot_total),
         payout_amount: payoutAmount,
