@@ -123,15 +123,19 @@ export function SimpleUserDisplay({
   avatarSize = 24,
   className = '',
 }: SimpleUserDisplayProps) {
-  // Determine display name from various possible fields
-  const displayName = userData.display_name
-    || userData.alias
-    || userData.username
-    || userData.discord_username
+  // Helper to get string value only (prevents arrays/objects from being used)
+  const getString = (val: any): string | null =>
+    typeof val === 'string' && val.length > 0 ? val : null;
+
+  // Determine display name from various possible fields (only accept strings)
+  const displayName = getString(userData.display_name)
+    || getString(userData.alias)
+    || getString(userData.username)
+    || getString(userData.discord_username)
     || 'Unknown';
 
-  const discordUsername = userData.discord_username;
-  const avatar = userData.discord_avatar || userData.avatar;
+  const discordUsername = getString(userData.discord_username) || undefined;
+  const avatar = getString(userData.discord_avatar) || getString(userData.avatar);
 
   return (
     <UserDisplay

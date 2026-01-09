@@ -4,7 +4,7 @@ import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
 // Build version - change this to verify deployment
-const BUILD_VERSION = '2026-01-09-v6';
+const BUILD_VERSION = '2026-01-09-v7';
 console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
 
 // Pages
