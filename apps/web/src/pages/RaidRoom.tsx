@@ -536,6 +536,18 @@ export function RaidRoom() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main auction area */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Auction Settings - Only for leaders (at top) */}
+          {isLeader && (
+            <AuctionSettings
+              duration={auctionDuration}
+              onDurationChange={setAuctionDuration}
+              minBid={auctionMinBid}
+              onMinBidChange={setAuctionMinBid}
+              increment={auctionIncrement}
+              onIncrementChange={setAuctionIncrement}
+            />
+          )}
+
           {/* Active Auction - WoW Style */}
           {activeItem ? (
             <div className={`wow-tooltip ${qualityBorderClass[getItemQuality(activeItem)]} p-4 ${isEnding ? 'auction-ending' : ''}`}>
@@ -680,7 +692,7 @@ export function RaidRoom() {
             </div>
             <div
               ref={auctionFeedRef}
-              className="h-40 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
+              className="h-64 overflow-y-auto p-3 space-y-1 gargul-feed text-sm"
             >
               {auctionEvents.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">Auction events will appear here</p>
@@ -691,18 +703,6 @@ export function RaidRoom() {
               )}
             </div>
           </div>
-
-          {/* Auction Settings - Only for leaders */}
-          {isLeader && (
-            <AuctionSettings
-              duration={auctionDuration}
-              onDurationChange={setAuctionDuration}
-              minBid={auctionMinBid}
-              onMinBidChange={setAuctionMinBid}
-              increment={auctionIncrement}
-              onIncrementChange={setAuctionIncrement}
-            />
-          )}
 
           {/* Items Up For Auction */}
           <div className="wow-tooltip wow-border-epic">
@@ -771,7 +771,7 @@ export function RaidRoom() {
                         items={raid.items.filter((i: any) => i.status === 'PENDING').map((i: any) => i.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-2">
                           {raid.items
                             .filter((item: any) => item.status === 'PENDING')
                             .map((item: any) => (
@@ -791,7 +791,7 @@ export function RaidRoom() {
                       </SortableContext>
                     </DndContext>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-2">
                       {raid.items
                         .filter((item: any) => item.status === 'PENDING')
                         .map((item: any) => (
@@ -826,23 +826,21 @@ export function RaidRoom() {
               </div>
 
               <div className="p-3 space-y-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {raid.items
-                    .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
-                    .map((item: any) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        isLeader={isLeader}
-                        onStart={() => {}}
-                        onDelete={() => {}}
-                        onManualAward={() => {}}
-                        onReauction={() => reauctionMutation.mutate(item.id)}
-                        isDeleting={false}
-                        isReauctioning={reauctionMutation.isPending}
-                      />
-                    ))}
-                </div>
+                {raid.items
+                  .filter((item: any) => item.status === 'COMPLETED' && item.winner_id)
+                  .map((item: any) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      isLeader={isLeader}
+                      onStart={() => {}}
+                      onDelete={() => {}}
+                      onManualAward={() => {}}
+                      onReauction={() => reauctionMutation.mutate(item.id)}
+                      isDeleting={false}
+                      isReauctioning={reauctionMutation.isPending}
+                    />
+                  ))}
               </div>
             </div>
           )}
@@ -868,10 +866,9 @@ export function RaidRoom() {
               </div>
 
               <div className="p-3 space-y-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {raid.items
-                    .filter((item: any) => (item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
-                    .map((item: any) => (
+                {raid.items
+                  .filter((item: any) => (item.status === 'COMPLETED' && !item.winner_id) || item.status === 'CANCELLED')
+                  .map((item: any) => (
                       <div
                         key={item.id}
                         className={`wow-item-card ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'} p-2 ${selectedUnsoldItems.includes(item.id) ? 'ring-2 ring-amber-500' : ''}`}
@@ -944,8 +941,7 @@ export function RaidRoom() {
                           )}
                         </div>
                       </div>
-                    ))}
-                </div>
+                  ))}
               </div>
             </div>
           )}
