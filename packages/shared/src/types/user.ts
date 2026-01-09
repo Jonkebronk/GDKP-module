@@ -34,8 +34,12 @@ export interface AuthUser {
 }
 
 // Helper function to get display name (alias or discord_username)
-export function getDisplayName(user: { alias?: string | null; discord_username?: string }): string {
-  return user.alias || user.discord_username || 'Unknown';
+export function getDisplayName(user: { alias?: string | null; discord_username?: string } | null | undefined): string {
+  if (!user) return 'Unknown';
+  // Ensure we return a string, not an object/array
+  const alias = typeof user.alias === 'string' ? user.alias : null;
+  const discord = typeof user.discord_username === 'string' ? user.discord_username : null;
+  return alias || discord || 'Unknown';
 }
 
 // Type for public user display (shown to non-admins)
