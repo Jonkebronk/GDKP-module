@@ -122,4 +122,50 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
       socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to place bid' });
     }
   });
+
+  // Stop an auction (return to queue)
+  socket.on('auction:stop', async ({ item_id }) => {
+    try {
+      const raid_id = socket.data.current_raid_id;
+      if (!raid_id) {
+        socket.emit('error', { code: 'NOT_IN_RAID', message: 'Must be in a raid' });
+        return;
+      }
+
+      const result = await auctionService.stopAuction(io, raid_id, item_id, user_id);
+
+      if (!result.success) {
+        socket.emit('error', { code: result.error!, message: result.message! });
+        return;
+      }
+
+      logger.info({ user_id, item_id, raid_id }, 'Auction stopped');
+    } catch (error) {
+      logger.error({ user_id, item_id, error }, 'Failed to stop auction');
+      socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to stop auction' });
+    }
+  });
+
+  // Skip an auction (mark as unsold)
+  socket.on('auction:skip', async ({ item_id }) => {
+    try {
+      const raid_id = socket.data.current_raid_id;
+      if (!raid_id) {
+        socket.emit('error', { code: 'NOT_IN_RAID', message: 'Must be in a raid' });
+        return;
+      }
+
+      const result = await auctionService.skipAuction(io, raid_id, item_id, user_id);
+
+      if (!result.success) {
+        socket.emit('error', { code: result.error!, message: result.message! });
+        return;
+      }
+
+      logger.info({ user_id, item_id, raid_id }, 'Auction skipped');
+    } catch (error) {
+      logger.error({ user_id, item_id, error }, 'Failed to skip auction');
+      socket.emit('error', { code: 'INTERNAL_ERROR', message: 'Failed to skip auction' });
+    }
+  });
 }

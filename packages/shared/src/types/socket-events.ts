@@ -23,6 +23,10 @@ export interface ClientToServerEvents {
   'bid:place': (data: { item_id: string; amount: number }) => void;
 
   'chat:send': (data: { raid_id: string; message: string }) => void;
+
+  // Auction controls (leader only)
+  'auction:stop': (data: { item_id: string }) => void;
+  'auction:skip': (data: { item_id: string }) => void;
 }
 
 // Server -> Client Events
@@ -50,6 +54,8 @@ export interface ServerToClientEvents {
     previous_amount: number;
     new_pot_total: number;
   }) => void;
+  'auction:stopped': (data: { item_id: string; item_name: string }) => void;
+  'auction:skipped': (data: { item_id: string; item_name: string }) => void;
 
   // Bidding
   'bid:accepted': (data: BidAcceptedPayload) => void;

@@ -7,11 +7,28 @@ import { useAuctionStore, type AuctionEvent } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
-import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors } from 'lucide-react';
+import { Users, Clock, Gavel, Plus, Trash2, Play, Rocket, UserPlus, Trophy, Package, X, Square, Coins, RotateCcw, Wallet, Scissors, GripVertical, StopCircle, SkipForward } from 'lucide-react';
 import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
 import { AuctionSettings } from '../components/AuctionSettings';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Quality to CSS class mapping
 const qualityBorderClass: Record<number, string> = {
@@ -89,12 +106,16 @@ export function RaidRoom() {
     window.addEventListener('auction:started', handleRefetch);
     window.addEventListener('auction:ended', handleRefetch);
     window.addEventListener('auction:restarted', handleRefetch);
+    window.addEventListener('auction:stopped', handleRefetch);
+    window.addEventListener('auction:skipped', handleRefetch);
     window.addEventListener('raid:completed', handleRefetch);
     window.addEventListener('raid:cancelled', handleRefetch);
     return () => {
       window.removeEventListener('auction:started', handleRefetch);
       window.removeEventListener('auction:ended', handleRefetch);
       window.removeEventListener('auction:restarted', handleRefetch);
+      window.removeEventListener('auction:stopped', handleRefetch);
+      window.removeEventListener('auction:skipped', handleRefetch);
       window.removeEventListener('raid:completed', handleRefetch);
       window.removeEventListener('raid:cancelled', handleRefetch);
     };
@@ -113,7 +134,7 @@ export function RaidRoom() {
   const isParticipant = raid?.participants?.some((p: any) => p.user_id === user?.id);
 
   // Only connect to socket if user is a participant
-  const { placeBid, startAuction, isConnected } = useSocket(isParticipant ? id || null : null);
+  const { placeBid, startAuction, stopAuction, skipAuction, isConnected } = useSocket(isParticipant ? id || null : null);
 
   // Join raid mutation
   const joinRaidMutation = useMutation({
@@ -273,6 +294,59 @@ export function RaidRoom() {
       });
     },
   });
+
+  // Reorder items mutation
+  const reorderItemsMutation = useMutation({
+    mutationFn: async (itemIds: string[]) => {
+      await api.patch(`/raids/${id}/items/reorder`, { item_ids: itemIds });
+    },
+    onError: () => {
+      // Refetch to restore original order on error
+      queryClient.invalidateQueries({ queryKey: ['raid', id] });
+    },
+  });
+
+  // DnD-kit sensors for drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for reordering items
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const pendingItems = raid?.items?.filter((i: any) => i.status === 'PENDING') || [];
+      const oldIndex = pendingItems.findIndex((item: any) => item.id === active.id);
+      const newIndex = pendingItems.findIndex((item: any) => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedItems = arrayMove(pendingItems, oldIndex, newIndex);
+        const newItemIds = reorderedItems.map((item: any) => item.id);
+
+        // Optimistically update UI
+        queryClient.setQueryData(['raid', id], (old: any) => {
+          if (!old?.items) return old;
+          const nonPendingItems = old.items.filter((i: any) => i.status !== 'PENDING');
+          // Rebuild with reordered pending items first
+          return {
+            ...old,
+            items: [...reorderedItems, ...nonPendingItems],
+          };
+        });
+
+        // Persist to backend
+        reorderItemsMutation.mutate(newItemIds);
+      }
+    }
+  };
 
   const toggleUnsoldItemSelection = (itemId: string) => {
     setSelectedUnsoldItems((prev) =>
@@ -569,6 +643,28 @@ export function RaidRoom() {
                   Place Bid
                 </button>
               </div>
+
+              {/* Auction Controls - Leader Only */}
+              {isLeader && (
+                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-700">
+                  <button
+                    onClick={() => stopAuction(activeItem.id)}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 py-2 rounded-lg transition-colors border border-orange-600/50"
+                    title="Stop auction and return item to queue"
+                  >
+                    <StopCircle className="h-5 w-5" />
+                    <span>Stop</span>
+                  </button>
+                  <button
+                    onClick={() => skipAuction(activeItem.id)}
+                    className="flex-1 flex items-center justify-center space-x-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 py-2 rounded-lg transition-colors border border-red-600/50"
+                    title="Skip auction and mark item as unsold"
+                  >
+                    <SkipForward className="h-5 w-5" />
+                    <span>Skip</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="wow-tooltip wow-border-common p-8 text-center">
@@ -650,23 +746,70 @@ export function RaidRoom() {
               {raid.items.filter((i: any) => i.status === 'PENDING' || i.status === 'ACTIVE').length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">No items pending auction</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {raid.items
-                    .filter((item: any) => item.status === 'PENDING' || item.status === 'ACTIVE')
-                    .map((item: any) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        isLeader={isLeader}
-                        onStart={() => handleStartAuction(item.id)}
-                        onDelete={() => deleteItemMutation.mutate(item.id)}
-                        onManualAward={() => setManualAwardItem(item)}
-                        onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
-                        isDeleting={deleteItemMutation.isPending}
-                        isBreakingUp={breakUpGoodieBagMutation.isPending}
-                      />
-                    ))}
-                </div>
+                <>
+                  {/* Active item (not draggable) */}
+                  {raid.items.filter((i: any) => i.status === 'ACTIVE').map((item: any) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      isLeader={isLeader}
+                      onStart={() => {}}
+                      onDelete={() => {}}
+                      onManualAward={() => {}}
+                      isDeleting={false}
+                    />
+                  ))}
+
+                  {/* Pending items (draggable for leader) */}
+                  {isLeader ? (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={raid.items.filter((i: any) => i.status === 'PENDING').map((i: any) => i.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {raid.items
+                            .filter((item: any) => item.status === 'PENDING')
+                            .map((item: any) => (
+                              <SortableItemCard
+                                key={item.id}
+                                item={item}
+                                isLeader={isLeader}
+                                onStart={() => handleStartAuction(item.id)}
+                                onDelete={() => deleteItemMutation.mutate(item.id)}
+                                onManualAward={() => setManualAwardItem(item)}
+                                onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
+                                isDeleting={deleteItemMutation.isPending}
+                                isBreakingUp={breakUpGoodieBagMutation.isPending}
+                              />
+                            ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {raid.items
+                        .filter((item: any) => item.status === 'PENDING')
+                        .map((item: any) => (
+                          <ItemCard
+                            key={item.id}
+                            item={item}
+                            isLeader={isLeader}
+                            onStart={() => handleStartAuction(item.id)}
+                            onDelete={() => deleteItemMutation.mutate(item.id)}
+                            onManualAward={() => setManualAwardItem(item)}
+                            onBreakUp={item.is_bundle ? () => breakUpGoodieBagMutation.mutate(item.id) : undefined}
+                            isDeleting={deleteItemMutation.isPending}
+                            isBreakingUp={breakUpGoodieBagMutation.isPending}
+                          />
+                        ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1212,6 +1355,114 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
             <RotateCcw className="h-4 w-4" />
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Sortable wrapper for ItemCard (drag and drop)
+function SortableItemCard(props: ItemCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const quality = props.item.quality || 4;
+  const qualityColor = ITEM_QUALITY_COLORS[quality as keyof typeof ITEM_QUALITY_COLORS] || '#a335ee';
+  const borderClass = qualityBorderClass[quality] || 'wow-border-epic';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`wow-item-card ${borderClass} p-2`}
+    >
+      <div className="flex items-center space-x-2">
+        {/* Drag handle */}
+        <button
+          className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 p-1"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+
+        {/* Icon */}
+        <div className={`p-0.5 rounded border ${borderClass}`}>
+          {props.item.icon_url ? (
+            <img src={props.item.icon_url} alt={props.item.name} className="w-10 h-10 rounded" />
+          ) : (
+            <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center">
+              <span className="text-gray-500">?</span>
+            </div>
+          )}
+        </div>
+
+        {/* Item info */}
+        <div className="flex-1 min-w-0">
+          <a
+            href={props.item.wowhead_id ? `https://www.wowhead.com/tbc/item=${props.item.wowhead_id}` : '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-wowhead={props.item.wowhead_id ? `item=${props.item.wowhead_id}&domain=tbc` : undefined}
+            className="font-medium text-sm hover:underline truncate block"
+            style={{ color: qualityColor }}
+          >
+            {props.item.name}
+          </a>
+          {/* Bundle contents tooltip */}
+          {props.item.is_bundle && props.item.bundle_item_names && props.item.bundle_item_names.length > 0 && (
+            <p className="text-xs text-purple-400 truncate" title={props.item.bundle_item_names.join(', ')}>
+              {props.item.bundle_item_names.length} items
+            </p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={props.onStart}
+            className="bg-amber-500 hover:bg-amber-600 text-black p-1.5 rounded transition-colors"
+            title="Start auction"
+          >
+            <Play className="h-4 w-4" />
+          </button>
+          {props.item.is_bundle && props.onBreakUp && (
+            <button
+              onClick={props.onBreakUp}
+              disabled={props.isBreakingUp}
+              className="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-1.5 rounded transition-colors disabled:opacity-50"
+              title="Break up Goodie Bag"
+            >
+              <Scissors className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={props.onManualAward}
+            className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 p-1.5 rounded transition-colors"
+            title="Manually award item"
+          >
+            <Gavel className="h-4 w-4" />
+          </button>
+          <button
+            onClick={props.onDelete}
+            disabled={props.isDeleting}
+            className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-1.5 rounded transition-colors"
+            title="Delete item"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

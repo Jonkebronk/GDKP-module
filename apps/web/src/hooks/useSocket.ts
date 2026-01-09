@@ -292,6 +292,26 @@ export function useSocket(raidId: string | null) {
       removeParticipant(data.user_id);
     });
 
+    // Handle auction stopped (return to queue)
+    socket.on('auction:stopped', (data) => {
+      addAuctionEvent({
+        type: 'system',
+        message: `Auction stopped for [${data.item_name}] - item returned to queue`,
+      });
+      endAuction();
+      window.dispatchEvent(new CustomEvent('auction:stopped', { detail: data }));
+    });
+
+    // Handle auction skipped (marked as unsold)
+    socket.on('auction:skipped', (data) => {
+      addAuctionEvent({
+        type: 'system',
+        message: `Auction skipped for [${data.item_name}] - item marked as unsold`,
+      });
+      endAuction();
+      window.dispatchEvent(new CustomEvent('auction:skipped', { detail: data }));
+    });
+
     return () => {
       socket.emit('leave:raid', { raid_id: raidId });
       socket.disconnect();
@@ -318,11 +338,25 @@ export function useSocket(raidId: string | null) {
     }
   }, []);
 
+  const stopAuction = useCallback((itemId: string) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('auction:stop', { item_id: itemId });
+    }
+  }, []);
+
+  const skipAuction = useCallback((itemId: string) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('auction:skip', { item_id: itemId });
+    }
+  }, []);
+
   return {
     socket: socketRef.current,
     placeBid,
     sendChat,
     startAuction,
+    stopAuction,
+    skipAuction,
     isConnected: socketRef.current?.connected ?? false,
   };
 }

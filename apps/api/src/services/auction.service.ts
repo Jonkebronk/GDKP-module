@@ -21,6 +21,14 @@ interface CompleteAuctionResult {
   error?: string;
 }
 
+interface StopAuctionResult {
+  success: boolean;
+  item_id?: string;
+  item_name?: string;
+  error?: string;
+  message?: string;
+}
+
 // Store active countdown intervals
 const activeCountdowns = new Map<string, NodeJS.Timeout>();
 
@@ -389,6 +397,177 @@ export class AuctionService {
       );
     } catch (error) {
       logger.error({ itemId, error }, 'Failed to complete auction');
+      throw error;
+    }
+  }
+
+  /**
+   * Stop an auction and return item to PENDING status
+   * Any winning bid is released (no longer locked)
+   */
+  async stopAuction(
+    io: TypedServer,
+    raidId: string,
+    itemId: string,
+    userId: string
+  ): Promise<StopAuctionResult> {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Get item and verify user is leader/officer
+        const item = await tx.item.findUnique({
+          where: { id: itemId },
+          include: {
+            raid: {
+              include: {
+                participants: {
+                  where: { user_id: userId },
+                },
+              },
+            },
+          },
+        });
+
+        if (!item) {
+          return { success: false, error: 'ITEM_NOT_FOUND', message: 'Item not found' };
+        }
+
+        if (item.raid_id !== raidId) {
+          return { success: false, error: 'INVALID_RAID', message: 'Item does not belong to this raid' };
+        }
+
+        const participant = item.raid.participants[0];
+        if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+          return { success: false, error: 'RAID_NOT_LEADER', message: 'Only leaders/officers can stop auctions' };
+        }
+
+        if (item.status !== 'ACTIVE') {
+          return { success: false, error: 'AUCTION_NOT_ACTIVE', message: 'Auction is not active' };
+        }
+
+        // Stop the countdown
+        this.stopCountdown(itemId);
+
+        // Clear all bids for this item (releases locked gold)
+        await tx.bid.deleteMany({
+          where: { item_id: itemId },
+        });
+
+        // Reset item to PENDING
+        await tx.item.update({
+          where: { id: itemId },
+          data: {
+            status: 'PENDING',
+            current_bid: item.starting_bid,
+            winner_id: null,
+            started_at: null,
+            ends_at: null,
+          },
+        });
+
+        logger.info({ itemId, userId }, 'Auction stopped');
+
+        // Emit to all participants
+        io.to(`raid:${raidId}`).emit('auction:stopped', {
+          item_id: itemId,
+          item_name: item.name,
+        });
+
+        // Notify raid to refresh (item back in queue)
+        io.to(`raid:${raidId}`).emit('raid:updated', { raid_id: raidId, items_changed: true });
+
+        return {
+          success: true,
+          item_id: itemId,
+          item_name: item.name,
+        };
+      });
+    } catch (error) {
+      logger.error({ itemId, userId, error }, 'Failed to stop auction');
+      throw error;
+    }
+  }
+
+  /**
+   * Skip an auction and mark item as unsold (COMPLETED with no winner)
+   * Any winning bid is released (no longer locked)
+   */
+  async skipAuction(
+    io: TypedServer,
+    raidId: string,
+    itemId: string,
+    userId: string
+  ): Promise<StopAuctionResult> {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        // Get item and verify user is leader/officer
+        const item = await tx.item.findUnique({
+          where: { id: itemId },
+          include: {
+            raid: {
+              include: {
+                participants: {
+                  where: { user_id: userId },
+                },
+              },
+            },
+          },
+        });
+
+        if (!item) {
+          return { success: false, error: 'ITEM_NOT_FOUND', message: 'Item not found' };
+        }
+
+        if (item.raid_id !== raidId) {
+          return { success: false, error: 'INVALID_RAID', message: 'Item does not belong to this raid' };
+        }
+
+        const participant = item.raid.participants[0];
+        if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+          return { success: false, error: 'RAID_NOT_LEADER', message: 'Only leaders/officers can skip auctions' };
+        }
+
+        if (item.status !== 'ACTIVE') {
+          return { success: false, error: 'AUCTION_NOT_ACTIVE', message: 'Auction is not active' };
+        }
+
+        // Stop the countdown
+        this.stopCountdown(itemId);
+
+        // Clear all bids for this item (releases locked gold)
+        await tx.bid.deleteMany({
+          where: { item_id: itemId },
+        });
+
+        // Mark item as COMPLETED with no winner (unsold)
+        await tx.item.update({
+          where: { id: itemId },
+          data: {
+            status: 'COMPLETED',
+            current_bid: 0,
+            winner_id: null,
+            completed_at: new Date(),
+          },
+        });
+
+        logger.info({ itemId, userId }, 'Auction skipped');
+
+        // Emit to all participants
+        io.to(`raid:${raidId}`).emit('auction:skipped', {
+          item_id: itemId,
+          item_name: item.name,
+        });
+
+        // Notify raid to refresh (item in unsold section)
+        io.to(`raid:${raidId}`).emit('raid:updated', { raid_id: raidId, items_changed: true });
+
+        return {
+          success: true,
+          item_id: itemId,
+          item_name: item.name,
+        };
+      });
+    } catch (error) {
+      logger.error({ itemId, userId, error }, 'Failed to skip auction');
       throw error;
     }
   }

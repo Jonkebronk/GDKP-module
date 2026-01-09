@@ -35,6 +35,10 @@ const addItemSchema = z.object({
   auction_duration: z.number().int().min(30).max(300).default(60),
 });
 
+const reorderItemsSchema = z.object({
+  item_ids: z.array(z.string().uuid()).min(1),
+});
+
 const raidRoutes: FastifyPluginAsync = async (fastify) => {
   // List raids
   fastify.get('/', { preHandler: [requireAuth] }, async (request) => {
@@ -94,7 +98,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         items: {
-          orderBy: { created_at: 'asc' },
+          orderBy: [{ sort_order: 'asc' }, { created_at: 'asc' }],
           include: {
             winner: {
               select: { id: true, discord_username: true, discord_avatar: true, alias: true },
@@ -421,6 +425,59 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
 
     return { deleted: true };
+  });
+
+  // Reorder items in the auction queue
+  fastify.patch('/:id/items/reorder', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { item_ids } = reorderItemsSchema.parse(request.body);
+
+    // Verify user is leader/officer
+    const participant = await prisma.raidParticipant.findUnique({
+      where: {
+        raid_id_user_id: { raid_id: id, user_id: request.user.id },
+      },
+    });
+
+    if (!participant || !['LEADER', 'OFFICER'].includes(participant.role)) {
+      throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can reorder items', 403);
+    }
+
+    // Verify all items belong to this raid and are PENDING
+    const items = await prisma.item.findMany({
+      where: {
+        id: { in: item_ids },
+        raid_id: id,
+      },
+    });
+
+    if (items.length !== item_ids.length) {
+      throw new AppError(ERROR_CODES.ITEM_NOT_FOUND, 'Some items not found in this raid', 404);
+    }
+
+    const nonPendingItems = items.filter((item) => item.status !== 'PENDING');
+    if (nonPendingItems.length > 0) {
+      throw new AppError(
+        ERROR_CODES.INVALID_REQUEST,
+        'Can only reorder pending items',
+        400
+      );
+    }
+
+    // Update sort_order for each item based on position in array
+    await prisma.$transaction(
+      item_ids.map((itemId, index) =>
+        prisma.item.update({
+          where: { id: itemId },
+          data: { sort_order: index },
+        })
+      )
+    );
+
+    // Notify clients about the reorder
+    fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
+
+    return { reordered: true };
   });
 
   // Manually award item (without auction)

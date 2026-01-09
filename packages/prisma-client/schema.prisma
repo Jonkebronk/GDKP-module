@@ -133,6 +133,7 @@ model Item {
   completed_at     DateTime?
   version          Int        @default(0) // Optimistic locking
   created_at       DateTime   @default(now())
+  sort_order       Int        @default(0)
   is_bundle        Boolean    @default(false)
   bundle_item_names String[]  @default([])
 
@@ -145,6 +146,7 @@ model Item {
   @@index([status])
   @@index([winner_id])
   @@index([raid_id, status])
+  @@index([raid_id, sort_order])
 }
 
 enum ItemStatus {
