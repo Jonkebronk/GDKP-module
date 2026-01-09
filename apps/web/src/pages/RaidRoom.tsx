@@ -533,7 +533,7 @@ export function RaidRoom() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-[600px_1fr_1fr_300px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-[500px_1fr_1fr_300px] gap-6">
         {/* Left Sidebar - Items (hidden on mobile/tablet, shown on xl) */}
         <div className="hidden xl:block space-y-4 order-1">
           {/* Up For Auction */}
