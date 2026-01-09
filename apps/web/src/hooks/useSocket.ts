@@ -295,8 +295,9 @@ export function useSocket(raidId: string | null) {
     // Handle auction stopped (return to queue)
     socket.on('auction:stopped', (data) => {
       addAuctionEvent({
-        type: 'system',
+        type: 'auction_stopped',
         message: `Auction stopped for [${data.item_name}] - item returned to queue`,
+        itemName: data.item_name,
       });
       endAuction();
       window.dispatchEvent(new CustomEvent('auction:stopped', { detail: data }));
@@ -305,8 +306,9 @@ export function useSocket(raidId: string | null) {
     // Handle auction skipped (marked as unsold)
     socket.on('auction:skipped', (data) => {
       addAuctionEvent({
-        type: 'system',
+        type: 'auction_skipped',
         message: `Auction skipped for [${data.item_name}] - item marked as unsold`,
+        itemName: data.item_name,
       });
       endAuction();
       window.dispatchEvent(new CustomEvent('auction:skipped', { detail: data }));

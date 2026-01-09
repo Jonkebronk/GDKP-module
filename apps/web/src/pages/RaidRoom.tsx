@@ -1222,6 +1222,24 @@ function GargulMessage({ event }: { event: AuctionEvent }) {
             <span className="gargul-gold">{event.amount}g</span>
           </>
         );
+      case 'auction_stopped':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span>Auction stopped for </span>
+            <span className="gargul-item">[{event.itemName}]</span>
+            <span className="text-orange-400"> - item returned to queue</span>
+          </>
+        );
+      case 'auction_skipped':
+        return (
+          <>
+            <span className="gargul-prefix">💎 Gargul: </span>
+            <span>Auction skipped for </span>
+            <span className="gargul-item">[{event.itemName}]</span>
+            <span className="text-red-400"> - item marked as unsold</span>
+          </>
+        );
       default:
         return <span>{event.message}</span>;
     }
