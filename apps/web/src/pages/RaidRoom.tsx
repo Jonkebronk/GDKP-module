@@ -70,15 +70,27 @@ const getRaidBackground = (instances: string | string[] | undefined | null) => {
   return instanceList.length > 0 ? raidBackgrounds[instanceList[0]] || '' : '';
 };
 
-const formatInstances = (instances: string | string[] | undefined | null) => {
-  if (!instances) return 'Unknown';
-  const instanceList = Array.isArray(instances) ? instances : [instances];
-  return instanceList.length > 0 ? instanceList.join(' + ') : 'Unknown';
+const formatInstances = (instances: any): string => {
+  try {
+    if (!instances) return 'Unknown';
+    if (typeof instances === 'string') return instances;
+    if (Array.isArray(instances)) {
+      const filtered = instances.filter(i => typeof i === 'string');
+      return filtered.length > 0 ? filtered.join(' + ') : 'Unknown';
+    }
+    // If it's something else (object, number, etc.), convert to string
+    return String(instances) || 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
 };
 
 export function RaidRoom() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+
+  // Debug: log raid data on mount to help identify render issues
+  console.log('[RaidRoom] Component rendering, id:', id);
   const { user, lockedAmount } = useAuthStore();
   const { activeItem, remainingMs, isEnding, isLeadingBidder, auctionEvents, addAuctionEvent } = useAuctionStore();
   const { participants: liveParticipants } = useChatStore();
@@ -146,6 +158,13 @@ export function RaidRoom() {
     queryKey: ['raid', id],
     queryFn: async () => {
       const res = await api.get(`/raids/${id}`);
+      console.log('[RaidRoom] Raid data received:', {
+        id: res.data?.id,
+        name: res.data?.name,
+        instances: res.data?.instances,
+        instancesType: typeof res.data?.instances,
+        instancesIsArray: Array.isArray(res.data?.instances),
+      });
       return res.data;
     },
     enabled: !!id,
