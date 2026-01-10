@@ -8,6 +8,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, AUCTION_DEFAULTS } from '@gdkp/shared';
 
+// Assets with cache-busting hashes
+import goodieBagIcon from '../assets/goodie-bag.png';
+
 // Error Boundary to catch React render errors
 class RaidRoomErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
@@ -780,7 +783,7 @@ function RaidRoomContent() {
                         )}
                         <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
                           {item.is_bundle ? (
-                            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-8 h-8 rounded" />
+                            <img src={goodieBagIcon} alt="Goodie Bag" className="w-8 h-8 rounded" />
                           ) : item.icon_url ? (
                             <img src={item.icon_url} alt={item.name} className="w-8 h-8 rounded" />
                           ) : (
@@ -876,7 +879,7 @@ function RaidRoomContent() {
               <div className="flex items-start space-x-4 mb-6">
                 <div className={`p-1 rounded border-2 ${qualityBorderClass[getItemQuality(activeItem)]}`}>
                   {activeItem.is_bundle ? (
-                    <img src="/goodie-bag.png" alt="Goodie Bag" className="w-16 h-16 rounded" />
+                    <img src={goodieBagIcon} alt="Goodie Bag" className="w-16 h-16 rounded" />
                   ) : activeItem.icon_url ? (
                     <img src={activeItem.icon_url} alt={activeItem.name} className="w-16 h-16 rounded" />
                   ) : (
@@ -1196,7 +1199,7 @@ function RaidRoomContent() {
                           )}
                           <div className={`p-0.5 rounded border ${qualityBorderClass[item.quality || 4] || 'wow-border-epic'}`}>
                             {item.is_bundle ? (
-                              <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+                              <img src={goodieBagIcon} alt="Goodie Bag" className="w-10 h-10 rounded" />
                             ) : item.icon_url ? (
                               <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
                             ) : (
@@ -1630,7 +1633,7 @@ function ItemCard({ item, isLeader, onStart, onDelete, onManualAward, onReauctio
         {/* Icon */}
         <div className={`p-0.5 rounded border ${borderClass}`}>
           {item.is_bundle ? (
-            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+            <img src={goodieBagIcon} alt="Goodie Bag" className="w-10 h-10 rounded" />
           ) : item.icon_url ? (
             <img src={item.icon_url} alt={item.name} className="w-10 h-10 rounded" />
           ) : (
@@ -1761,7 +1764,7 @@ function SortableItemCard(props: ItemCardProps) {
         {/* Icon */}
         <div className={`p-0.5 rounded border ${borderClass}`}>
           {props.item.is_bundle ? (
-            <img src="/goodie-bag.png" alt="Goodie Bag" className="w-10 h-10 rounded" />
+            <img src={goodieBagIcon} alt="Goodie Bag" className="w-10 h-10 rounded" />
           ) : props.item.icon_url ? (
             <img src={props.item.icon_url} alt={props.item.name} className="w-10 h-10 rounded" />
           ) : (
