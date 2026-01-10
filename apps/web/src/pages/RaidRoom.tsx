@@ -330,17 +330,10 @@ function RaidRoomContent() {
       const res = await api.post(`/auctions/${itemId}/reauction`);
       return res.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
       queryClient.invalidateQueries({ queryKey: ['raid', id, 'distribution-preview'] });
-      // Add event to auction feed
-      addAuctionEvent({
-        type: 'reauction',
-        message: `Re-auctioned`,
-        itemName: data.item.name,
-        playerName: data.previous_winner,
-        amount: data.previous_amount,
-      });
+      // Feed event is handled by socket broadcast (useSocket.ts)
     },
   });
 
