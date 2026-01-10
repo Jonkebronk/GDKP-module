@@ -72,9 +72,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!user) {
-        // Generate sequential player number for new users
+        // Generate sequential ID for new users (Admin or Player prefix based on role)
         const userCount = await prisma.user.count();
-        const playerNumber = (userCount + 1).toString().padStart(7, '0');
+        const idNumber = (userCount + 1).toString().padStart(7, '0');
+        const aliasPrefix = shouldBeAdmin ? 'Admin' : 'Player';
 
         user = await prisma.user.create({
           data: {
@@ -85,7 +86,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               : null,
             role: shouldBeAdmin ? 'ADMIN' : 'USER',
             session_status: shouldBeAdmin ? 'APPROVED' : 'WAITING',
-            alias: `Player${playerNumber}`,
+            alias: `${aliasPrefix}${idNumber}`,
           },
         });
         logger.info({ userId: user.id, discordId: discordUser.id, alias: user.alias, isAdmin: shouldBeAdmin }, 'New user created');
@@ -109,9 +110,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         // Generate alias for existing users who don't have one
         if (!user.alias) {
           const userCount = await prisma.user.count();
+          const idNumber = userCount.toString().padStart(7, '0');
+          const aliasPrefix = user.role === 'ADMIN' ? 'Admin' : 'Player';
           user = await prisma.user.update({
             where: { id: user.id },
-            data: { alias: `Player${userCount.toString().padStart(7, '0')}` },
+            data: { alias: `${aliasPrefix}${idNumber}` },
           });
           logger.info({ userId: user.id, alias: user.alias }, 'Generated alias for existing user');
         }
