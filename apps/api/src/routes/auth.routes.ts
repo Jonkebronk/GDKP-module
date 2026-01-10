@@ -9,32 +9,21 @@ const discordTokenSchema = z.object({
   code: z.string(),
 });
 
-// Generate next available Player/Admin ID by finding the highest existing number
-async function getNextAliasNumber(): Promise<number> {
-  const users = await prisma.user.findMany({
-    where: {
-      alias: {
-        not: null,
-      },
-    },
-    select: { alias: true },
-  });
+// Generate next available Player/Admin ID atomically using database lock
+async function getNextAliasNumberAtomic(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<number> {
+  // Use raw query to get max number with advisory lock to prevent race conditions
+  const result = await tx.$queryRaw<Array<{ max_num: number | null }>>`
+    SELECT MAX(
+      CASE
+        WHEN alias ~ '^(Player|Admin)[0-9]+$'
+        THEN CAST(SUBSTRING(alias FROM '[0-9]+$') AS INTEGER)
+        ELSE 0
+      END
+    ) as max_num
+    FROM "User"
+  `;
 
-  let maxNumber = 0;
-  for (const user of users) {
-    if (user.alias) {
-      // Extract number from alias like "Player0000005" or "Admin0000001"
-      const match = user.alias.match(/^(?:Player|Admin)(\d+)$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNumber) {
-          maxNumber = num;
-        }
-      }
-    }
-  }
-
-  return maxNumber + 1;
+  return (result[0]?.max_num || 0) + 1;
 }
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -94,64 +83,74 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Check if this user should be admin based on env config
       const shouldBeAdmin = env.isAdmin(discordUser.username);
 
-      // Find or create user
-      let user = await prisma.user.findUnique({
-        where: { discord_id: discordUser.id },
-      });
-
-      if (!user) {
-        // Generate sequential ID for new users (Admin or Player prefix based on role)
-        const nextNumber = await getNextAliasNumber();
-        const idNumber = nextNumber.toString().padStart(7, '0');
-        const aliasPrefix = shouldBeAdmin ? 'Admin' : 'Player';
-
-        user = await prisma.user.create({
-          data: {
-            discord_id: discordUser.id,
-            discord_username: discordUser.username,
-            discord_avatar: discordUser.avatar
-              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
-              : null,
-            role: shouldBeAdmin ? 'ADMIN' : 'USER',
-            session_status: shouldBeAdmin ? 'APPROVED' : 'WAITING',
-            alias: `${aliasPrefix}${idNumber}`,
-          },
-        });
-        logger.info({ userId: user.id, discordId: discordUser.id, alias: user.alias, isAdmin: shouldBeAdmin }, 'New user created');
-      } else {
-        // Update user info and reset session status
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            discord_username: discordUser.username,
-            discord_avatar: discordUser.avatar
-              ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
-              : null,
-            // Promote to admin if configured (but don't demote existing admins)
-            ...(shouldBeAdmin && user.role !== 'ADMIN' ? { role: 'ADMIN' } : {}),
-            // Reset session: admins auto-approved, others go to waiting room
-            session_status: shouldBeAdmin || user.role === 'ADMIN' ? 'APPROVED' : 'WAITING',
-            // Keep existing alias (permanent)
-          },
-        });
-
-        // Generate alias for users who don't have one OR have old-style alias (not Player/Admin format)
-        const hasValidAlias = user.alias && /^(?:Player|Admin)\d{7}$/.test(user.alias);
-        if (!hasValidAlias) {
-          const nextNumber = await getNextAliasNumber();
-          const idNumber = nextNumber.toString().padStart(7, '0');
-          const aliasPrefix = user.role === 'ADMIN' ? 'Admin' : 'Player';
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: { alias: `${aliasPrefix}${idNumber}` },
+      // Find or create user with serializable transaction to prevent duplicate aliases
+      const user = await prisma.$transaction(
+        async (tx) => {
+          let existingUser = await tx.user.findUnique({
+            where: { discord_id: discordUser.id },
           });
-          logger.info({ userId: user.id, alias: user.alias }, 'Generated alias for existing user');
-        }
 
-        if (shouldBeAdmin && user.role !== 'ADMIN') {
-          logger.info({ userId: user.id }, 'User promoted to admin');
+          if (!existingUser) {
+            // Generate sequential ID for new users atomically within transaction
+            const nextNumber = await getNextAliasNumberAtomic(tx);
+            const idNumber = nextNumber.toString().padStart(7, '0');
+            const aliasPrefix = shouldBeAdmin ? 'Admin' : 'Player';
+
+            existingUser = await tx.user.create({
+              data: {
+                discord_id: discordUser.id,
+                discord_username: discordUser.username,
+                discord_avatar: discordUser.avatar
+                  ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+                  : null,
+                role: shouldBeAdmin ? 'ADMIN' : 'USER',
+                session_status: shouldBeAdmin ? 'APPROVED' : 'WAITING',
+                alias: `${aliasPrefix}${idNumber}`,
+              },
+            });
+            logger.info({ userId: existingUser.id, discordId: discordUser.id, alias: existingUser.alias, isAdmin: shouldBeAdmin }, 'New user created');
+          } else {
+            // Update user info and reset session status
+            existingUser = await tx.user.update({
+              where: { id: existingUser.id },
+              data: {
+                discord_username: discordUser.username,
+                discord_avatar: discordUser.avatar
+                  ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+                  : null,
+                // Promote to admin if configured (but don't demote existing admins)
+                ...(shouldBeAdmin && existingUser.role !== 'ADMIN' ? { role: 'ADMIN' } : {}),
+                // Reset session: admins auto-approved, others go to waiting room
+                session_status: shouldBeAdmin || existingUser.role === 'ADMIN' ? 'APPROVED' : 'WAITING',
+                // Keep existing alias (permanent)
+              },
+            });
+
+            // Generate alias for users who don't have one OR have old-style alias (not Player/Admin format)
+            const hasValidAlias = existingUser.alias && /^(?:Player|Admin)\d{7}$/.test(existingUser.alias);
+            if (!hasValidAlias) {
+              const nextNumber = await getNextAliasNumberAtomic(tx);
+              const idNumber = nextNumber.toString().padStart(7, '0');
+              const aliasPrefix = existingUser.role === 'ADMIN' ? 'Admin' : 'Player';
+              existingUser = await tx.user.update({
+                where: { id: existingUser.id },
+                data: { alias: `${aliasPrefix}${idNumber}` },
+              });
+              logger.info({ userId: existingUser.id, alias: existingUser.alias }, 'Generated alias for existing user');
+            }
+
+            if (shouldBeAdmin && existingUser.role !== 'ADMIN') {
+              logger.info({ userId: existingUser.id }, 'User promoted to admin');
+            }
+          }
+
+          return existingUser;
+        },
+        {
+          isolationLevel: 'Serializable',
+          timeout: 10000,
         }
-      }
+      );
 
       // Notify admins if user entered waiting room
       if (user.session_status === 'WAITING') {
