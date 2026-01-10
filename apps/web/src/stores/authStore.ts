@@ -8,12 +8,10 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  needsAliasSetup: boolean;
   sessionStatus: SessionStatus;
   lockedAmount: number;
   setAuth: (user: AuthUser, token: string) => void;
   updateWallet: (balance: number, lockedAmount: number) => void;
-  updateAlias: (alias: string) => Promise<void>;
   updateSessionStatus: (status: SessionStatus) => void;
   refreshToken: () => Promise<void>;
   logout: () => Promise<void>;
@@ -27,7 +25,6 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       isLoading: true,
-      needsAliasSetup: false,
       sessionStatus: 'OFFLINE' as SessionStatus,
       lockedAmount: 0,
 
@@ -37,7 +34,6 @@ export const useAuthStore = create<AuthState>()(
           token,
           isAuthenticated: true,
           isLoading: false,
-          needsAliasSetup: !user.alias,
           sessionStatus: user.session_status,
         });
       },
@@ -47,14 +43,6 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? { ...state.user, gold_balance: balance } : null,
           lockedAmount,
         }));
-      },
-
-      updateAlias: async (alias: string) => {
-        const response = await api.patch('/users/me/alias', { alias });
-        const updatedUser = response.data as AuthUser;
-        set({ user: updatedUser, needsAliasSetup: false });
-        // Refresh token to include new alias
-        await get().refreshToken();
       },
 
       updateSessionStatus: (status: SessionStatus) => {
@@ -85,7 +73,6 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           token: null,
           isAuthenticated: false,
-          needsAliasSetup: false,
           sessionStatus: 'OFFLINE',
           lockedAmount: 0,
         });
@@ -105,7 +92,6 @@ export const useAuthStore = create<AuthState>()(
             user,
             isAuthenticated: true,
             isLoading: false,
-            needsAliasSetup: !user.alias,
             sessionStatus: user.session_status,
           });
         } catch {
@@ -114,7 +100,6 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             isLoading: false,
-            needsAliasSetup: false,
             sessionStatus: 'OFFLINE',
           });
         }

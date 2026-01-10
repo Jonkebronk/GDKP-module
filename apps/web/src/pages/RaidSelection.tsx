@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import { Swords, Users, LogIn, Check, Calendar } from 'lucide-react';
+import { Swords, Users, LogIn, Check, Calendar, User } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { GoldDisplay } from '../components/GoldDisplay';
 
 interface ActiveRaid {
   id: string;
@@ -82,6 +83,25 @@ export function RaidSelection() {
 
   return (
     <div className="space-y-6">
+      {/* Player identity banner */}
+      <div className="bg-gradient-to-r from-gray-800 to-gray-800/50 border border-gray-700 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-gray-700 rounded-full p-2">
+              <User className="h-5 w-5 text-gold-400" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Playing as</p>
+              <p className="text-gold-400 font-mono text-lg font-semibold">{user?.alias || 'Loading...'}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-400 text-sm">Balance:</span>
+            <GoldDisplay amount={user?.gold_balance || 0} className="text-amber-400 font-semibold" iconSize={16} />
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-white mb-2">Active Raids</h1>

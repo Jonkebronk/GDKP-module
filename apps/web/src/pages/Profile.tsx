@@ -1,18 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { getDisplayName } from '@gdkp/shared';
-import { User, Check, X, AlertCircle, Edit2 } from 'lucide-react';
-
-const ALIAS_REGEX = /^[a-zA-Z0-9_-]+$/;
+import { User } from 'lucide-react';
 
 export function Profile() {
-  const { user, updateAlias } = useAuthStore();
-  const [newAlias, setNewAlias] = useState('');
-  const [isEditingAlias, setIsEditingAlias] = useState(false);
-  const [aliasError, setAliasError] = useState('');
-  const [aliasLoading, setAliasLoading] = useState(false);
+  const { user } = useAuthStore();
 
   const { data: profile } = useQuery({
     queryKey: ['user', 'profile'],
@@ -21,39 +14,6 @@ export function Profile() {
       return res.data;
     },
   });
-
-  const startEditingAlias = () => {
-    setNewAlias(user?.alias || '');
-    setIsEditingAlias(true);
-    setAliasError('');
-  };
-
-  const saveAlias = async () => {
-    const trimmed = newAlias.trim();
-    if (trimmed.length < 2) {
-      setAliasError('Alias must be at least 2 characters');
-      return;
-    }
-    if (trimmed.length > 32) {
-      setAliasError('Alias must be at most 32 characters');
-      return;
-    }
-    if (!ALIAS_REGEX.test(trimmed)) {
-      setAliasError('Alias can only contain letters, numbers, underscores, and hyphens');
-      return;
-    }
-
-    setAliasLoading(true);
-    try {
-      await updateAlias(trimmed);
-      setIsEditingAlias(false);
-      setAliasError('');
-    } catch {
-      setAliasError('Failed to update alias. Please try again.');
-    } finally {
-      setAliasLoading(false);
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -81,66 +41,16 @@ export function Profile() {
         <div className="border-t border-gray-700 pt-6 mb-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
             <User className="h-5 w-5" />
-            <span>Display Name (Alias)</span>
+            <span>Player ID</span>
           </h3>
 
           <p className="text-gray-400 text-sm mb-4">
-            This is the name shown to other users. Your Discord identity is hidden.
+            Your unique player identifier. This is shown to other users instead of your Discord name.
           </p>
 
-          {aliasError && (
-            <div className="flex items-center space-x-2 text-red-400 text-sm mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <span>{aliasError}</span>
-            </div>
-          )}
-
-          {isEditingAlias ? (
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={newAlias}
-                onChange={(e) => setNewAlias(e.target.value)}
-                placeholder="Enter your alias..."
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
-                maxLength={32}
-                autoFocus
-              />
-              <p className="text-gray-500 text-xs">
-                2-32 characters. Letters, numbers, underscores, and hyphens only.
-              </p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={saveAlias}
-                  disabled={aliasLoading}
-                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <Check className="h-4 w-4" />
-                  <span>{aliasLoading ? 'Saving...' : 'Save'}</span>
-                </button>
-                <button
-                  onClick={() => setIsEditingAlias(false)}
-                  className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="text-white font-medium">
-                {user?.alias || <span className="text-gray-500">Not set</span>}
-              </div>
-              <button
-                onClick={startEditingAlias}
-                className="flex items-center space-x-1 text-gold-500 hover:text-gold-400 text-sm"
-              >
-                <Edit2 className="h-4 w-4" />
-                <span>Change</span>
-              </button>
-            </div>
-          )}
+          <div className="bg-gray-700/50 rounded-lg px-4 py-3">
+            <span className="text-gold-400 font-mono text-lg">{user?.alias || 'Loading...'}</span>
+          </div>
         </div>
 
         <div className="border-t border-gray-700 pt-6">

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ITEM_QUALITY_COLORS, type ItemQuality } from '@gdkp/shared';
-import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check, Smartphone, Download } from 'lucide-react';
+import { Wallet, ChevronDown, ChevronUp, ShoppingBag, Coins, Swords, Users, LogIn, Check, Smartphone, Download, User } from 'lucide-react';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
@@ -163,6 +163,21 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+
+      {/* Player identity banner */}
+      <div className="bg-gradient-to-r from-gray-800 to-gray-800/50 border border-gray-700 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-gray-700 rounded-full p-2">
+              <User className="h-5 w-5 text-gold-400" />
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Playing as</p>
+              <p className="text-gold-400 font-mono text-lg font-semibold">{user?.alias || 'Loading...'}</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Balance + Gold Report + Active Raids row */}
       <div className="flex flex-col sm:flex-row gap-4">

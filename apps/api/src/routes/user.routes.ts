@@ -4,13 +4,6 @@ import { prisma } from '../config/database.js';
 import { requireAuth } from '../middleware/auth.js';
 import { AppError, ERROR_CODES } from '@gdkp/shared';
 
-const updateAliasSchema = z.object({
-  alias: z.string()
-    .min(2, 'Alias must be at least 2 characters')
-    .max(32, 'Alias must be at most 32 characters')
-    .regex(/^[a-zA-Z0-9_-]+$/, 'Alias can only contain letters, numbers, underscores, and hyphens'),
-});
-
 const goldReportSchema = z.object({
   amount: z.number().int().positive(),
 });
@@ -52,26 +45,6 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
       role: user.role,
       created_at: user.created_at,
     };
-  });
-
-  // Update user alias (display name)
-  fastify.patch('/me/alias', { preHandler: [requireAuth] }, async (request) => {
-    const { alias } = updateAliasSchema.parse(request.body);
-
-    const user = await prisma.user.update({
-      where: { id: request.user.id },
-      data: { alias },
-      select: {
-        id: true,
-        discord_id: true,
-        discord_username: true,
-        discord_avatar: true,
-        alias: true,
-        role: true,
-      },
-    });
-
-    return user;
   });
 
   // Get items won by user (gold spent history)

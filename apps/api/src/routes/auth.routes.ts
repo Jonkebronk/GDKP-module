@@ -72,6 +72,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (!user) {
+        // Generate sequential player number for new users
+        const userCount = await prisma.user.count();
+        const playerNumber = (userCount + 1).toString().padStart(7, '0');
+
         user = await prisma.user.create({
           data: {
             discord_id: discordUser.id,
@@ -80,14 +84,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
               ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
               : null,
             role: shouldBeAdmin ? 'ADMIN' : 'USER',
-            // New users start in waiting room with no alias
             session_status: shouldBeAdmin ? 'APPROVED' : 'WAITING',
-            alias: null,
+            alias: `Player${playerNumber}`,
           },
         });
-        logger.info({ userId: user.id, discordId: discordUser.id, isAdmin: shouldBeAdmin }, 'New user created');
+        logger.info({ userId: user.id, discordId: discordUser.id, alias: user.alias, isAdmin: shouldBeAdmin }, 'New user created');
       } else {
-        // Update user info and reset session (clear alias, set to waiting)
+        // Update user info and reset session status
         user = await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -99,10 +102,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
             ...(shouldBeAdmin && user.role !== 'ADMIN' ? { role: 'ADMIN' } : {}),
             // Reset session: admins auto-approved, others go to waiting room
             session_status: shouldBeAdmin || user.role === 'ADMIN' ? 'APPROVED' : 'WAITING',
-            // Clear alias on each login (session-based)
-            alias: null,
+            // Keep existing alias (permanent)
           },
         });
+
+        // Generate alias for existing users who don't have one
+        if (!user.alias) {
+          const userCount = await prisma.user.count();
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { alias: `Player${userCount.toString().padStart(7, '0')}` },
+          });
+          logger.info({ userId: user.id, alias: user.alias }, 'Generated alias for existing user');
+        }
+
         if (shouldBeAdmin && user.role !== 'ADMIN') {
           logger.info({ userId: user.id }, 'User promoted to admin');
         }
@@ -159,13 +172,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
-  // Logout - clear session status and alias
+  // Logout - clear session status (keep alias permanent)
   fastify.post('/logout', { preHandler: [requireAuth] }, async (request) => {
     await prisma.user.update({
       where: { id: request.user.id },
       data: {
         session_status: 'OFFLINE',
-        alias: null,
       },
     });
     return { success: true };
