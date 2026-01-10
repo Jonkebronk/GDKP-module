@@ -197,7 +197,7 @@ export function PotDistribution({
         {/* Participant shares */}
         <div className="border-t border-gray-700 pt-3">
           <h4 className="text-xs font-medium text-gray-400 mb-2">Cut Per Player</h4>
-          <div className="max-h-48 overflow-y-auto space-y-1">
+          <div className="max-h-72 overflow-y-auto space-y-1">
             {preview.shares.map((share) => (
               <div
                 key={share.user_id}
