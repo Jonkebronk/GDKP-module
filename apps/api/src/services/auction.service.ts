@@ -288,7 +288,7 @@ export class AuctionService {
           const winningBid = await tx.bid.findFirst({
             where: { item_id: itemId, is_winning: true },
             include: {
-              user: { select: { id: true, discord_username: true, gold_balance: true } },
+              user: { select: { id: true, discord_username: true, alias: true, gold_balance: true } },
             },
           });
 
@@ -370,7 +370,7 @@ export class AuctionService {
             item_id: itemId,
             item_name: item.name,
             winner_id: winner.id,
-            winner_name: winner.discord_username,
+            winner_name: winner.alias || winner.discord_username,
             final_amount: finalAmount,
             pot_total: Number(updatedRaid.pot_total),
           });
@@ -386,7 +386,7 @@ export class AuctionService {
             success: true,
             had_winner: true,
             winner_id: winner.id,
-            winner_name: winner.discord_username,
+            winner_name: winner.alias || winner.discord_username,
             final_amount: finalAmount,
           };
         },
