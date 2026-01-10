@@ -214,17 +214,9 @@ export function PotDistribution({
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="text-right space-y-0.5">
-                    {share.role === 'LEADER' && preview.leader_cut_amount > 0 ? (
-                      <>
-                        <div className="text-gray-400 text-xs">
-                          Payout: {formatGold(preview.member_share)} + {formatGold(preview.leader_cut_amount)}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-gray-400 text-xs">
-                        Payout: {formatGold(share.share_amount)}
-                      </div>
-                    )}
+                    <div className="text-gray-400 text-xs">
+                      Payout: {formatGold(share.share_amount)}
+                    </div>
                     {share.total_spent > 0 && (
                       <div className="text-red-400 text-xs">
                         Spent: -{formatGold(share.total_spent)}
