@@ -107,8 +107,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
 
-        // Generate alias for existing users who don't have one
-        if (!user.alias) {
+        // Generate alias for users who don't have one OR have old-style alias (not Player/Admin format)
+        const hasValidAlias = user.alias && (user.alias.startsWith('Player') || user.alias.startsWith('Admin'));
+        if (!hasValidAlias) {
           const userCount = await prisma.user.count();
           const idNumber = userCount.toString().padStart(7, '0');
           const aliasPrefix = user.role === 'ADMIN' ? 'Admin' : 'Player';
