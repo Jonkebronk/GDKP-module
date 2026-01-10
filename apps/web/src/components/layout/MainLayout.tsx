@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
+import gnomeLogo from '../../assets/gnome-logo.png';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
@@ -44,7 +45,7 @@ export function MainLayout() {
           <div className="flex items-center h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center mr-6">
-              <img src="/gnome-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+              <img src={gnomeLogo} alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             </Link>
 
             {/* Desktop nav */}

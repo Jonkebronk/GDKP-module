@@ -10,6 +10,7 @@ import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, 
 
 // Assets with cache-busting hashes
 import goodieBagIcon from '../assets/goodie-bag.png';
+import gnomeLogo from '../assets/gnome-logo.png';
 
 // Error Boundary to catch React render errors
 class RaidRoomErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -548,7 +549,7 @@ function RaidRoomContent() {
               </Link>
               <div className="w-px h-6 bg-gray-700" />
               <Link to={backUrl} className="flex items-center">
-                <img src="/gnome-logo.png" alt="Logo" className="h-7 w-7 rounded-full object-cover" />
+                <img src={gnomeLogo} alt="Logo" className="h-7 w-7 rounded-full object-cover" />
               </Link>
             </div>
 

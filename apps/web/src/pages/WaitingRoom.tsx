@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 import { api } from '../api/client';
 import { GoldDisplay } from '../components/GoldDisplay';
 import { Clock, User, LogOut, Coins, Send } from 'lucide-react';
+import gnomeLogo from '../assets/gnome-logo.png';
 
 interface GoldReport {
   id: string;
@@ -123,7 +124,7 @@ export function WaitingRoomPage() {
         {/* Header */}
         <div className="text-center">
           <img
-            src="/gnome-logo.png"
+            src={gnomeLogo}
             alt="Logo"
             className="mx-auto h-20 w-20 rounded-full object-cover"
           />

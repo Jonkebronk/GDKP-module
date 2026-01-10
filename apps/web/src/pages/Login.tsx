@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { KeyRound } from 'lucide-react';
 import { api } from '../api/client';
+import gnomeLogo from '../assets/gnome-logo.png';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export function LoginPage() {
         {/* Logo */}
         <div className="space-y-4">
           <img
-            src="/gnome-logo.png"
+            src={gnomeLogo}
             alt="Logo"
             className="mx-auto h-48 w-48 rounded-full object-cover"
           />

@@ -2,6 +2,7 @@ import { Outlet, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { getDisplayName } from '@gdkp/shared';
 import { LogOut } from 'lucide-react';
+import gnomeLogo from '../../assets/gnome-logo.png';
 
 export function RestrictedLayout() {
   const { user, logout } = useAuthStore();
@@ -14,7 +15,7 @@ export function RestrictedLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/raids-select" className="flex items-center">
-              <img src="/gnome-logo.png" alt="Logo" className="h-8 w-8 rounded-full object-cover" />
+              <img src={gnomeLogo} alt="Logo" className="h-8 w-8 rounded-full object-cover" />
             </Link>
 
             {/* User info + Logout */}
