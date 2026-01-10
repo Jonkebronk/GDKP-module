@@ -182,7 +182,8 @@ function RaidRoomContent() {
 
   // Listen for auction/raid events that require refetch
   useEffect(() => {
-    const handleRefetch = () => {
+    const handleRefetch = (event: Event) => {
+      console.log('[RaidRoom] Refetch triggered by:', event.type);
       queryClient.invalidateQueries({ queryKey: ['raid', id] });
     };
     window.addEventListener('auction:started', handleRefetch);
@@ -192,6 +193,7 @@ function RaidRoomContent() {
     window.addEventListener('auction:skipped', handleRefetch);
     window.addEventListener('raid:completed', handleRefetch);
     window.addEventListener('raid:cancelled', handleRefetch);
+    window.addEventListener('raid:updated', handleRefetch);
     return () => {
       window.removeEventListener('auction:started', handleRefetch);
       window.removeEventListener('auction:ended', handleRefetch);
@@ -200,6 +202,7 @@ function RaidRoomContent() {
       window.removeEventListener('auction:skipped', handleRefetch);
       window.removeEventListener('raid:completed', handleRefetch);
       window.removeEventListener('raid:cancelled', handleRefetch);
+      window.removeEventListener('raid:updated', handleRefetch);
     };
   }, [id, queryClient]);
 
@@ -1560,14 +1563,25 @@ function GargulMessage({ event }: { event: AuctionEvent }) {
           </>
         );
       case 'reauction':
+        // Handle both sold items being re-auctioned and unsold items returned to queue
+        if (event.playerName && event.amount && event.amount > 0) {
+          return (
+            <>
+              <span className="gargul-prefix">💎 Gargul: </span>
+              <span className="gargul-item">[{event.itemName}]</span>
+              <span> re-auctioned! Previous: </span>
+              <span className="gargul-player">{event.playerName}</span>
+              <span> for </span>
+              <span className="gargul-gold">{event.amount}g</span>
+            </>
+          );
+        }
+        // Unsold item returned to auction queue
         return (
           <>
             <span className="gargul-prefix">💎 Gargul: </span>
             <span className="gargul-item">[{event.itemName}]</span>
-            <span> re-auctioned! Previous: </span>
-            <span className="gargul-player">{event.playerName}</span>
-            <span> for </span>
-            <span className="gargul-gold">{event.amount}g</span>
+            <span className="text-orange-400"> returned to auction queue</span>
           </>
         );
       case 'goodie_bag_created':

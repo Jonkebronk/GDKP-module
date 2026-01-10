@@ -50,7 +50,7 @@ export interface ServerToClientEvents {
   'auction:restarted': (data: {
     item_id: string;
     item_name: string;
-    previous_winner: string;
+    previous_winner: string | null;
     previous_amount: number;
     new_pot_total: number;
   }) => void;

@@ -201,20 +201,42 @@ export function useSocket(raidId: string | null) {
 
     // Re-auction event
     socket.on('auction:restarted', (data) => {
-      addAuctionEvent({
-        type: 'reauction',
-        message: `Re-auctioned! Previous: ${data.previous_winner} for ${data.previous_amount}g`,
-        itemName: data.item_name,
-        playerName: data.previous_winner,
-        amount: data.previous_amount,
-      });
-      addAuctionEvent({
-        type: 'pot_updated',
-        message: `Pot was updated, it now holds ${data.new_pot_total}g`,
-        amount: data.new_pot_total,
-      });
+      console.log('[Socket] auction:restarted received:', data);
+      // Only show feed messages if there was a previous winner
+      if (data.previous_winner && data.previous_amount > 0) {
+        addAuctionEvent({
+          type: 'reauction',
+          message: `Re-auctioned! Previous: ${data.previous_winner} for ${data.previous_amount}g`,
+          itemName: data.item_name,
+          playerName: data.previous_winner,
+          amount: data.previous_amount,
+        });
+        addAuctionEvent({
+          type: 'pot_updated',
+          message: `Pot was updated, it now holds ${data.new_pot_total}g`,
+          amount: data.new_pot_total,
+        });
+      } else {
+        // Unsold item being re-auctioned
+        addAuctionEvent({
+          type: 'reauction',
+          message: `[${data.item_name}] returned to auction queue`,
+          itemName: data.item_name,
+          playerName: undefined,
+          amount: 0,
+        });
+      }
       // Trigger refetch
       window.dispatchEvent(new CustomEvent('auction:restarted', { detail: data }));
+    });
+
+    // Raid updated event (items changed, pot changed, etc.)
+    socket.on('raid:updated', (data) => {
+      console.log('[Socket] raid:updated received:', data);
+      // Trigger refetch if items changed
+      if (data.items_changed) {
+        window.dispatchEvent(new CustomEvent('raid:updated', { detail: data }));
+      }
     });
 
     // Pot distribution events

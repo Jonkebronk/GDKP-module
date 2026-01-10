@@ -220,9 +220,11 @@ const auctionRoutes: FastifyPluginAsync = async (fastify) => {
       new_pot_total: newPotTotal,
     });
 
-    // Also send raid update for pot change
+    // Also send raid update for items changed (triggers refetch on all clients)
     fastify.io.to(`raid:${item.raid_id}`).emit('raid:updated', {
       pot_total: newPotTotal,
+      items_changed: true,
+      raid_id: item.raid_id,
     });
 
     return {
