@@ -11,6 +11,7 @@ import { formatGold, QUICK_BID_INCREMENTS, ITEM_QUALITY_COLORS, getDisplayName, 
 // Assets with cache-busting hashes
 import goodieBagIcon from '../assets/goodie-bag.png';
 import gnomeLogo from '../assets/gnome-logo.png';
+import anonymousAvatar from '../assets/anonymous-avatar.png';
 
 // Error Boundary to catch React render errors
 class RaidRoomErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -557,7 +558,7 @@ function RaidRoomContent() {
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
                 <img
-                  src="/anonymous-avatar.png"
+                  src={anonymousAvatar}
                   alt={user ? getDisplayName(user) : ''}
                   className="h-7 w-7 rounded-full object-cover"
                 />

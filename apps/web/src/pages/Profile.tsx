@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { getDisplayName } from '@gdkp/shared';
 import { User } from 'lucide-react';
+import anonymousAvatar from '../assets/anonymous-avatar.png';
 
 export function Profile() {
   const { user } = useAuthStore();
@@ -23,7 +24,7 @@ export function Profile() {
       <div className="bg-gray-800 rounded-lg p-6">
         <div className="flex items-center space-x-4 mb-6">
           <img
-            src="/anonymous-avatar.png"
+            src={anonymousAvatar}
             alt={user ? getDisplayName(user) : ''}
             className="w-20 h-20 rounded-full"
           />

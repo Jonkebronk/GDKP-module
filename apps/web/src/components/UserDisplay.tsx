@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Eye } from 'lucide-react';
+import anonymousAvatar from '../assets/anonymous-avatar.png';
 
 interface UserDisplayProps {
   /** The alias or display name to show */
@@ -68,7 +69,7 @@ export function UserDisplay({
     >
       {showAvatar && (
         <img
-          src="/anonymous-avatar.png"
+          src={anonymousAvatar}
           alt={displayName}
           className="rounded-full object-cover"
           style={{ width: avatarSize, height: avatarSize }}

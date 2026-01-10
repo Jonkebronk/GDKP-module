@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import gnomeLogo from '../../assets/gnome-logo.png';
+import anonymousAvatar from '../../assets/anonymous-avatar.png';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
@@ -107,7 +108,7 @@ export function MainLayout() {
               {/* User avatar */}
               <div className="flex items-center space-x-2">
                 <img
-                  src="/anonymous-avatar.png"
+                  src={anonymousAvatar}
                   alt={user ? getDisplayName(user) : ''}
                   className="h-8 w-8 rounded-full object-cover"
                 />

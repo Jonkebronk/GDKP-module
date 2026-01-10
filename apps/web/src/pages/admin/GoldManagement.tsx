@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { formatGold } from '@gdkp/shared';
 import { Coins, Search, Plus, Minus, Check, AlertCircle, Trash2, Clock, X, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import anonymousAvatar from '../../assets/anonymous-avatar.png';
 
 interface User {
   id: string;
@@ -209,7 +210,7 @@ export function GoldManagement() {
               <div key={report.id} className="flex items-center justify-between p-3 hover:bg-gray-700/50">
                 <div className="flex items-center space-x-3">
                   <img
-                    src="/anonymous-avatar.png"
+                    src={anonymousAvatar}
                     alt=""
                     className="w-8 h-8 rounded-full object-cover"
                   />
@@ -291,7 +292,7 @@ export function GoldManagement() {
                   >
                     <div className="flex items-center space-x-3">
                       <img
-                        src="/anonymous-avatar.png"
+                        src={anonymousAvatar}
                         alt=""
                         className="w-8 h-8 rounded-full object-cover"
                       />

@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getDisplayName } from '@gdkp/shared';
 import { LogOut } from 'lucide-react';
 import gnomeLogo from '../../assets/gnome-logo.png';
+import anonymousAvatar from '../../assets/anonymous-avatar.png';
 
 export function RestrictedLayout() {
   const { user, logout } = useAuthStore();
@@ -23,7 +24,7 @@ export function RestrictedLayout() {
               {/* User avatar */}
               <div className="flex items-center space-x-2">
                 <img
-                  src="/anonymous-avatar.png"
+                  src={anonymousAvatar}
                   alt={user ? getDisplayName(user) : ''}
                   className="h-8 w-8 rounded-full object-cover"
                 />
