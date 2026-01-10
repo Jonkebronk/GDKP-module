@@ -48,8 +48,18 @@ export async function createApp() {
   // Global error handler
   app.setErrorHandler(errorHandler);
 
-  // Health check
-  app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+  // Build version - change this on each deploy to trigger client refresh
+  const BUILD_VERSION = '2026-01-10-v1';
+
+  // Health check with version
+  app.get('/health', async () => ({
+    status: 'ok',
+    version: BUILD_VERSION,
+    timestamp: new Date().toISOString()
+  }));
+
+  // Version endpoint for client refresh check
+  app.get('/api/version', async () => ({ version: BUILD_VERSION }));
 
   // API routes
   await app.register(authRoutes, { prefix: '/api/auth' });

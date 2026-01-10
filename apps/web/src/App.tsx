@@ -1,11 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
-// Build version - change this to verify deployment
-const BUILD_VERSION = '2026-01-09-v8';
+// Build version - must match server version
+const BUILD_VERSION = '2026-01-10-v1';
 console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
+
+// Check for new version and reload if needed
+async function checkForUpdates() {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const res = await fetch(`${apiUrl}/api/version`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.version && data.version !== BUILD_VERSION) {
+        console.log(`%c[GDKP] New version available: ${data.version}, reloading...`, 'color: #ff6600; font-weight: bold');
+        window.location.reload();
+      }
+    }
+  } catch {
+    // Ignore fetch errors
+  }
+}
 
 // Pages
 import { LoginPage } from './pages/Login';
@@ -172,12 +189,23 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const versionChecked = useRef(false);
 
   // Global socket-to-query cache sync for instant updates
   useQuerySocket();
 
   useEffect(() => {
     checkAuth();
+
+    // Check for new version on startup (once)
+    if (!versionChecked.current) {
+      versionChecked.current = true;
+      checkForUpdates();
+    }
+
+    // Check for updates every 5 minutes
+    const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [checkAuth]);
 
   return (

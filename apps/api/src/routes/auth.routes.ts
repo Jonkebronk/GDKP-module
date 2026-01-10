@@ -9,6 +9,34 @@ const discordTokenSchema = z.object({
   code: z.string(),
 });
 
+// Generate next available Player/Admin ID by finding the highest existing number
+async function getNextAliasNumber(): Promise<number> {
+  const users = await prisma.user.findMany({
+    where: {
+      alias: {
+        not: null,
+      },
+    },
+    select: { alias: true },
+  });
+
+  let maxNumber = 0;
+  for (const user of users) {
+    if (user.alias) {
+      // Extract number from alias like "Player0000005" or "Admin0000001"
+      const match = user.alias.match(/^(?:Player|Admin)(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+  }
+
+  return maxNumber + 1;
+}
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Discord OAuth - redirect to Discord
   fastify.get('/discord', async (request, reply) => {
@@ -73,8 +101,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       if (!user) {
         // Generate sequential ID for new users (Admin or Player prefix based on role)
-        const userCount = await prisma.user.count();
-        const idNumber = (userCount + 1).toString().padStart(7, '0');
+        const nextNumber = await getNextAliasNumber();
+        const idNumber = nextNumber.toString().padStart(7, '0');
         const aliasPrefix = shouldBeAdmin ? 'Admin' : 'Player';
 
         user = await prisma.user.create({
@@ -108,10 +136,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         // Generate alias for users who don't have one OR have old-style alias (not Player/Admin format)
-        const hasValidAlias = user.alias && (user.alias.startsWith('Player') || user.alias.startsWith('Admin'));
+        const hasValidAlias = user.alias && /^(?:Player|Admin)\d{7}$/.test(user.alias);
         if (!hasValidAlias) {
-          const userCount = await prisma.user.count();
-          const idNumber = userCount.toString().padStart(7, '0');
+          const nextNumber = await getNextAliasNumber();
+          const idNumber = nextNumber.toString().padStart(7, '0');
           const aliasPrefix = user.role === 'ADMIN' ? 'Admin' : 'Player';
           user = await prisma.user.update({
             where: { id: user.id },

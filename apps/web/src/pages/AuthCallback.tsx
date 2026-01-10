@@ -36,9 +36,10 @@ export function AuthCallback() {
         const user = response.data as AuthUser;
         setAuth(user, token);
 
-        // Redirect based on session status
+        // Redirect based on session status and role
         if (user.session_status === 'APPROVED') {
-          navigate('/');
+          // Admins go to dashboard, regular users go to raid selection
+          navigate(user.role === 'ADMIN' ? '/' : '/raids-select');
         } else {
           // WAITING status - go to waiting room
           navigate('/waiting-room');
