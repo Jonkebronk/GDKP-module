@@ -80,8 +80,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         avatar: string | null;
       };
 
-      // Check if this user should be admin based on env config
-      const shouldBeAdmin = env.isAdmin(discordUser.username);
+      // Check if this user should be admin based on Discord ID in env config
+      const shouldBeAdmin = env.isAdmin(discordUser.id);
 
       // Find or create user with serializable transaction to prevent duplicate aliases
       const user = await prisma.$transaction(

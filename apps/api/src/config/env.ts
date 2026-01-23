@@ -34,8 +34,8 @@ const envSchema = z.object({
   GOLD_PER_EUR: z.string().default('1000'),
   PLATFORM_FEE_PERCENT: z.string().default('5'),
 
-  // Admin users (comma-separated Discord usernames)
-  ADMIN_DISCORD_USERNAMES: z.string().default(''),
+  // Admin users (comma-separated Discord user IDs)
+  ADMIN_DISCORD_IDS: z.string().default(''),
 
   // Gate passphrase for secret community access
   GATE_PASSPHRASE: z.string().default(''),
@@ -49,12 +49,12 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-// Parse admin usernames into a Set for fast lookup
-const adminUsernames = new Set(
-  parsed.data.ADMIN_DISCORD_USERNAMES
+// Parse admin Discord IDs into a Set for fast lookup
+const adminDiscordIds = new Set(
+  parsed.data.ADMIN_DISCORD_IDS
     .split(',')
-    .map(u => u.trim().toLowerCase())
-    .filter(u => u.length > 0)
+    .map(id => id.trim())
+    .filter(id => id.length > 0)
 );
 
 export const env = {
@@ -65,5 +65,5 @@ export const env = {
   isDev: parsed.data.NODE_ENV === 'development',
   isProd: parsed.data.NODE_ENV === 'production',
   isTest: parsed.data.NODE_ENV === 'test',
-  isAdmin: (username: string) => adminUsernames.has(username.toLowerCase()),
+  isAdmin: (discordId: string) => adminDiscordIds.has(discordId),
 };

@@ -105,7 +105,7 @@ The platform runs on Railway with the following services:
 | `JWT_SECRET` | Secret key for JWT tokens (`openssl rand -base64 32`) |
 | `API_URL` | Your Railway API URL |
 | `FRONTEND_URL` | Your Railway Web URL |
-| `ADMIN_DISCORD_USERNAMES` | Comma-separated admin Discord usernames |
+| `ADMIN_DISCORD_IDS` | Comma-separated admin Discord user IDs |
 | `GATE_PASSPHRASE` | Optional access control passphrase |
 
 #### Web Service
