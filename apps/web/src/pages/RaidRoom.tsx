@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useEffect, useRef, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { api } from '../api/client';
@@ -513,6 +513,11 @@ function RaidRoomContent() {
 
   if (!raid) {
     return <div className="text-center text-gray-400">Raid not found</div>;
+  }
+
+  // Pre-auction raids redirect to the pre-auction page
+  if (raid.roster_locked_at) {
+    return <Navigate to={`/raids/${id}/pre-auction`} replace />;
   }
 
   const formatTime = (ms: number) => {
