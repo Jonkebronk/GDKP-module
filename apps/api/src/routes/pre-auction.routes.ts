@@ -83,6 +83,104 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // Get available raids for starting pre-auction (admin only)
+  fastify.get('/pre-auctions/available-raids', { preHandler: [requireAuth] }, async (request) => {
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== 'ADMIN') {
+      throw new AppError(ERROR_CODES.AUTH_FORBIDDEN, 'Admin access required', 403);
+    }
+
+    // Get raids that are PENDING and not yet locked
+    const raids = await prisma.raid.findMany({
+      where: {
+        status: 'PENDING',
+        roster_locked_at: null,
+      },
+      include: {
+        participants: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return raids.map((raid) => ({
+      id: raid.id,
+      name: raid.name,
+      instances: raid.instances,
+      status: raid.status,
+      participant_count: raid.participants.length,
+      created_at: raid.created_at,
+    }));
+  });
+
+  // Import participants from Raid Helper (by Discord IDs)
+  fastify.post('/raids/:id/import-participants', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { discord_ids } = request.body as { discord_ids: string[] };
+
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== 'ADMIN') {
+      throw new AppError(ERROR_CODES.AUTH_FORBIDDEN, 'Admin access required', 403);
+    }
+
+    // Get the raid
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+      include: { participants: true },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.roster_locked_at) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Roster is already locked', 400);
+    }
+
+    // Find users by Discord IDs
+    const users = await prisma.user.findMany({
+      where: {
+        discord_id: { in: discord_ids },
+      },
+      select: { id: true, discord_id: true },
+    });
+
+    const existingParticipantIds = new Set(raid.participants.map((p) => p.user_id));
+    const foundDiscordIds = new Set(users.map((u) => u.discord_id));
+
+    // Filter users not already in raid
+    const usersToAdd = users.filter((u) => !existingParticipantIds.has(u.id));
+
+    // Add participants
+    if (usersToAdd.length > 0) {
+      await prisma.raidParticipant.createMany({
+        data: usersToAdd.map((u) => ({
+          raid_id: id,
+          user_id: u.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Find Discord IDs that weren't found in the system
+    const notFound = discord_ids.filter((discordId) => !foundDiscordIds.has(discordId));
+
+    return {
+      matched: usersToAdd.length,
+      already_in_raid: users.length - usersToAdd.length,
+      not_found: notFound,
+    };
+  });
+
   // Lock roster and start pre-auction
   fastify.post('/raids/:id/lock-roster', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };
