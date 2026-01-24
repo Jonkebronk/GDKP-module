@@ -7,6 +7,12 @@ import type {
 } from './auction';
 import type { RaidParticipant, Raid } from './raid';
 import type { Item, Bid } from './auction';
+import type {
+  PreAuctionBidNewPayload,
+  PreAuctionEndedPayload,
+  PreAuctionItemClaimedPayload,
+  PreAuctionItem,
+} from './pre-auction';
 
 // Client -> Server Events
 export interface ClientToServerEvents {
@@ -27,6 +33,11 @@ export interface ClientToServerEvents {
   // Auction controls (leader only)
   'auction:stop': (data: { item_id: string }) => void;
   'auction:skip': (data: { item_id: string }) => void;
+
+  // Pre-auction events
+  'preauction:join': (data: { raid_id: string }) => void;
+  'preauction:leave': (data: { raid_id: string }) => void;
+  'preauction:bid': (data: { pre_auction_item_id: string; amount: number }) => void;
 }
 
 // Server -> Client Events
@@ -100,6 +111,15 @@ export interface ServerToClientEvents {
 
   // Participant events
   'participant:left': (data: { user_id: string; username: string }) => void;
+
+  // Pre-auction events
+  'preauction:bid:new': (data: PreAuctionBidNewPayload) => void;
+  'preauction:bid:accepted': (data: { bid_id: string; amount: number; timestamp: string }) => void;
+  'preauction:bid:rejected': (data: { error: string; min_required?: number }) => void;
+  'preauction:ended': (data: PreAuctionEndedPayload) => void;
+  'preauction:item:claimed': (data: PreAuctionItemClaimedPayload) => void;
+  'preauction:item:updated': (data: { item: PreAuctionItem }) => void;
+  'preauction:started': (data: { raid_id: string; ends_at: string; item_count: number }) => void;
 }
 
 // Inter-Server Events (for Redis adapter scaling)

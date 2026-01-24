@@ -4,8 +4,10 @@ import { prisma } from '../config/database.js';
 import { requireAuth } from '../middleware/auth.js';
 import { AppError, ERROR_CODES, WOW_INSTANCES } from '@gdkp/shared';
 import { PotDistributionService } from '../services/pot-distribution.service.js';
+import { PreAuctionService } from '../services/pre-auction.service.js';
 
 const potDistributionService = new PotDistributionService();
+const preAuctionService = new PreAuctionService();
 
 const createRaidSchema = z.object({
   instances: z.array(z.string()).min(1),
@@ -288,6 +290,9 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Leader cannot leave the raid', 400);
     }
 
+    // Handle pre-auction bids (reassign to next highest bidder)
+    await preAuctionService.handleUserLeavingRaid(fastify.io, id, request.user.id);
+
     await prisma.raidParticipant.delete({
       where: {
         raid_id_user_id: { raid_id: id, user_id: request.user.id },
@@ -317,7 +322,7 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot remove yourself from the raid', 400);
     }
 
-    // Check if user has winning bids in active auctions
+    // Check if user has winning bids in active live auctions
     const activeWinningBids = await prisma.bid.findFirst({
       where: {
         user_id: userId,
@@ -332,6 +337,9 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
     if (activeWinningBids) {
       throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Cannot remove participant with active winning bids', 400);
     }
+
+    // Handle pre-auction bids (reassign to next highest bidder)
+    await preAuctionService.handleUserLeavingRaid(fastify.io, id, userId);
 
     // Remove participant
     await prisma.raidParticipant.delete({
@@ -364,6 +372,59 @@ const raidRoutes: FastifyPluginAsync = async (fastify) => {
       throw new AppError(ERROR_CODES.RAID_NOT_LEADER, 'Only leaders/officers can add items', 403);
     }
 
+    // Check if there's a pre-auction winner for this item
+    if (data.wowhead_id) {
+      const preAuctionResult = await preAuctionService.claimPreAuctionWinner(
+        fastify.io,
+        id,
+        data.wowhead_id
+      );
+
+      if (preAuctionResult.success) {
+        // Pre-auction winner was awarded automatically
+        // Get the created item
+        const awardedItem = await prisma.item.findUnique({
+          where: { id: preAuctionResult.item_id! },
+          include: {
+            winner: {
+              select: { id: true, discord_username: true, discord_avatar: true, alias: true },
+            },
+          },
+        });
+
+        if (awardedItem) {
+          // Notify clients about the auto-awarded item
+          fastify.io.to(`raid:${id}`).emit('raid:updated', { raid_id: id, items_changed: true });
+
+          // Get updated pot total
+          const raid = await prisma.raid.findUnique({ where: { id } });
+          const potTotal = raid ? Number(raid.pot_total) : preAuctionResult.amount || 0;
+
+          // Emit auction:ended event for the feed
+          fastify.io.to(`raid:${id}`).emit('auction:ended', {
+            item_id: awardedItem.id,
+            item_name: awardedItem.name,
+            winner_id: awardedItem.winner_id!,
+            winner_name: awardedItem.winner?.alias || awardedItem.winner?.discord_username,
+            final_amount: Number(awardedItem.current_bid),
+            pot_total: potTotal,
+            is_pre_auction: true,
+          });
+
+          return {
+            ...awardedItem,
+            starting_bid: Number(awardedItem.starting_bid),
+            current_bid: Number(awardedItem.current_bid),
+            min_increment: Number(awardedItem.min_increment),
+            pre_auction_claimed: true,
+            pre_auction_winner_name: preAuctionResult.winner_name,
+            pre_auction_amount: preAuctionResult.amount,
+          };
+        }
+      }
+    }
+
+    // No pre-auction winner, create item normally for live auction
     const item = await prisma.item.create({
       data: {
         raid_id: id,

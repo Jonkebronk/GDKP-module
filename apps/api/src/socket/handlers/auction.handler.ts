@@ -73,8 +73,8 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
         timestamp: result.bid!.created_at.toISOString(),
       });
 
-      // Send wallet update to bidder
-      const lockedAmount = await bidService.getLockedAmount(user_id);
+      // Send wallet update to bidder (include both live and pre-auction locked amounts)
+      const lockedAmount = await bidService.getTotalLockedAmount(user_id);
       const userBalance = await prisma.user.findUnique({
         where: { id: user_id },
         select: { gold_balance: true },
@@ -86,7 +86,7 @@ export function registerAuctionHandlers(io: TypedServer, socket: TypedSocket) {
 
       // If someone was outbid, send them a wallet update too (their locked amount decreases)
       if (result.previous_winner_id && result.previous_winner_id !== user_id) {
-        const prevLockedAmount = await bidService.getLockedAmount(result.previous_winner_id);
+        const prevLockedAmount = await bidService.getTotalLockedAmount(result.previous_winner_id);
         const prevUserBalance = await prisma.user.findUnique({
           where: { id: result.previous_winner_id },
           select: { gold_balance: true },

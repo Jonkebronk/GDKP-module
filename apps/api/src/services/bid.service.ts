@@ -103,8 +103,8 @@ export class BidService {
             return { success: false, error: 'USER_NOT_FOUND' };
           }
 
-          // 7. Calculate locked amount (sum of user's winning bids in active auctions)
-          const lockedResult = await tx.bid.aggregate({
+          // 7. Calculate locked amount (sum of user's winning bids in active auctions + pre-auctions)
+          const liveAuctionLocked = await tx.bid.aggregate({
             where: {
               user_id: userId,
               is_winning: true,
@@ -113,7 +113,18 @@ export class BidService {
             _sum: { amount: true },
           });
 
-          const lockedAmount = Number(lockedResult._sum.amount || 0);
+          const preAuctionLocked = await tx.preAuctionBid.aggregate({
+            where: {
+              user_id: userId,
+              is_winning: true,
+              pre_auction_item: {
+                status: { in: ['ACTIVE', 'ENDED'] },
+              },
+            },
+            _sum: { amount: true },
+          });
+
+          const lockedAmount = Number(liveAuctionLocked._sum.amount || 0) + Number(preAuctionLocked._sum.amount || 0);
           const availableBalance = Number(user.gold_balance) - lockedAmount;
 
           if (availableBalance < amount) {
@@ -189,6 +200,7 @@ export class BidService {
 
   /**
    * Get the total locked amount for a user (winning bids in active auctions)
+   * This only returns live auction locked amounts - not pre-auctions
    */
   async getLockedAmount(userId: string): Promise<number> {
     const result = await prisma.bid.aggregate({
@@ -204,7 +216,34 @@ export class BidService {
   }
 
   /**
-   * Get available balance for a user
+   * Get the total locked amount from pre-auctions for a user
+   */
+  async getPreAuctionLockedAmount(userId: string): Promise<number> {
+    const result = await prisma.preAuctionBid.aggregate({
+      where: {
+        user_id: userId,
+        is_winning: true,
+        pre_auction_item: {
+          status: { in: ['ACTIVE', 'ENDED'] },
+        },
+      },
+      _sum: { amount: true },
+    });
+
+    return Number(result._sum.amount || 0);
+  }
+
+  /**
+   * Get total locked amount for a user (both live and pre-auction)
+   */
+  async getTotalLockedAmount(userId: string): Promise<number> {
+    const liveAuctionLocked = await this.getLockedAmount(userId);
+    const preAuctionLocked = await this.getPreAuctionLockedAmount(userId);
+    return liveAuctionLocked + preAuctionLocked;
+  }
+
+  /**
+   * Get available balance for a user (considering both live and pre-auction locks)
    */
   async getAvailableBalance(userId: string): Promise<number> {
     const user = await prisma.user.findUnique({
@@ -214,7 +253,7 @@ export class BidService {
 
     if (!user) return 0;
 
-    const locked = await this.getLockedAmount(userId);
+    const locked = await this.getTotalLockedAmount(userId);
     return Number(user.gold_balance) - locked;
   }
 }

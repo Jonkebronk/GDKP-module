@@ -38,6 +38,7 @@ import { AliasMappings } from './pages/admin/AliasMappings';
 import { GoldManagement } from './pages/admin/GoldManagement';
 import { Lobby } from './pages/admin/Lobby';
 import { RaidSelection } from './pages/RaidSelection';
+import { PreAuctionPage } from './pages/PreAuctionPage';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -246,6 +247,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <RaidRoom />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Pre-auction page accessible to both USER and ADMIN */}
+        <Route
+          path="/raids/:id/pre-auction"
+          element={
+            <ProtectedRoute>
+              <PreAuctionPage />
             </ProtectedRoute>
           }
         />

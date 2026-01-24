@@ -25,14 +25,16 @@ model User {
   updated_at       DateTime      @updatedAt
 
   // Relations
-  raids_led       Raid[]            @relation("RaidLeader")
-  participations  RaidParticipant[]
-  bids            Bid[]
-  items_won       Item[]            @relation("ItemWinner")
-  transactions    Transaction[]
-  chat_messages   ChatMessage[]
-  gold_reports    GoldReport[]
-  reviewed_reports GoldReport[]     @relation("GoldReportReviewer")
+  raids_led            Raid[]            @relation("RaidLeader")
+  participations       RaidParticipant[]
+  bids                 Bid[]
+  items_won            Item[]            @relation("ItemWinner")
+  transactions         Transaction[]
+  chat_messages        ChatMessage[]
+  gold_reports         GoldReport[]
+  reviewed_reports     GoldReport[]      @relation("GoldReportReviewer")
+  pre_auction_wins     PreAuctionItem[]  @relation("PreAuctionWinner")
+  pre_auction_bids     PreAuctionBid[]
 
   @@index([discord_id])
   @@index([role])
@@ -56,24 +58,27 @@ enum SessionStatus {
 // ============================================
 
 model Raid {
-  id           String     @id @default(uuid()) @db.Uuid
-  name         String     @db.VarChar(100)
-  instances    String[]   @default([])
-  leader_id    String     @db.Uuid
-  status       RaidStatus @default(PENDING)
-  pot_total    Decimal    @default(0) @db.Decimal(15, 2)
-  split_config Json       @db.JsonB
-  created_at   DateTime   @default(now())
-  updated_at   DateTime   @updatedAt
-  started_at   DateTime?
-  ended_at     DateTime?
+  id                   String     @id @default(uuid()) @db.Uuid
+  name                 String     @db.VarChar(100)
+  instances            String[]   @default([])
+  leader_id            String     @db.Uuid
+  status               RaidStatus @default(PENDING)
+  pot_total            Decimal    @default(0) @db.Decimal(15, 2)
+  split_config         Json       @db.JsonB
+  created_at           DateTime   @default(now())
+  updated_at           DateTime   @updatedAt
+  started_at           DateTime?
+  ended_at             DateTime?
+  roster_locked_at     DateTime?
+  preauction_ends_at   DateTime?
 
   // Relations
-  leader        User              @relation("RaidLeader", fields: [leader_id], references: [id])
-  participants  RaidParticipant[]
-  items         Item[]
-  chat_messages ChatMessage[]
-  loot_history  LootHistory[]
+  leader            User              @relation("RaidLeader", fields: [leader_id], references: [id])
+  participants      RaidParticipant[]
+  items             Item[]
+  chat_messages     ChatMessage[]
+  loot_history      LootHistory[]
+  pre_auction_items PreAuctionItem[]
 
   @@index([leader_id])
   @@index([status])
@@ -233,7 +238,8 @@ model TbcRaidItem {
   boss_name     String?  @db.VarChar(100)
   phase         Int      @default(1) // TBC phase 1-5
 
-  loot_history LootHistory[]
+  loot_history      LootHistory[]
+  pre_auction_items PreAuctionItem[]
 
   @@index([raid_instance])
   @@index([slot])
@@ -311,4 +317,56 @@ enum GoldReportStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ============================================
+// PRE-AUCTION
+// ============================================
+
+model PreAuctionItem {
+  id            String           @id @default(uuid()) @db.Uuid
+  raid_id       String           @db.Uuid
+  tbc_item_id   String           @db.Uuid
+  status        PreAuctionStatus @default(ACTIVE)
+  current_bid   Decimal          @default(0) @db.Decimal(15, 2)
+  min_increment Decimal          @default(10) @db.Decimal(15, 2)
+  winner_id     String?          @db.Uuid
+  ends_at       DateTime
+  created_at    DateTime         @default(now())
+
+  // Relations
+  raid     Raid        @relation(fields: [raid_id], references: [id], onDelete: Cascade)
+  tbc_item TbcRaidItem @relation(fields: [tbc_item_id], references: [id])
+  winner   User?       @relation("PreAuctionWinner", fields: [winner_id], references: [id])
+  bids     PreAuctionBid[]
+
+  @@unique([raid_id, tbc_item_id])
+  @@index([raid_id])
+  @@index([status])
+  @@index([ends_at])
+  @@index([tbc_item_id])
+}
+
+model PreAuctionBid {
+  id                  String   @id @default(uuid()) @db.Uuid
+  pre_auction_item_id String   @db.Uuid
+  user_id             String   @db.Uuid
+  amount              Decimal  @db.Decimal(15, 2)
+  is_winning          Boolean  @default(false)
+  created_at          DateTime @default(now())
+
+  // Relations
+  pre_auction_item PreAuctionItem @relation(fields: [pre_auction_item_id], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [user_id], references: [id])
+
+  @@index([pre_auction_item_id])
+  @@index([user_id])
+  @@index([pre_auction_item_id, is_winning])
+}
+
+enum PreAuctionStatus {
+  ACTIVE    // Bidding open
+  ENDED     // Timer expired, awaiting drop
+  CLAIMED   // Item dropped and awarded
+  UNCLAIMED // Raid ended without drop
 }

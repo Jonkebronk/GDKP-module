@@ -5,6 +5,7 @@ export * from './types/auction';
 export * from './types/wallet';
 export * from './types/socket-events';
 export * from './types/items';
+export * from './types/pre-auction';
 
 // Constants
 export * from './constants/auction';

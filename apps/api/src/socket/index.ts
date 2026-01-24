@@ -14,9 +14,12 @@ import { socketAuth } from './middleware/socketAuth.js';
 import { registerAuctionHandlers } from './handlers/auction.handler.js';
 import { registerRaidHandlers } from './handlers/raid.handler.js';
 import { registerChatHandlers } from './handlers/chat.handler.js';
+import { registerPreAuctionHandlers } from './handlers/pre-auction.handler.js';
 import { AuctionService } from '../services/auction.service.js';
+import { PreAuctionService } from '../services/pre-auction.service.js';
 
 const auctionService = new AuctionService();
+const preAuctionService = new PreAuctionService();
 
 export type TypedServer = Server<
   ClientToServerEvents,
@@ -65,6 +68,7 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
     registerRaidHandlers(io, socket);
     registerAuctionHandlers(io, socket);
     registerChatHandlers(io, socket);
+    registerPreAuctionHandlers(io, socket);
 
     // Disconnection
     socket.on('disconnect', (reason) => {
@@ -82,6 +86,11 @@ export function createSocketServer(httpServer: HttpServer): TypedServer {
   // Recover any stale auctions from before server restart
   auctionService.recoverStaleAuctions(io).catch((err) => {
     logger.error({ error: err }, 'Failed to recover stale auctions on startup');
+  });
+
+  // Recover any stale pre-auctions from before server restart
+  preAuctionService.recoverStalePreAuctions(io).catch((err) => {
+    logger.error({ error: err }, 'Failed to recover stale pre-auctions on startup');
   });
 
   return io;
