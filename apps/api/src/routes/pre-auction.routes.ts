@@ -320,25 +320,69 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
     if (discordIds.length === 0) {
       return {
         matched: 0,
+        created: 0,
         already_in_raid: 0,
-        not_found: [],
+        failed_to_fetch: [],
         message: 'No Discord user IDs found in the message',
       };
     }
 
-    // Find users by Discord IDs
-    const users = await prisma.user.findMany({
+    // Find existing users by Discord IDs
+    const existingUsers = await prisma.user.findMany({
       where: {
         discord_id: { in: discordIds },
       },
       select: { id: true, discord_id: true },
     });
 
+    const existingDiscordIds = new Set(existingUsers.map((u) => u.discord_id));
+    const missingDiscordIds = discordIds.filter((discordId) => !existingDiscordIds.has(discordId));
+
+    // Auto-create users for missing Discord IDs
+    const createdUsers: { id: string; discord_id: string }[] = [];
+    const failedToFetch: string[] = [];
+
+    for (const discordId of missingDiscordIds) {
+      try {
+        // Fetch user info from Discord API
+        const discordResponse = await fetch(`https://discord.com/api/v10/users/${discordId}`, {
+          headers: {
+            Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          },
+        });
+
+        if (!discordResponse.ok) {
+          failedToFetch.push(discordId);
+          continue;
+        }
+
+        const discordUser = await discordResponse.json();
+
+        // Create user in database
+        const newUser = await prisma.user.create({
+          data: {
+            discord_id: discordId,
+            discord_username: discordUser.username || `User${discordId.slice(-4)}`,
+            discord_avatar: discordUser.avatar || null,
+            gold_balance: 0,
+            role: 'USER',
+            session_status: 'APPROVED', // Auto-approve so they can access pre-auction
+          },
+          select: { id: true, discord_id: true },
+        });
+
+        createdUsers.push(newUser);
+      } catch (err) {
+        failedToFetch.push(discordId);
+      }
+    }
+
+    // Combine existing and newly created users
+    const allUsers = [...existingUsers, ...createdUsers];
     const existingParticipantIds = new Set(raid.participants.map((p) => p.user_id));
-    const foundDiscordIds = new Set(users.map((u) => u.discord_id));
 
     // Filter users not already in raid
-    const usersToAdd = users.filter((u) => !existingParticipantIds.has(u.id));
+    const usersToAdd = allUsers.filter((u) => !existingParticipantIds.has(u.id));
 
     // Add participants
     if (usersToAdd.length > 0) {
@@ -351,14 +395,13 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    // Find Discord IDs that weren't found in the system
-    const notFound = discordIds.filter((discordId) => !foundDiscordIds.has(discordId));
-
     return {
-      matched: usersToAdd.length,
-      already_in_raid: users.length - usersToAdd.length,
-      not_found: notFound,
+      matched: existingUsers.filter((u) => !existingParticipantIds.has(u.id)).length,
+      created: createdUsers.length,
+      already_in_raid: allUsers.length - usersToAdd.length,
+      failed_to_fetch: failedToFetch,
       total_found_in_message: discordIds.length,
+      total_added: usersToAdd.length,
     };
   });
 

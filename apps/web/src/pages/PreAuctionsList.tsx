@@ -42,8 +42,11 @@ interface AvailableRaid {
 
 interface ImportResult {
   matched: number;
-  not_found: string[];
+  created?: number;
+  not_found?: string[];
+  failed_to_fetch?: string[];
   already_in_raid: number;
+  total_added?: number;
 }
 
 const DURATION_OPTIONS = [
@@ -283,15 +286,20 @@ function StartPreAuctionPanel() {
                     {importResult && (
                       <span className="text-sm text-green-400">
                         <Check className="h-4 w-4 inline mr-1" />
-                        Added {importResult.matched} players
+                        Added {importResult.total_added ?? importResult.matched} players
+                        {importResult.created !== undefined && importResult.created > 0 && (
+                          <span className="text-blue-400 ml-1">
+                            ({importResult.created} new accounts created)
+                          </span>
+                        )}
                         {importResult.total_found_in_message && (
                           <span className="text-gray-400 ml-1">
                             (found {importResult.total_found_in_message} in message)
                           </span>
                         )}
-                        {importResult.not_found.length > 0 && (
+                        {importResult.failed_to_fetch && importResult.failed_to_fetch.length > 0 && (
                           <span className="text-yellow-400 ml-2">
-                            ({importResult.not_found.length} not registered)
+                            ({importResult.failed_to_fetch.length} failed)
                           </span>
                         )}
                       </span>
