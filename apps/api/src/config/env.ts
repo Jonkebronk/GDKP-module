@@ -14,6 +14,7 @@ const envSchema = z.object({
   DISCORD_CLIENT_ID: z.string(),
   DISCORD_CLIENT_SECRET: z.string(),
   DISCORD_CALLBACK_URL: z.string(),
+  DISCORD_BOT_TOKEN: z.string().optional(),
 
   // Coinbase Commerce
   COINBASE_API_KEY: z.string(),

@@ -91,13 +91,19 @@ function CountdownTimer({ endsAt }: { endsAt: string }) {
   );
 }
 
+interface RaidHelperImportResult extends ImportResult {
+  total_found_in_message?: number;
+  message?: string;
+}
+
 function StartPreAuctionPanel() {
   const queryClient = useQueryClient();
   const [selectedRaidId, setSelectedRaidId] = useState<string>('');
   const [duration, setDuration] = useState(24);
   const [showImport, setShowImport] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [channelId, setChannelId] = useState('');
+  const [messageId, setMessageId] = useState('');
+  const [importResult, setImportResult] = useState<RaidHelperImportResult | null>(null);
 
   // Fetch available raids (PENDING, not locked)
   const { data: availableRaids, isLoading: raidsLoading } = useQuery({
@@ -110,13 +116,14 @@ function StartPreAuctionPanel() {
 
   const selectedRaid = availableRaids?.find((r) => r.id === selectedRaidId);
 
-  // Import participants mutation
+  // Import from Raid Helper mutation
   const importMutation = useMutation({
-    mutationFn: async (data: { raidId: string; discordIds: string[] }) => {
-      const res = await api.post(`/raids/${data.raidId}/import-participants`, {
-        discord_ids: data.discordIds,
+    mutationFn: async (data: { raidId: string; channelId: string; messageId: string }) => {
+      const res = await api.post(`/raids/${data.raidId}/import-from-raidhelper`, {
+        channel_id: data.channelId,
+        message_id: data.messageId,
       });
-      return res.data as ImportResult;
+      return res.data as RaidHelperImportResult;
     },
     onSuccess: (result) => {
       setImportResult(result);
@@ -136,37 +143,16 @@ function StartPreAuctionPanel() {
       queryClient.invalidateQueries({ queryKey: ['pre-auctions-list'] });
       queryClient.invalidateQueries({ queryKey: ['available-raids-for-preauction'] });
       setSelectedRaidId('');
-      setImportText('');
+      setChannelId('');
+      setMessageId('');
       setImportResult(null);
       setShowImport(false);
     },
   });
 
   const handleImport = () => {
-    if (!selectedRaidId || !importText.trim()) return;
-
-    // Parse Discord IDs from Raid Helper export
-    // Raid Helper exports contain Discord user IDs in various formats
-    const lines = importText.split('\n');
-    const discordIds: string[] = [];
-
-    for (const line of lines) {
-      // Match Discord ID patterns (17-19 digit numbers)
-      const matches = line.match(/\b\d{17,19}\b/g);
-      if (matches) {
-        discordIds.push(...matches);
-      }
-    }
-
-    // Remove duplicates
-    const uniqueIds = [...new Set(discordIds)];
-
-    if (uniqueIds.length === 0) {
-      alert('No Discord IDs found in the pasted text');
-      return;
-    }
-
-    importMutation.mutate({ raidId: selectedRaidId, discordIds: uniqueIds });
+    if (!selectedRaidId || !channelId.trim() || !messageId.trim()) return;
+    importMutation.mutate({ raidId: selectedRaidId, channelId: channelId.trim(), messageId: messageId.trim() });
   };
 
   const handleStartPreAuction = () => {
@@ -255,16 +241,36 @@ function StartPreAuctionPanel() {
 
               {showImport && (
                 <div className="mt-3 space-y-3">
-                  <textarea
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    placeholder="Paste Raid Helper signup data here...&#10;&#10;The system will extract Discord user IDs automatically."
-                    className="w-full h-32 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                  />
+                  <p className="text-xs text-gray-400">
+                    Right-click the Raid Helper message in Discord → "Copy Message ID".
+                    Also need the Channel ID (enable Developer Mode in Discord settings).
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Channel ID</label>
+                      <input
+                        type="text"
+                        value={channelId}
+                        onChange={(e) => setChannelId(e.target.value)}
+                        placeholder="e.g. 123456789012345678"
+                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Message ID</label>
+                      <input
+                        type="text"
+                        value={messageId}
+                        onChange={(e) => setMessageId(e.target.value)}
+                        placeholder="e.g. 123456789012345678"
+                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                      />
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={handleImport}
-                      disabled={!importText.trim() || importMutation.isPending}
+                      disabled={!channelId.trim() || !messageId.trim() || importMutation.isPending}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       {importMutation.isPending ? (
@@ -272,25 +278,32 @@ function StartPreAuctionPanel() {
                       ) : (
                         <Upload className="h-4 w-4" />
                       )}
-                      Import Players
+                      Fetch & Import
                     </button>
                     {importResult && (
                       <span className="text-sm text-green-400">
                         <Check className="h-4 w-4 inline mr-1" />
                         Added {importResult.matched} players
+                        {importResult.total_found_in_message && (
+                          <span className="text-gray-400 ml-1">
+                            (found {importResult.total_found_in_message} in message)
+                          </span>
+                        )}
                         {importResult.not_found.length > 0 && (
                           <span className="text-yellow-400 ml-2">
-                            ({importResult.not_found.length} not found)
+                            ({importResult.not_found.length} not registered)
                           </span>
                         )}
                       </span>
                     )}
                   </div>
-                  {importResult && importResult.not_found.length > 0 && (
-                    <div className="text-xs text-gray-500">
-                      Not found: {importResult.not_found.slice(0, 5).join(', ')}
-                      {importResult.not_found.length > 5 && ` and ${importResult.not_found.length - 5} more`}
+                  {importMutation.isError && (
+                    <div className="text-xs text-red-400">
+                      {(importMutation.error as Error)?.message || 'Failed to fetch from Discord'}
                     </div>
+                  )}
+                  {importResult && importResult.message && (
+                    <div className="text-xs text-yellow-400">{importResult.message}</div>
                   )}
                 </div>
               )}

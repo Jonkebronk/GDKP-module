@@ -5,6 +5,110 @@ import { requireAuth } from '../middleware/auth.js';
 import { AppError, ERROR_CODES } from '@gdkp/shared';
 import { PreAuctionService } from '../services/pre-auction.service.js';
 import { BidService } from '../services/bid.service.js';
+import { env } from '../config/env.js';
+
+// Fetch Discord message and extract user IDs from Raid Helper format
+async function fetchRaidHelperSignups(channelId: string, messageId: string): Promise<string[]> {
+  if (!env.DISCORD_BOT_TOKEN) {
+    throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Discord bot token not configured', 500);
+  }
+
+  // Fetch message from Discord API
+  const response = await fetch(
+    `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`,
+    {
+      headers: {
+        Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new AppError(
+      ERROR_CODES.INVALID_REQUEST,
+      `Failed to fetch Discord message: ${response.status} ${error}`,
+      400
+    );
+  }
+
+  const message = await response.json();
+  const discordIds: Set<string> = new Set();
+
+  // Extract user IDs from message content (mentions like <@123456789>)
+  const contentMatches = message.content?.match(/<@!?(\d{17,19})>/g) || [];
+  for (const match of contentMatches) {
+    const id = match.replace(/<@!?(\d{17,19})>/, '$1');
+    discordIds.add(id);
+  }
+
+  // Extract user IDs from embeds
+  if (message.embeds) {
+    for (const embed of message.embeds) {
+      // Check embed description
+      if (embed.description) {
+        const descMatches = embed.description.match(/<@!?(\d{17,19})>/g) || [];
+        for (const match of descMatches) {
+          const id = match.replace(/<@!?(\d{17,19})>/, '$1');
+          discordIds.add(id);
+        }
+        // Also look for raw IDs in Raid Helper format (some versions use plain IDs)
+        const rawIdMatches = embed.description.match(/\b(\d{17,19})\b/g) || [];
+        for (const id of rawIdMatches) {
+          discordIds.add(id);
+        }
+      }
+
+      // Check embed fields
+      if (embed.fields) {
+        for (const field of embed.fields) {
+          const fieldValue = field.value || '';
+          const fieldMatches = fieldValue.match(/<@!?(\d{17,19})>/g) || [];
+          for (const match of fieldMatches) {
+            const id = match.replace(/<@!?(\d{17,19})>/, '$1');
+            discordIds.add(id);
+          }
+          // Raw IDs
+          const rawIdMatches = fieldValue.match(/\b(\d{17,19})\b/g) || [];
+          for (const id of rawIdMatches) {
+            discordIds.add(id);
+          }
+        }
+      }
+    }
+  }
+
+  // Also fetch reactions to get users who reacted (Raid Helper uses reactions for signups)
+  try {
+    // Get common Raid Helper reaction emojis
+    const reactionEmojis = ['✅', '❌', '❔', '🛡️', '⚔️', '🏹', '✨'];
+
+    for (const emoji of reactionEmojis) {
+      const encodedEmoji = encodeURIComponent(emoji);
+      const reactionsResponse = await fetch(
+        `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encodedEmoji}?limit=100`,
+        {
+          headers: {
+            Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+          },
+        }
+      );
+
+      if (reactionsResponse.ok) {
+        const users = await reactionsResponse.json();
+        for (const user of users) {
+          if (user.id && !user.bot) {
+            discordIds.add(user.id);
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore reaction fetch errors, continue with what we have
+  }
+
+  return Array.from(discordIds);
+}
 
 const preAuctionService = new PreAuctionService();
 const bidService = new BidService();
@@ -178,6 +282,83 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
       matched: usersToAdd.length,
       already_in_raid: users.length - usersToAdd.length,
       not_found: notFound,
+    };
+  });
+
+  // Fetch signups from Raid Helper Discord message and import participants
+  fastify.post('/raids/:id/import-from-raidhelper', { preHandler: [requireAuth] }, async (request) => {
+    const { id } = request.params as { id: string };
+    const { channel_id, message_id } = request.body as { channel_id: string; message_id: string };
+
+    // Check if user is admin
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.id },
+      select: { role: true },
+    });
+
+    if (user?.role !== 'ADMIN') {
+      throw new AppError(ERROR_CODES.AUTH_FORBIDDEN, 'Admin access required', 403);
+    }
+
+    // Get the raid
+    const raid = await prisma.raid.findUnique({
+      where: { id },
+      include: { participants: true },
+    });
+
+    if (!raid) {
+      throw new AppError(ERROR_CODES.RAID_NOT_FOUND, 'Raid not found', 404);
+    }
+
+    if (raid.roster_locked_at) {
+      throw new AppError(ERROR_CODES.INVALID_REQUEST, 'Roster is already locked', 400);
+    }
+
+    // Fetch Discord user IDs from Raid Helper message
+    const discordIds = await fetchRaidHelperSignups(channel_id, message_id);
+
+    if (discordIds.length === 0) {
+      return {
+        matched: 0,
+        already_in_raid: 0,
+        not_found: [],
+        message: 'No Discord user IDs found in the message',
+      };
+    }
+
+    // Find users by Discord IDs
+    const users = await prisma.user.findMany({
+      where: {
+        discord_id: { in: discordIds },
+      },
+      select: { id: true, discord_id: true },
+    });
+
+    const existingParticipantIds = new Set(raid.participants.map((p) => p.user_id));
+    const foundDiscordIds = new Set(users.map((u) => u.discord_id));
+
+    // Filter users not already in raid
+    const usersToAdd = users.filter((u) => !existingParticipantIds.has(u.id));
+
+    // Add participants
+    if (usersToAdd.length > 0) {
+      await prisma.raidParticipant.createMany({
+        data: usersToAdd.map((u) => ({
+          raid_id: id,
+          user_id: u.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // Find Discord IDs that weren't found in the system
+    const notFound = discordIds.filter((discordId) => !foundDiscordIds.has(discordId));
+
+    return {
+      matched: usersToAdd.length,
+      already_in_raid: users.length - usersToAdd.length,
+      not_found: notFound,
+      total_found_in_message: discordIds.length,
     };
   });
 
