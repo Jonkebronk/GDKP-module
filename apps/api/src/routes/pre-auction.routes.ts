@@ -340,30 +340,37 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Auto-create users for missing Discord IDs
     const createdUsers: { id: string; discord_id: string }[] = [];
-    const failedToFetch: string[] = [];
+    const failedToCreate: string[] = [];
 
     for (const discordId of missingDiscordIds) {
       try {
-        // Fetch user info from Discord API
-        const discordResponse = await fetch(`https://discord.com/api/v10/users/${discordId}`, {
-          headers: {
-            Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-          },
-        });
+        // Try to fetch user info from Discord API (may fail if bot doesn't share a guild)
+        let username = `User${discordId.slice(-4)}`;
+        let avatar: string | null = null;
 
-        if (!discordResponse.ok) {
-          failedToFetch.push(discordId);
-          continue;
+        try {
+          const discordResponse = await fetch(`https://discord.com/api/v10/users/${discordId}`, {
+            headers: {
+              Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
+            },
+          });
+
+          if (discordResponse.ok) {
+            const discordUser = await discordResponse.json();
+            username = discordUser.username || username;
+            avatar = discordUser.avatar || null;
+          }
+          // If fetch fails, we still create with placeholder - they'll get updated on login
+        } catch {
+          // Ignore fetch errors, continue with placeholder data
         }
 
-        const discordUser = await discordResponse.json();
-
-        // Create user in database
+        // Create user in database (even if Discord fetch failed)
         const newUser = await prisma.user.create({
           data: {
             discord_id: discordId,
-            discord_username: discordUser.username || `User${discordId.slice(-4)}`,
-            discord_avatar: discordUser.avatar || null,
+            discord_username: username,
+            discord_avatar: avatar,
             gold_balance: 0,
             role: 'USER',
             session_status: 'APPROVED', // Auto-approve so they can access pre-auction
@@ -373,7 +380,7 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
 
         createdUsers.push(newUser);
       } catch (err) {
-        failedToFetch.push(discordId);
+        failedToCreate.push(discordId);
       }
     }
 
@@ -399,7 +406,7 @@ const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
       matched: existingUsers.filter((u) => !existingParticipantIds.has(u.id)).length,
       created: createdUsers.length,
       already_in_raid: allUsers.length - usersToAdd.length,
-      failed_to_fetch: failedToFetch,
+      failed_to_create: failedToCreate,
       total_found_in_message: discordIds.length,
       total_added: usersToAdd.length,
     };

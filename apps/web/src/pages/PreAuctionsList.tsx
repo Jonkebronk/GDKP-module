@@ -44,9 +44,10 @@ interface ImportResult {
   matched: number;
   created?: number;
   not_found?: string[];
-  failed_to_fetch?: string[];
+  failed_to_create?: string[];
   already_in_raid: number;
   total_added?: number;
+  total_found_in_message?: number;
 }
 
 const DURATION_OPTIONS = [
@@ -297,9 +298,9 @@ function StartPreAuctionPanel() {
                             (found {importResult.total_found_in_message} in message)
                           </span>
                         )}
-                        {importResult.failed_to_fetch && importResult.failed_to_fetch.length > 0 && (
+                        {importResult.failed_to_create && importResult.failed_to_create.length > 0 && (
                           <span className="text-yellow-400 ml-2">
-                            ({importResult.failed_to_fetch.length} failed)
+                            ({importResult.failed_to_create.length} failed to create)
                           </span>
                         )}
                       </span>
