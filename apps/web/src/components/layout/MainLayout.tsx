@@ -14,6 +14,7 @@ import {
   Coins,
   History,
   Users,
+  Gavel,
 } from 'lucide-react';
 import { useState } from 'react';
 import gnomeLogo from '../../assets/gnome-logo.png';
@@ -21,6 +22,7 @@ import anonymousAvatar from '../../assets/anonymous-avatar.png';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: Home },
+  { path: '/pre-auctions', label: 'Pre-Auction', icon: Gavel },
   { path: '/items', label: 'Items', icon: Package },
   { path: '/raid-history', label: 'History', icon: History },
   { path: '/profile', label: 'Profile', icon: User },

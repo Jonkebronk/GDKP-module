@@ -18,6 +18,71 @@ const placeBidSchema = z.object({
 });
 
 const preAuctionRoutes: FastifyPluginAsync = async (fastify) => {
+  // List all pre-auctions the user is participating in
+  fastify.get('/pre-auctions', { preHandler: [requireAuth] }, async (request) => {
+    const userId = request.user.id;
+
+    // Get all raids where user is a participant and roster is locked
+    const raids = await prisma.raid.findMany({
+      where: {
+        roster_locked_at: { not: null },
+        participants: {
+          some: { user_id: userId },
+        },
+      },
+      include: {
+        participants: true,
+        pre_auction_items: {
+          include: {
+            bids: {
+              where: { user_id: userId, is_winning: true },
+            },
+          },
+        },
+      },
+      orderBy: { preauction_ends_at: 'asc' },
+    });
+
+    const now = new Date();
+
+    const active: any[] = [];
+    const ended: any[] = [];
+
+    for (const raid of raids) {
+      const isActive = raid.preauction_ends_at && raid.preauction_ends_at > now;
+      const itemsWithBids = raid.pre_auction_items.filter((i) => Number(i.current_bid) > 0).length;
+      const myWinningBids = raid.pre_auction_items.filter((i) => i.winner_id === userId).length;
+      const myTotalBidAmount = raid.pre_auction_items
+        .filter((i) => i.winner_id === userId)
+        .reduce((sum, i) => sum + Number(i.current_bid), 0);
+
+      const raidData = {
+        id: raid.id,
+        name: raid.name,
+        instances: raid.instances,
+        roster_locked_at: raid.roster_locked_at,
+        preauction_ends_at: raid.preauction_ends_at,
+        participant_count: raid.participants.length,
+        item_count: raid.pre_auction_items.length,
+        items_with_bids: itemsWithBids,
+        my_winning_bids: myWinningBids,
+        my_total_bid_amount: myTotalBidAmount,
+      };
+
+      if (isActive) {
+        active.push(raidData);
+      } else {
+        ended.push(raidData);
+      }
+    }
+
+    // Only return last 10 ended
+    return {
+      active,
+      ended: ended.slice(0, 10),
+    };
+  });
+
   // Lock roster and start pre-auction
   fastify.post('/raids/:id/lock-roster', { preHandler: [requireAuth] }, async (request) => {
     const { id } = request.params as { id: string };

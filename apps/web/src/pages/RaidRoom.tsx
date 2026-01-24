@@ -54,7 +54,6 @@ import { PotDistribution } from '../components/PotDistribution';
 import { AddItemsModal } from '../components/AddItemsModal';
 import { SimpleUserDisplay } from '../components/UserDisplay';
 import { AuctionSettings } from '../components/AuctionSettings';
-import { RosterLockPanel } from '../components/RosterLockPanel';
 import {
   DndContext,
   closestCenter,
@@ -1316,16 +1315,6 @@ function RaidRoomContent() {
               )}
             </div>
           </div>
-
-          {/* Pre-Auction Panel */}
-          <RosterLockPanel
-            raidId={id!}
-            participantCount={raid.participants.length}
-            rosterLockedAt={raid.roster_locked_at ? new Date(raid.roster_locked_at) : null}
-            preAuctionEndsAt={raid.preauction_ends_at ? new Date(raid.preauction_ends_at) : null}
-            isLeader={isLeader}
-            raidStatus={raid.status}
-          />
 
           {/* Participants */}
           <div className="wow-tooltip wow-border-common">

@@ -39,6 +39,7 @@ import { GoldManagement } from './pages/admin/GoldManagement';
 import { Lobby } from './pages/admin/Lobby';
 import { RaidSelection } from './pages/RaidSelection';
 import { PreAuctionPage } from './pages/PreAuctionPage';
+import { PreAuctionsList } from './pages/PreAuctionsList';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -272,6 +273,7 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="raids" element={<Raids />} />
+          <Route path="pre-auctions" element={<PreAuctionsList />} />
           <Route path="items" element={<Items />} />
           <Route path="raid-history" element={<RaidHistory />} />
           <Route path="profile" element={<Profile />} />
