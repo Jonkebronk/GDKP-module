@@ -10,7 +10,7 @@ import { parseWishlistFromUrl, generateWishlistUrl } from '../utils/wishlistUrl'
 
 import { RaidTabs } from '../components/wishlist/RaidTabs';
 import { WishlistItemCard } from '../components/wishlist/WishlistItemCard';
-import { CartSummary } from '../components/wishlist/CartSummary';
+import { CartDrawer } from '../components/wishlist/CartDrawer';
 import { ShareModal } from '../components/wishlist/ShareModal';
 
 // API base URL
@@ -29,6 +29,7 @@ interface InstanceData {
 export function WishlistPage() {
   const [searchParams] = useSearchParams();
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [searchInput, setSearchInput] = useState('');
 
   // Store
@@ -36,12 +37,11 @@ export function WishlistPage() {
     selectedIds,
     selectedRaid,
     filters,
-    viewMode,
     setSelectedIds,
     setSelectedRaid,
     setFilters,
-    setViewMode,
     toggleItem,
+    removeItem,
     clearCart,
     cacheItems,
     isSelected,
@@ -52,8 +52,8 @@ export function WishlistPage() {
     const urlIds = parseWishlistFromUrl(searchParams);
     if (urlIds.length > 0) {
       setSelectedIds(urlIds);
-      // Switch to cart view when loading from URL
-      setViewMode('cart');
+      // Open cart drawer when loading from URL
+      setShowCartDrawer(true);
     }
   }, []);
 
@@ -142,14 +142,15 @@ export function WishlistPage() {
     return counts;
   }, [instancesData]);
 
-  // Items to display
+  // Items to display (always browse mode, cart is a drawer now)
   const displayItems = useMemo(() => {
-    if (viewMode === 'cart') {
-      // In cart view, show only selected items
-      return selectedItemsData?.items || [];
-    }
     return itemsData?.items || [];
-  }, [viewMode, itemsData, selectedItemsData]);
+  }, [itemsData]);
+
+  // Selected items for cart drawer
+  const cartItems = useMemo(() => {
+    return selectedItemsData?.items || [];
+  }, [selectedItemsData]);
 
   // Group items by boss
   const groupedItems = useMemo(() => {
@@ -169,7 +170,7 @@ export function WishlistPage() {
   const availableSlots = useMemo(() => {
     const slots = new Set<string>();
     for (const item of itemsData?.items || []) {
-      if (item.slot && item.slot !== 'Unknown') slots.add(item.slot);
+      if (item.slot && (item.slot as string) !== 'Unknown') slots.add(item.slot);
     }
     return Array.from(slots).sort();
   }, [itemsData]);
@@ -193,11 +194,14 @@ export function WishlistPage() {
             </div>
 
             {selectedIds.size > 0 && (
-              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-400">
-                <span className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded">
-                  {selectedIds.size} selected
-                </span>
-              </div>
+              <button
+                onClick={() => setShowCartDrawer(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                <span className="font-medium">{selectedIds.size}</span>
+                <span className="hidden sm:inline">selected</span>
+              </button>
             )}
           </div>
         </div>
@@ -304,7 +308,7 @@ export function WishlistPage() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-24">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {isLoadingItems ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
@@ -312,9 +316,7 @@ export function WishlistPage() {
         ) : displayItems.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-400">
-              {viewMode === 'cart'
-                ? 'No items in your wishlist yet. Browse items and click the + button to add them.'
-                : 'No items found. Try adjusting your filters.'}
+              No items found. Try adjusting your filters or select a different raid.
             </p>
           </div>
         ) : (
@@ -343,13 +345,28 @@ export function WishlistPage() {
         )}
       </main>
 
-      {/* Cart Summary */}
-      <CartSummary
-        selectedCount={selectedIds.size}
-        viewMode={viewMode}
-        onToggleView={() => setViewMode(viewMode === 'browse' ? 'cart' : 'browse')}
+      {/* Floating Cart Button (mobile) */}
+      {selectedIds.size > 0 && (
+        <button
+          onClick={() => setShowCartDrawer(true)}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-amber-500 text-black rounded-full shadow-lg hover:bg-amber-400 transition-colors sm:hidden"
+        >
+          <ShoppingCart className="h-5 w-5" />
+          <span className="font-semibold">{selectedIds.size}</span>
+        </button>
+      )}
+
+      {/* Cart Drawer */}
+      <CartDrawer
+        isOpen={showCartDrawer}
+        onClose={() => setShowCartDrawer(false)}
+        items={cartItems}
+        onRemoveItem={removeItem}
+        onClear={() => {
+          clearCart();
+          setShowCartDrawer(false);
+        }}
         onShare={handleShare}
-        onClear={clearCart}
       />
 
       {/* Share Modal */}
