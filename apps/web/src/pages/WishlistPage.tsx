@@ -165,11 +165,11 @@ export function WishlistPage() {
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [displayItems]);
 
-  // Unique slots from current items
+  // Unique slots from current items (excluding Unknown)
   const availableSlots = useMemo(() => {
     const slots = new Set<string>();
     for (const item of itemsData?.items || []) {
-      if (item.slot) slots.add(item.slot);
+      if (item.slot && item.slot !== 'Unknown') slots.add(item.slot);
     }
     return Array.from(slots).sort();
   }, [itemsData]);
