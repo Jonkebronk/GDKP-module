@@ -14,7 +14,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
 
 # Cache bust - change this value to force fresh pnpm install
-ARG CACHE_BUST=20260109-v4-FORCE
+ARG CACHE_BUST=20260214-v1
 RUN echo "Cache bust: $CACHE_BUST" && rm -rf /root/.pnpm-store
 
 # Install dependencies
