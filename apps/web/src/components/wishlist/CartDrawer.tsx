@@ -82,8 +82,11 @@ export function CartDrawer({
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
               <ShoppingCart className="h-16 w-16 text-gray-600 mb-4" />
               <p className="text-gray-400 text-lg mb-2">Your wishlist is empty</p>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 text-sm mb-4">
                 Browse items and click the + button to add them here
+              </p>
+              <p className="text-gray-600 text-xs">
+                Once you've selected items, share your list with your booster!
               </p>
             </div>
           ) : (
@@ -112,6 +115,11 @@ export function CartDrawer({
         {/* Footer */}
         {items.length > 0 && (
           <div className="p-4 border-t border-gray-700 bg-gray-800 space-y-3">
+            {/* Info text */}
+            <p className="text-xs text-gray-500 text-center">
+              Share this list with your booster so they know what you want!
+            </p>
+
             {/* Summary */}
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Total items</span>
@@ -122,17 +130,16 @@ export function CartDrawer({
             <div className="flex gap-2">
               <button
                 onClick={onClear}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600/20 text-red-400 text-sm font-medium hover:bg-red-600/30 transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600/20 text-red-400 text-sm font-medium hover:bg-red-600/30 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
-                Clear All
               </button>
               <button
                 onClick={onShare}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-500 transition-colors"
               >
                 <Share2 className="h-4 w-4" />
-                Share List
+                Share with Booster
               </button>
             </div>
           </div>

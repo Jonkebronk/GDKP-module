@@ -193,16 +193,27 @@ export function WishlistPage() {
               <h1 className="text-xl font-bold text-white">TBC Raid Loot Browser</h1>
             </div>
 
-            {selectedIds.size > 0 && (
-              <button
-                onClick={() => setShowCartDrawer(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                <span className="font-medium">{selectedIds.size}</span>
-                <span className="hidden sm:inline">selected</span>
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {selectedIds.size > 0 ? (
+                <>
+                  <span className="hidden md:block text-sm text-gray-400">
+                    Click to view cart & share with your booster
+                  </span>
+                  <button
+                    onClick={() => setShowCartDrawer(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-black rounded-lg hover:bg-amber-400 transition-colors font-medium"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>{selectedIds.size}</span>
+                    <span className="hidden sm:inline">items</span>
+                  </button>
+                </>
+              ) : (
+                <span className="text-sm text-gray-500">
+                  Select items to build your wishlist
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
