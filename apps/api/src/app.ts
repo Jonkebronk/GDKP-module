@@ -15,6 +15,7 @@ import auctionRoutes from './routes/auction.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import itemRoutes from './routes/items.routes.js';
 import preAuctionRoutes from './routes/pre-auction.routes.js';
+import publicRoutes from './routes/public.routes.js';
 
 export async function createApp() {
   const app = Fastify({
@@ -70,6 +71,7 @@ export async function createApp() {
   await app.register(adminRoutes, { prefix: '/api/admin' });
   await app.register(itemRoutes, { prefix: '/api/items' });
   await app.register(preAuctionRoutes, { prefix: '/api' });
+  await app.register(publicRoutes, { prefix: '/api/public' });
 
   return app;
 }

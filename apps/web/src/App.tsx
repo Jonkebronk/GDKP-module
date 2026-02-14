@@ -40,6 +40,7 @@ import { Lobby } from './pages/admin/Lobby';
 import { RaidSelection } from './pages/RaidSelection';
 import { PreAuctionPage } from './pages/PreAuctionPage';
 import { PreAuctionsList } from './pages/PreAuctionsList';
+import { WishlistPage } from './pages/WishlistPage';
 
 // Layout
 import { MainLayout } from './components/layout/MainLayout';
@@ -216,6 +217,7 @@ export default function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/wishlist" element={<WishlistPage />} />
 
         {/* Waiting room - for users waiting for approval */}
         <Route
