@@ -550,6 +550,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 
   /**
    * POST /items/import/wowhead-zone - Import all drops from a WoWhead zone URL
+   * Now extracts boss names from WoWhead's sourcemore data
    */
   fastify.post('/import/wowhead-zone', { preHandler: [requireAuth] }, async (request, reply) => {
     const { url } = wowheadZoneImportSchema.parse(request.body);
@@ -586,97 +587,132 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 
       const html = await response.text();
 
-      // Extract item IDs specifically from the "drops" listview section
-      const itemIds: number[] = [];
+      // Extract items with boss info from the drops listview
+      interface ItemWithBoss {
+        id: number;
+        boss: string;
+      }
+      const itemsWithBoss: ItemWithBoss[] = [];
 
-      // Find the drops listview - look for id: 'drops' and then find the data array
-      // The data array can be very long with nested objects, so we need a different approach
+      // Find the drops listview and extract the full data array
       const dropsListviewMatch = html.match(/new Listview\(\{[^{]*id:\s*['"]drops['"][^{]*data:\s*\[/);
 
       if (dropsListviewMatch) {
-        // Find where this listview starts and extract items from that section
-        const startIndex = dropsListviewMatch.index! + dropsListviewMatch[0].length;
+        const startIndex = dropsListviewMatch.index! + dropsListviewMatch[0].length - 1; // Include the [
 
         // Find the end of the data array by counting brackets
         let bracketCount = 1;
-        let endIndex = startIndex;
-        for (let i = startIndex; i < html.length && bracketCount > 0; i++) {
+        let endIndex = startIndex + 1;
+        for (let i = startIndex + 1; i < html.length && bracketCount > 0; i++) {
           if (html[i] === '[') bracketCount++;
           if (html[i] === ']') bracketCount--;
           endIndex = i;
         }
 
-        const dropsData = html.substring(startIndex, endIndex);
+        const dropsDataStr = html.substring(startIndex, endIndex + 1);
 
-        // Extract all item IDs from the drops data
-        const idMatches = dropsData.matchAll(/"id"\s*:\s*(\d+)/g);
-        for (const m of idMatches) {
-          const id = parseInt(m[1]);
-          if (id > 0 && !itemIds.includes(id)) {
-            itemIds.push(id);
-          }
-        }
-      }
+        // Parse the JSON data - WoWhead uses relaxed JSON, so we need to fix it
+        try {
+          // Fix unquoted keys and single quotes
+          const fixedJson = dropsDataStr
+            .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3')
+            .replace(/'/g, '"');
 
-      // Fallback: Try WH.Gatherer.addData for item type (3) with drops
-      if (itemIds.length === 0) {
-        // WH.Gatherer.addData(TYPE, ID, DATA) - type 3 is items
-        const gathererMatches = html.matchAll(/WH\.Gatherer\.addData\(\s*3\s*,\s*\d+\s*,\s*(\{[^}]+\})\)/g);
-        for (const m of gathererMatches) {
-          const dataStr = m[1];
-          const idMatches = dataStr.matchAll(/"(\d+)":/g);
-          for (const idm of idMatches) {
-            const id = parseInt(idm[1]);
-            if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
-              itemIds.push(id);
-            }
-          }
-        }
-      }
+          const dropsData = JSON.parse(fixedJson) as Array<{
+            id?: number;
+            sourcemore?: Array<{ n?: string; t?: number }>;
+          }>;
 
-      // Second fallback: Find all listviews with template:'item' and extract from those
-      if (itemIds.length === 0) {
-        const listviewMatches = html.matchAll(/new Listview\(\{[^}]*template:\s*['"]item['"][^}]*\}/g);
-        for (const lvm of listviewMatches) {
-          const startPos = html.indexOf('data:', lvm.index);
-          if (startPos > 0 && startPos < lvm.index! + 500) {
-            // Find items in the next 50000 characters (data arrays can be large)
-            const searchSection = html.substring(startPos, startPos + 50000);
-            const itemMatches = searchSection.matchAll(/"id"\s*:\s*(\d+)/g);
-            for (const m of itemMatches) {
-              const id = parseInt(m[1]);
-              if (id > 1000 && id < 100000 && !itemIds.includes(id)) {
-                itemIds.push(id);
+          for (const item of dropsData) {
+            if (item.id && item.id > 0) {
+              // Extract boss name from sourcemore (t=1 is creature/NPC)
+              let bossName = 'Unknown';
+              if (item.sourcemore && Array.isArray(item.sourcemore)) {
+                for (const source of item.sourcemore) {
+                  if (source.n && source.t === 1) {
+                    bossName = source.n;
+                    break;
+                  }
+                }
+              }
+
+              // Only add if not already in list
+              if (!itemsWithBoss.find(i => i.id === item.id)) {
+                itemsWithBoss.push({ id: item.id, boss: bossName });
               }
             }
-            break; // Just use the first item listview
+          }
+        } catch (jsonError) {
+          logger.warn({ error: jsonError }, 'Failed to parse drops JSON, falling back to regex');
+
+          // Fallback: Extract items using regex
+          const itemMatches = dropsDataStr.matchAll(/\{[^{}]*"id"\s*:\s*(\d+)[^{}]*(?:"sourcemore"\s*:\s*\[([^\]]*)\])?[^{}]*\}/g);
+          for (const m of itemMatches) {
+            const id = parseInt(m[1]);
+            let bossName = 'Unknown';
+
+            if (m[2]) {
+              // Try to extract boss name from sourcemore
+              const bossMatch = m[2].match(/"n"\s*:\s*"([^"]+)"/);
+              if (bossMatch) {
+                bossName = bossMatch[1];
+              }
+            }
+
+            if (id > 0 && !itemsWithBoss.find(i => i.id === id)) {
+              itemsWithBoss.push({ id, boss: bossName });
+            }
           }
         }
       }
 
-      if (itemIds.length === 0) {
+      // Fallback if no items found
+      if (itemsWithBoss.length === 0) {
+        // Try simpler regex extraction
+        const idMatches = html.matchAll(/"id"\s*:\s*(\d+)/g);
+        for (const m of idMatches) {
+          const id = parseInt(m[1]);
+          if (id > 1000 && id < 100000 && !itemsWithBoss.find(i => i.id === id)) {
+            itemsWithBoss.push({ id, boss: 'Unknown' });
+          }
+        }
+      }
+
+      if (itemsWithBoss.length === 0) {
         return reply.status(400).send({
           success: false,
           error: 'No drops found on zone page. The page format may have changed.',
         });
       }
 
-      logger.info({ zoneId, instanceName, itemCount: itemIds.length }, 'Found items on WoWhead zone page');
+      logger.info({ zoneId, instanceName, itemCount: itemsWithBoss.length }, 'Found items on WoWhead zone page');
 
       // Import each item
       let imported = 0;
+      let updated = 0;
       let skipped = 0;
       const errors: string[] = [];
-      const importedItems: { id: number; name: string; quality: number }[] = [];
+      const importedItems: { id: number; name: string; quality: number; boss: string }[] = [];
 
-      for (const wowheadId of itemIds) {
+      for (const itemInfo of itemsWithBoss) {
+        const { id: wowheadId, boss: bossName } = itemInfo;
+
         // Check if item already exists
         const existing = await prisma.tbcRaidItem.findUnique({
           where: { wowhead_id: wowheadId },
         });
 
         if (existing) {
-          skipped++;
+          // Update boss name if it was Unknown
+          if (existing.boss_name === 'Unknown' && bossName !== 'Unknown') {
+            await prisma.tbcRaidItem.update({
+              where: { wowhead_id: wowheadId },
+              data: { boss_name: bossName },
+            });
+            updated++;
+          } else {
+            skipped++;
+          }
           continue;
         }
 
@@ -711,7 +747,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
             slot = slotMatch[1];
           }
 
-          // Create the item
+          // Create the item with boss name
           await prisma.tbcRaidItem.create({
             data: {
               wowhead_id: wowheadId,
@@ -720,7 +756,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
               quality: tooltipData.quality ?? 4,
               slot,
               raid_instance: instanceName,
-              boss_name: 'Unknown',
+              boss_name: bossName,
               phase: 1,
             },
           });
@@ -730,6 +766,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
             id: wowheadId,
             name: tooltipData.name,
             quality: tooltipData.quality ?? 4,
+            boss: bossName,
           });
 
           // Small delay to avoid rate limiting
@@ -740,7 +777,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       logger.info(
-        { userId: request.user.id, zoneId, instanceName, imported, skipped, errorCount: errors.length },
+        { userId: request.user.id, zoneId, instanceName, imported, updated, skipped, errorCount: errors.length },
         'WoWhead zone import completed'
       );
 
@@ -749,8 +786,9 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
         zone_id: zoneId,
         instance: instanceName,
         imported,
+        updated,
         skipped,
-        total_found: itemIds.length,
+        total_found: itemsWithBoss.length,
         items: importedItems,
         errors: errors.slice(0, 10),
       };
