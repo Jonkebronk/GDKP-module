@@ -190,7 +190,10 @@ export function WishlistPage() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <ShoppingCart className="h-6 w-6 text-amber-400" />
-              <h1 className="text-xl font-bold text-white">TBC Raid Loot Browser</h1>
+              <h1 className="text-xl font-bold text-white">
+                <span className="hidden sm:inline">TBC Raid Loot Browser</span>
+                <span className="sm:hidden">Loot Browser</span>
+              </h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -232,9 +235,9 @@ export function WishlistPage() {
       {/* Filters */}
       <div className="bg-gray-800/30 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <div className="relative flex-1 min-w-[150px] sm:min-w-[200px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -255,11 +258,11 @@ export function WishlistPage() {
 
             {/* Slot filter */}
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-400 hidden sm:block" />
               <select
                 value={filters.slot || ''}
                 onChange={(e) => setFilters({ slot: e.target.value || undefined })}
-                className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                className="bg-gray-800 border border-gray-600 rounded-lg px-2 sm:px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
               >
                 <option value="">All Slots</option>
                 {availableSlots.map((slot) => (
@@ -276,7 +279,7 @@ export function WishlistPage() {
               onChange={(e) =>
                 setFilters({ quality: e.target.value ? parseInt(e.target.value) : undefined })
               }
-              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-2 sm:px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
             >
               <option value="">All Qualities</option>
               {[5, 4, 3, 2, 1, 0].map((q) => (
@@ -291,7 +294,7 @@ export function WishlistPage() {
               <select
                 value={filters.boss || ''}
                 onChange={(e) => setFilters({ boss: e.target.value || undefined })}
-                className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none"
+                className="bg-gray-800 border border-gray-600 rounded-lg px-2 sm:px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none max-w-[140px] sm:max-w-none truncate"
               >
                 <option value="">All Bosses</option>
                 {bossesData.bosses.map((boss) => (
