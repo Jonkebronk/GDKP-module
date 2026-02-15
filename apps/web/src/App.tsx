@@ -4,7 +4,7 @@ import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
 // Build version - must match server version
-const BUILD_VERSION = '2026-02-15-v2';
+const BUILD_VERSION = '2026-02-15-v3';
 console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
 
 // Check for new version and reload if needed
@@ -201,11 +201,19 @@ export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const versionChecked = useRef(false);
 
+  // CRITICAL: Bypass router entirely for /wishlist (fixes Discord in-app browser)
+  const isWishlistPath = window.location.pathname === '/wishlist' ||
+    window.location.pathname.startsWith('/wishlist?') ||
+    window.location.pathname.startsWith('/wishlist/');
+
   // Global socket-to-query cache sync for instant updates
   useQuerySocket();
 
   useEffect(() => {
-    checkAuth();
+    // Skip auth check entirely for wishlist - it's public
+    if (!isWishlistPath) {
+      checkAuth();
+    }
 
     // Check for new version on startup (once)
     if (!versionChecked.current) {
@@ -216,7 +224,17 @@ export default function App() {
     // Check for updates every 5 minutes
     const interval = setInterval(checkForUpdates, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [checkAuth]);
+  }, [checkAuth, isWishlistPath]);
+
+  // Render WishlistPage directly for /wishlist paths
+  // This bypasses any routing issues in Discord's in-app browser
+  if (isWishlistPath) {
+    return (
+      <BrowserRouter>
+        <WishlistPage />
+      </BrowserRouter>
+    );
+  }
 
   return (
     <BrowserRouter>
