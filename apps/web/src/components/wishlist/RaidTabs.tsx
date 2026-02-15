@@ -8,10 +8,6 @@ interface RaidTabsProps {
 }
 
 export function RaidTabs({ selectedRaid, onSelectRaid, itemCounts = {} }: RaidTabsProps) {
-  const selectedLabel = selectedRaid
-    ? `${selectedRaid} (${itemCounts[selectedRaid] || 0})`
-    : 'All Raids';
-
   return (
     <div className="relative">
       <select
