@@ -221,21 +221,17 @@ export function WishlistPage() {
         </div>
       </header>
 
-      {/* Raid Tabs */}
+      {/* Filters */}
       <div className="bg-gray-800/50 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-3">
-          <RaidTabs
-            selectedRaid={selectedRaid}
-            onSelectRaid={setSelectedRaid}
-            itemCounts={itemCounts}
-          />
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-gray-800/30 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Raid Dropdown */}
+            <RaidTabs
+              selectedRaid={selectedRaid}
+              onSelectRaid={setSelectedRaid}
+              itemCounts={itemCounts}
+            />
+
             {/* Search */}
             <div className="relative flex-1 min-w-[150px] sm:min-w-[200px] max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

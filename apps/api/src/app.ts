@@ -51,7 +51,7 @@ export async function createApp() {
   app.setErrorHandler(errorHandler);
 
   // Build version - change this on each deploy to trigger client refresh
-  const BUILD_VERSION = '2026-02-15-v5';
+  const BUILD_VERSION = '2026-02-15-v6';
 
   // Health check with version
   app.get('/health', async () => ({
