@@ -4,7 +4,7 @@ import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
 // Build version - must match server version
-const BUILD_VERSION = '2026-02-14-v1';
+const BUILD_VERSION = '2026-02-15-v1';
 console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
 
 // Check for new version and reload if needed
@@ -155,6 +155,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // Redirect based on user role
 function RoleBasedRedirect() {
   const { user, isAuthenticated, isLoading, sessionStatus } = useAuthStore();
+  const location = useLocation();
+
+  // Safety: If somehow we're on /wishlist in the fallback, stay there (it's public)
+  if (location.pathname === '/wishlist' || location.pathname.startsWith('/wishlist')) {
+    // This shouldn't happen, but prevent redirect loop
+    return <WishlistPage />;
+  }
 
   if (isLoading) {
     return <LoadingSpinner />;
