@@ -51,7 +51,7 @@ export async function createApp() {
   app.setErrorHandler(errorHandler);
 
   // Build version - change this on each deploy to trigger client refresh
-  const BUILD_VERSION = '2026-02-15-v3';
+  const BUILD_VERSION = '2026-02-15-v4';
 
   // Health check with version
   app.get('/health', async () => ({
@@ -62,6 +62,18 @@ export async function createApp() {
 
   // Version endpoint for client refresh check
   app.get('/api/version', async () => ({ version: BUILD_VERSION }));
+
+  // Wishlist redirect - use this URL in Discord embeds for mobile compatibility
+  // This does a server-side redirect which works better in Discord's in-app browser
+  app.get('/api/go/wishlist', async (request, reply) => {
+    const query = request.query as Record<string, string>;
+    const items = query.items || '';
+    const baseUrl = env.FRONTEND_URL || 'https://gdkpweb-production.up.railway.app';
+    const wishlistUrl = items
+      ? `${baseUrl}/wishlist?items=${items}`
+      : `${baseUrl}/wishlist`;
+    return reply.redirect(302, wishlistUrl);
+  });
 
   // API routes
   await app.register(authRoutes, { prefix: '/api/auth' });

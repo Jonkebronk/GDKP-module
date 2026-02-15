@@ -4,7 +4,7 @@ import { useAuthStore } from './stores/authStore';
 import { useQuerySocket } from './hooks/useQuerySocket';
 
 // Build version - must match server version
-const BUILD_VERSION = '2026-02-15-v3';
+const BUILD_VERSION = '2026-02-15-v4';
 console.log(`%c[GDKP] Build Version: ${BUILD_VERSION}`, 'color: #ffcc00; font-weight: bold');
 
 // Check for new version and reload if needed
@@ -201,10 +201,13 @@ export default function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const versionChecked = useRef(false);
 
-  // CRITICAL: Bypass router entirely for /wishlist (fixes Discord in-app browser)
+  // CRITICAL: Bypass router entirely for wishlist paths (fixes Discord in-app browser)
   const isWishlistPath = window.location.pathname === '/wishlist' ||
     window.location.pathname.startsWith('/wishlist?') ||
-    window.location.pathname.startsWith('/wishlist/');
+    window.location.pathname.startsWith('/wishlist/') ||
+    window.location.pathname === '/loot' ||
+    window.location.pathname.startsWith('/loot?') ||
+    window.location.pathname.startsWith('/loot/');
 
   // Global socket-to-query cache sync for instant updates
   useQuerySocket();
@@ -243,6 +246,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/wishlist" element={<WishlistPage />} />
+        <Route path="/loot" element={<WishlistPage />} />
 
         {/* Waiting room - for users waiting for approval */}
         <Route
