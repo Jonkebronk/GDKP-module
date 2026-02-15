@@ -6,6 +6,9 @@ import { api } from '../api/client';
 import gnomeLogo from '../assets/gnome-logo.png';
 
 export function LoginPage() {
+  // Debug: Log when LoginPage renders and current path
+  console.log('[DEBUG] LoginPage rendered, path:', window.location.pathname);
+
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -153,6 +156,11 @@ export function LoginPage() {
         {/* Fight Club Quote */}
         <p className="text-amber-500 text-sm italic">
           The first rule of Fight Club is: You do not talk about Fight Club
+        </p>
+
+        {/* Debug info */}
+        <p className="text-red-500 text-xs mt-4">
+          [DEBUG] LoginPage - Path: {window.location.pathname}
         </p>
       </div>
 

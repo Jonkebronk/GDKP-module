@@ -27,6 +27,9 @@ interface InstanceData {
 }
 
 export function WishlistPage() {
+  // Debug: Log when WishlistPage renders
+  console.log('[DEBUG] WishlistPage rendered, path:', window.location.pathname);
+
   const [searchParams] = useSearchParams();
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCartDrawer, setShowCartDrawer] = useState(false);
@@ -184,6 +187,11 @@ export function WishlistPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
+      {/* Debug banner */}
+      <div className="bg-green-600 text-white text-xs p-1 text-center">
+        [DEBUG] WishlistPage loaded - Path: {window.location.pathname}
+      </div>
+
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
